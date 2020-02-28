@@ -266,7 +266,7 @@
             next
          }
       }
-      if ((is.null(ignore))&&(!is.ursa(var))&&((is.numeric(var))||(is.na(var)))&&
+      if ((is.null(ignore))&&(!is.ursa(var))&&((is.numeric(var))||(anyNA(var)))&&
           (length(name))&&(length(.grep("(^bg$|nodata|ignore)",name))))
       {
          ignore <- var
@@ -332,8 +332,9 @@
       message(paste("Filename is assigned automatically:",fname))
    }
    myDir <- .dirname(fname)
-   if (!file.exists(myDir))
-      dir.create(myDir)
+   if (!file.exists(myDir)) {
+      dir.create(myDir,recursive=TRUE)
+   }
    con$fname <- file.path(chartr("\\","/",normalizePath(.dirname(fname)))
                           ,.basename(fname))
    if (!is.null(connection))
@@ -556,6 +557,8 @@
 }
 '.optimal.datatype' <- function(x,nodata=NULL)
 {
+   if (is.ursa(x))
+      x <- x$value
    if (TRUE)
    {
       isInt <- is.integer(x)
@@ -871,32 +874,45 @@
       if ((nchar(Sys.which("gdalsrsinfo")))&&
           (!(any(c("rgdal","sf") %in% loadedNamespaces())))) {
          if (lverbose)
-            message("'gdalsrsinfo' engine")
-         wktout <- paste0(.maketmp(),".wkt~")
-        # shell(paste("gdalsrsinfo -o wkt",paste0("\"",proj4,"\""),"1>",wktout))
-        # 20170319 dQuote() returns non-symmetrical quotes in interactive() 
-         system2("gdalsrsinfo",list("-o wkt",.dQuote(proj4))
-                ,stdout=wktout)
-         wkt <- readLines(wktout,warn=FALSE)
-         file.remove(wktout)
+            message("'gdalsrsinfo' engine (write)")
+         if (FALSE) 
+            wkt <- system2("gdalsrsinfo",c("-o wkt",.dQuote(proj4))
+                   ,stdout=TRUE)
+         else {
+            wktout <- .maketmp(ext=".wkt~")
+           # shell(paste("gdalsrsinfo -o wkt",paste0("\"",proj4,"\""),"1>",wktout))
+           # 20170319 dQuote() returns non-symmetrical quotes in interactive() 
+            system2("gdalsrsinfo",c("-o wkt_esri",.dQuote(proj4))
+                   ,stdout=wktout,stderr=FALSE)
+            wkt <- readLines(wktout,warn=FALSE)
+            file.remove(wktout)
+         }
       }
       else if (!("sf" %in% loadedNamespaces())) {
          if (lverbose)
             message("'rgdal' engine")
-         if (!.try(wkt <- rgdal::showWKT(proj4,morphToESRI=FALSE)))
+         if (!.try(wkt <- rgdal::showWKT(proj4,morphToESRI=TRUE)))
             wkt <- NULL
       }
-      else {
+      else { ## 'sf' in namespace; 'OGC_WKT' ONLY. 
          if (lverbose)
             message("'sf' engine")
-         if (!.try(wkt <- sf::st_as_text(sf::st_crs(proj4))))
+         if (!.try(wkt <- sf::st_as_text(sf::st_crs(proj4),EWKT=TRUE)))
             wkt <- NULL
+        # print(proj4)
+        # message(wkt)
+         if (!TRUE) { ## 20191216 patch for EXTENSION["PROJ4","+proj=......."]
+            wkt <- gsub(",EXTENSION\\[\"PROJ4\".+\\]","]",wkt)
+         }
       }
       if (lverbose)
          .elapsedTime("proj4 -> wkt finish")
    }
-   if (!is.null(wkt))
+   if (!is.null(wkt)) {
+      if (length(wkt))
+         wkt <- paste(gsub("(^\\s+|\\s+$)","",wkt),collapse="")
       writeLines(sprintf("coordinate system string = {%s}",wkt),Fout)
+   }
    if ((is.character(x$name))&&(sum(nchar(x$name))>0))
    {
       if (.lgrep(",",x$name)) {

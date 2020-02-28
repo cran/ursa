@@ -4,6 +4,7 @@
          stop(paste("Package",sQuote(pkg),"is required for this operation"))
   # if (is.character(obj))
    obj <- spatialize(obj,engine="sf")
+  # print(spatial_crs(obj))
    if (is.null(by)) {
       by <- spatial_fields(obj)
       if (!length(by)) {
@@ -40,8 +41,16 @@
             obj$OGRFID <- seq(spatial_count(obj))
          by <- "OGRFID"
       }
+      if (devel <- FALSE) {
+         a9 <- fasterize::fasterize(sf=obj,raster=as.Raster()
+                    ,field=by,by=NULL,fun=fun) ## in memory 
+         print(object.size(a9))
+         print(object.size(ursa(a9)))
+         q()
+      }
       res <- ursa(fasterize::fasterize(sf=obj,raster=as.Raster()
                  ,field=by,by=NULL,fun=fun))
+     # res <- fasterize::fasterize(sf=obj,raster=as.Raster(),field=by,by=NULL,fun=fun)
       if (isList) {
          src <- as.integer(names(ursa(res,"table")))
          res <- lapply(bname,function(x) {

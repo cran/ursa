@@ -1,8 +1,12 @@
 '[<-.ursaRaster' <- function(x,i,j,...,value)
 {
-   verbose <- FALSE
-   if (verbose)
-      str(match.call())
+   verbose <- isTRUE(getOption("ursaDevel"))
+   if (verbose) {
+      cat("----------\n")
+      on.exit(cat("==========\n"))
+   }
+  # if (verbose)
+  #    str(match.call())
    dimx <- dim(x$value)
    con <- x$con
    if (!.is.con(con))
@@ -11,7 +15,6 @@
    missingI <- missing(i)
    if (!is.null(dimx))
    {
-      obj <- x
       if (missingJ)
          j <- seq(dimx[1])
       if (missingI)
@@ -22,9 +25,16 @@
       {
          args <- list(...)
          regexp <- if ("regexp" %in% names(args)) args[["regexp"]] else FALSE
-         i <- .getBand(obj,i,regexp=regexp)
+         i2 <- .getBand(x,i,regexp=regexp)
+         if (is.null(i2)) {
+            names(value) <- i
+            x <- c(x,value)
+            return(x)
+         }
+         i <- i2
          j <- seq(dimx[1])
       }
+      obj <- x
       if (is.ursa(i))
       {
          debug <- FALSE
@@ -39,7 +49,18 @@
          else
          {
             ind <- !is.na(i$value)
-            obj$value[ind] <- value$value[ind]
+            if (proposed <- TRUE) {
+               if ((length(obj)>1)&&(length(obj)==length(i))) {
+                  k <- rep(seq_along(value),length.out=length(obj))
+                  for (m in seq_along(k))
+                     obj$value[ind[,m],m] <- value$value[ind[,m],k[m]]
+               }
+               else ## common
+                  obj$value[ind] <- value$value[ind]
+            }
+            else {
+               obj$value[ind] <- value$value[ind]
+            }
          }
          if (debug)
          {
@@ -75,6 +96,18 @@
          bg <- ignorevalue(x)
          if (!is.na(bg))
             value[.is.eq(value,bg)] <- NA
+      }
+      if (verbose) {
+         str(value)
+         print(is.null(value))
+         print(dim(value))
+         print(length(value))
+      }
+      if (missingJ) {
+         if (is.null(value))
+            return(obj[-i])
+         if ((is.null(dim(value)))&&(!length(value)))
+            return(obj[-i])
       }
       if (is.array(value))
       {
@@ -247,6 +280,8 @@
      # print(c(j=all(j %in% seq(dimx[1])),i=all(i %in% seq(dimx[2]))))
       if ((length(j)<dimx[1])&&(all(j %in% seq(dimx[1])))) ## write lines
       {
+         if (verbose)
+            print("write lines")
          toSeek <- toSeek %in% c(1,3)
          if (any(is.na(value$con$posR)))
             nl <- as.integer(dimy[1]/con$samples)
@@ -353,6 +388,8 @@
       }
       else if ((length(i)<dimx[2])&&(all(i %in% seq(dimx[2])))) ## write bands
       {
+         if (verbose)
+            print("write bands")
          toSeek <- (toSeek %in% c(1,2)) ## c(2,3) 2012-08-27
          sparse <- attr(value$value,"sparse")
          if ((!is.null(sparse))&&(any(sparse!=0)))
@@ -504,6 +541,8 @@
       }
       else if ((length(j)==dimx[1])&&(length(i)==dimx[2])) ## write full
       {
+         if (verbose)
+            print("write full")
         # .writeall(data=value$value,con=con,split=TRUE,con$handle)
          if (!is.na(con$nodata))
          {

@@ -1,11 +1,15 @@
-'spatial_read' <-
 'spatialize' <- function(dsn,engine=c("native","sp","sf")
                          ,layer=".*",field=".+",coords=c("x","y"),crs=character()
                          ,geocode="",place="",area=c("bounding","point")
                          ,grid=NULL,size=NA,cell=NA,expand=1,border=NA
-                         ,lat0=NA,lon0=NA,resetProj=FALSE,style="auto"#,zoom=NA
+                         ,lat0=NA,lon0=NA,resetProj=FALSE,resetGrid=FALSE
+                         ,style="auto" ## auto none internal keep
+                        # ,zoom=NA
                          ,subset="",verbose=FALSE,...) {
    engine <- match.arg(engine)
+   if (resetGrid)
+      session_grid(NULL)
+   toResetGrid <- 0L
   # print(c(expand=expand,border=border))
   # geocode <- match.arg(geocode)
    geocodeStatus <- FALSE
@@ -55,7 +59,7 @@
    isNative <- engine=="native"
    if (is.character(dsn)) {
       if (length(dsn)>1) {
-         pattern <- "\\.(gpkg|tab|kml|json|geojson|mif|sqlite|shp|osm)(\\.(zip|gz|bz2))*$"
+         pattern <- "\\.(gpkg|tab|kml|json|geojson|mif|sqlite|shp|osm)(\\.(zip|rar|gz|bz2))*$"
          dsn <- dsn[.grep(pattern,basename(dsn))]
          if (length(dsn)!=1)
             stop("Either filename is not recognized or multiple files")
@@ -63,6 +67,10 @@
    }
    if (!((is.character(dsn))&&(length(dsn)==1))) {
       nextCheck <- TRUE
+      if ((.isSF(dsn))||(.isSP(dsn))) {
+         if ((resetProj)||(length(as.list(match.call())[-1])==1))
+            session_grid(NULL)
+      }
       if (FALSE) { ## 20180125--
          spcl <- paste0("Spatial",c("Points","Lines","Polygons"))
          spcl <- c(spcl,paste0(spcl,"DataFrame"))
@@ -114,7 +122,7 @@
                crsNow <- ursa_proj(dsn)
             isCRS <- ((!is.na(crsNow))&&(nchar(crsNow)))
             if (!((is.character(coords))&&(length(coords)==2))) {
-               coords <- .maketmp(2)
+               coords <- basename(.maketmp(2))
                colnames(obj)[1:2] <- coords
             }
             if (isSF) {
@@ -136,6 +144,39 @@
       }
       if ((nextCheck)&&(is.data.frame(dsn))&&
           (is.character(coords))&&(length(coords)==2)) {
+         if (!all(coords %in% colnames(dsn))) {
+            mname <- colnames(dsn)
+            indX <- .grep("^coords.x1$",mname)
+            if (!length(indX))
+               indX <- .grep("^x$",mname)
+            if (!length(indX))
+               indX <- .grep("^lon",mname)
+            if (!length(indX))
+               indX <- .grep("^east",mname)
+            if (!length(indX))
+               indX <- .grep("^x1",mname)
+            indY <- .grep("^coords.x2$",mname)
+            if (!length(indY))
+               indY <- .grep("^y$",mname)
+            if (!length(indY))
+               indY <- .grep("^lat",mname)
+            if (!length(indY))
+               indY <- .grep("^north",mname)
+            if (!length(indY))
+               indY <- .grep("^x2",mname)
+            if ((!length(indX))&&(!length(indY))) {
+               indX <- .grep("^000x1$",mname)
+               indY <- .grep("^000x2$",mname)
+            }
+            if ((!length(indX))&&(!length(indY))) {
+               indX <- .grep(paste0("^",coords[1],"$"),mname)
+               indY <- .grep(paste0("^",coords[2],"$"),mname)
+            }
+            ind <- c(indX[1],indY[1])
+            if ((any(is.na(ind)))||(length(ind)!=2))
+               stop("unable to detect 'x' and 'y' coordinates")
+            coords <- mname[ind]
+         }
          #isCRS <- ((!is.na(crsNow))&&(nchar(crsNow)))
          if (style!="auto")
             crsNow <- style
@@ -223,6 +264,15 @@
             dsn <- class(obj)
          }
          else {
+            if ((TRUE)&&(inherits(dsn,"list"))&&(inherits(dsn,"data.frame"))) {
+               if (length(unique(sapply(dsn,length)))==1)
+                  dsn <- as.data.frame(dsn)
+               cl <- sapply(dsn,function(x) {
+                  if (!inherits(x,c("integer","numeric","character","factor"
+                                   ,"Date","POSIXt")))
+                     stop("TODO #38")
+               })
+            }
             obj <- try(sf::st_as_sf(dsn,coords=coords))
             if (inherits(obj,"try-error")) {
                cat(geterrmessage())
@@ -319,6 +369,11 @@
          dsn <- zname
       }
       if (!file.exists(dsn)) {
+         list1 <- spatial_dir(path=dirname(dsn),pattern=basename(dsn))
+         if (length(list1)==1)
+            dsn <- list1
+      }
+      if (!file.exists(dsn)) {
          aname <- paste0(dsn,".zip")
          if (isZip <- file.exists(aname)) {
             ziplist <- unzip(aname,exdir=tempdir());on.exit(file.remove(ziplist))
@@ -330,7 +385,8 @@
          }
          else if (.lgrep("\\.(gpkg|tab|kml|json|geojson|mif|sqlite|shp|osm)(\\.(zip|gz|bz2))*$"
                  ,basename(dsn))) {
-            message("#40. It seems that specified non-existent file name rather than geocode request.")
+            message(paste("#40. It seems that specified non-existent file name"
+                         ,sQuote(dsn),"rather than geocode request."))
             return(NULL)
          }
          else {
@@ -365,7 +421,8 @@
                else if (length(da)==2) {
                   arglist <- as.list(match.call())
                   arglist$dsn <- da
-                  return(do.call(as.character(arglist[[1]]),arglist[-1])) ## RECURSIVE!!!
+                  arglist[[1]] <- tail(as.character(arglist[[1]]),1)
+                  return(do.call(arglist[[1]],arglist[-1])) ## RECURSIVE!!!
                }
             }
             else
@@ -403,12 +460,36 @@
          else if ((nchar(Sys.which("gzip")))&&(isZip <- .lgrep("\\.gz$",dsn)>0)) {
             dsn0 <- dsn
             dsn <- tempfile();on.exit(file.remove(dsn))
-            system2("gzip",c("-f -d -c",.dQuote(dsn0)),stdout=dsn)
+            system2("gzip",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
          }
          else if ((nchar(Sys.which("bzip2")))&&(isZip <- .lgrep("\\.bz2$",dsn)>0)) {
             dsn0 <- dsn
             dsn <- tempfile();on.exit(file.remove(dsn))
-            system2("bzip2",c("-f -d -c",.dQuote(dsn0)),stdout=dsn)
+            system2("bzip2",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
+         }
+         else if ((T)&&(nchar(Sys.which("7z")))&&(isZip <- .lgrep("\\.rar$",dsn)>0)) {
+            stop(dsn,": this archive type is not supported")
+            ziplist <- system(paste("7z","l","-scsUTF-8",dsn),intern=TRUE)
+            ind <- .grep("-{19}\\s",ziplist)
+            ziplist <- ziplist[(ind[1]+1):(ind[2]-1)]
+            ziplist <- substr(ziplist,54L,nchar(ziplist))
+            ziplist <- .gsub("\\\\","/",ziplist)
+            dir1 <- dir(path=tempdir())
+           # print(dir1)
+            system(paste("7z","e","-aos",.dQuote(dsn),paste0("-o",tempdir())))
+            dir2 <- dir(path=tempdir())
+           # print(dir2)
+            print(ziplist)
+            q()
+            print(dir(path=tempdir()))
+            file.remove(ziplist)
+            q()
+            rarlist <- system(paste("rar","lb",.dQuote(dsn)),intern=TRUE)
+            print(rarlist)
+            system2("rar",c("e -o+",.dQuote(dsn),tempdir()),stdout=NULL)
+           # print(rarlist)
+           # file.remove(rarlist)
+            stop("RAR")
          }
          if (isCDF <- .lgrep("\\.(nc|hdf)$",dsn)>0) {
             obj <- .read_nc(dsn,".+")
@@ -440,7 +521,7 @@
          }
       }
       if ((!hasOpened)&&((!geocodeStatus)||(file.exists(dsn)))) {
-         opW <- options(warn=0)
+         opW <- options(warn=ifelse(isSP,-1,0))
          if (isSF)
             lname <- try(sf::st_layers(dsn)$name)
          else {
@@ -460,10 +541,31 @@
             return(NULL)
          }
          if (isSF) {
+           # opW2 <- options(warn=0)
             obj <- sf::st_read(dsn,layer=layer,quiet=TRUE)
+           # options(opW2)
+            if (!spatial_count(obj))
+               return(obj)
+            if (TRUE)
+               obj <- sf::st_zm(obj,drop=TRUE)
          }
          else {
-            obj <- rgdal::readOGR(dsn,layer,pointDropZ=TRUE,verbose=FALSE)
+            if (isSHP <- .lgrep("\\.shp$",dsn)>0) {
+               cpgname <- .gsub("\\.shp$",".cpg",dsn)
+               if (file.exists(cpgname)) {
+                  cpg <- readLines(cpgname,warn=FALSE)
+               }
+               else
+                  cpg <- "UTF-8"
+            }
+            else {
+               cpg <- "UTF-8"
+            }
+            ##~ obj <- rgdal::readOGR(dsn,layer,pointDropZ=TRUE,encoding=enc
+                                 ##~ ,use_iconv=!is.null(enc),verbose=FALSE)
+            obj <- rgdal::readOGR(dsn,layer,pointDropZ=TRUE,encoding=cpg
+                                 ,use_iconv=TRUE,verbose=FALSE)
+                                 ## --20191112 use_iconv=!isSHP
             if ((length(names(obj))==1)&&(names(obj)=="FID")) {
                info <- rgdal::ogrInfo(dsn,layer)
                if (info$nitems==0)
@@ -472,22 +574,21 @@
          }
          options(opW)
       }
-      if (.lgrep("\\.shp$",dsn)) {
-         cpgname <- .gsub("\\.shp$",".cpg",dsn)
-         if (file.exists(cpgname)) {
-            cpg <- readLines(cpgname,warn=FALSE)
-            if (cpg=="UTF-8")
-               cpg <- NULL
-         }
-      }
    }
+   if (style=="keep") {
+      crs <- spatial_crs(obj)
+     # style <- crs
+     # print(data.frame(style=style,crs=crs,isEPSG=isEPSG,isPROJ4=isPROJ4))
+     # print(resetProj)
+   }
+  # resetProj <- FALSE
    if (verbose)
       print(c('engine.sf'=isSF,'engine.sp'=isSP))
    if (nchar(subset)) {
       obj <- do.call("subset",list(obj,parse(text=subset)))
    }
    if ((geocodeStatus)&&(style=="auto")) {
-      style <- switch(geocode,nominatim="openstreetmap color"
+      style <- switch(geocode,nominatim=c("mapnik","openstreetmap color")[1]
                              ,google="google terrain color")
    }
    if ((toUnloadMethods)&&("package:methods" %in% search())) {
@@ -546,30 +647,60 @@
             da <- methods::slot(obj,"data")[,dname[i],drop=TRUE]
          }
          if (is.character(da)) {
+           # str(dname[i])
             isDateTime <- FALSE
-            if ((dev <- TRUE)&&(.lgrep("\\d{4}.*\\d{2}.*\\d{2}",da))) {
-               a <- as.POSIXct(as.POSIXlt(da,format="%Y-%m-%dT%H:%M:%SZ",tz="UTC"))
-               if (all(is.na(a))) {
-                  a <- as.POSIXct(da,tz="",format="%Y-%m-%d %H:%M")
+            skipParse <- TRUE
+           # if (dname[i]=="time")
+           #    str(da)
+            nc <- try(nchar(na.omit(da)))
+            if (inherits(nc,"try-error")) {
+               message("Data field ",.sQuote(dname[i])," has problem:")
+               str(da)
+               warning("Check specified encoding for input data table")
+            }
+            if ((dev <- TRUE)&&(length(unique(nc))==1)&&
+                  (.lgrep("\\d{4}.*\\d{2}.*\\d{2}",da))) {
+               nNA <- length(which(is.na(da)))
+               s <- sapply(gregexpr("(-|\\.|/)",da),function(x) length(x[x>=0]))
+               if (all(s>=2)) {
+                  s <- sapply(gregexpr("(-|\\.|/)",da),function(x) diff(x)[1])
+                  if (all(s==3))
+                     da <- .gsub(".*(\\d{4})(.?)(\\d{2})(.?)(\\d{2})(.*)"
+                                ,"\\1-\\3-\\5\\6",da)
                }
-               if (all(is.na(a))) {
-                  a <- as.POSIXct(da,tz="",format="%Y-%m-%dT%H:%M")
+               else if (FALSE & length(grep("(\\d{8})($|\\D.*$)",da))==length(da)) {
+                  da <- .gsub(".*(\\d{4})(.?)(\\d{2})(.?)(\\d{2})(.+)*"
+                             ,"\\1-\\3-\\5\\6 6='\\6' 7='\\7'",da)
                }
-               if (all(is.na(a))) {
-                  a <- as.Date(da,format="%Y-%m-%d")
-               }
-               if (all(is.na(a))) {
-                  a <- as.Date(da,format="%Y/%m/%d")
-               }
-               if (!all(is.na(a))) {
-                  da <- a
-                  rm(a)
-                  if (nchar(tz <- Sys.getenv("TZ"))) {
-                     da <- as.POSIXct(as.POSIXlt(da,tz=tz))
+               else
+                  skipParse <- TRUE
+               if (!skipParse) {
+                 # da <- .gsub(".*(\\d{4})(.?)(\\d{2})(.?)(\\d{2})(.*)","\\1-\\3-\\5\\6",da)
+                  a <- as.POSIXct(as.POSIXlt(da,format="%Y-%m-%dT%H:%M:%SZ",tz="UTC"))
+                  if (all(is.na(a))) {
+                     a <- as.POSIXct(da,tz="",format="%Y-%m-%d %H:%M:%S")
                   }
-                  isDateTime <- TRUE
+                  if (all(is.na(a))) {
+                     a <- as.POSIXct(da,tz="",format="%Y-%m-%d %H:%M")
+                  }
+                  if (all(is.na(a))) {
+                     a <- as.POSIXct(da,tz="",format="%Y-%m-%dT%H:%M")
+                  }
+                  if (all(is.na(a))) {
+                     a <- as.Date(da,format="%Y-%m-%d")
+                  }
+                  if (length(which(is.na(a)))==length(which(is.na(da)))) {
+                     da <- a
+                     rm(a)
+                     if (nchar(tz <- Sys.getenv("TZ"))) {
+                        da <- as.POSIXct(as.POSIXlt(da,tz=tz))
+                     }
+                     isDateTime <- TRUE
+                  }
                }
             }
+           # if (dname[i]=="time")
+           #    str(da)
             if (!isDateTime) {
               # da <- iconv(da,to="UTF-8")
               # Encoding(da) <- "UTF-8"
@@ -592,7 +723,7 @@
             }
          }
          else if (TRUE) {
-            isInt <- .is.integer(na.omit(da))
+            isInt <- !is.factor(da) && .is.integer(na.omit(da))
            # isInt <- .is.integer(da)
             if (isInt) { # &&(!is.integer(da))
                da <- as.integer(round(da))
@@ -634,8 +765,9 @@
                        ,SpatialPoints="POINT"
                        ,SpatialLines="LINE")
    if (("POLYGON" %in% geoType)&&("MULTIPOLYGON" %in% geoType)) {
-      if (isSF)
-         obj <- sf::st_cast(obj,"MULTIPOLYGON")
+      if (isSF) {
+         ret <- .try(obj <- sf::st_cast(obj,"MULTIPOLYGON"))
+      }
       if (isSP) {
          stop("POLYGON to MULTIPOLYGON for 'Spatial' is not implemented")
       }
@@ -644,7 +776,8 @@
    projPatt <- paste0("(",paste(projClass,collapse="|"),")")
    staticMap <- c("openstreetmap","google","sputnikmap")
    tilePatt <- paste0("(",paste0(unique(c(staticMap,.tileService())),collapse="|"),")")
-   len <- 640L
+   retina <- getOption("ursaRetina",1)
+   len <- 640L # as.integer(round(640*getOption("ursaRetina",1)))
    if (is.na(size[1]))
       size <- c(len,len)
    else if (is.character(size)) {
@@ -662,10 +795,11 @@
       else
          border <- 27L
    }
-   if (!.lgrep("auto",style))
+   if (!.lgrep("(none|auto|keep)",style))
       resetProj <- TRUE
    if (isEPSG)
       resetProj <- FALSE
+  # q()
   # if ((proj=="internal")&&(!is.na(keepProj))) {
   #    g2 <- NULL
   # }
@@ -687,7 +821,7 @@
       art <- "none"
    else {
       art <- .gsub2(tilePatt,"\\1",style)
-      proj <- "merc"
+      proj <- "merc" #ifelse(art=="polarmap",art,"merc")
    }
    isStatic <- .lgrep("static",style)>0
    mlen <- switch(art,google=640,openstreetmap=960,sputnikmap=640)
@@ -696,7 +830,7 @@
    }
   # canTile <- .lgrep(art,eval(as.list(args(".tileService"))$server))>0
    canTile <- .lgrep(art,.tileService())>0
-   isTile <- .lgrep("tile",style)>0 & canTile
+   isTile <- .lgrep("(tile|polarmap)",style)>0 & canTile
    if ((!isStatic)&&(!isTile)) {
       if (art %in% staticMap)
          isStatic <- TRUE
@@ -707,7 +841,9 @@
    }
    tpat <- unlist(gregexpr("\\{[xyz]\\}",style))
    tpat <- length(tpat[tpat>0])
-   toZoom <- (isTile)||(isStatic)||(style=="web")||(tpat==3)
+   toZoom <- (isTile)||(isStatic)||(style=="web")||.lgrep("^tile",style)||
+             (style=="polarmap")||
+             (tpat==3)
   # isColor <- .lgrep("colo(u)*r",style)>0
    isWeb <- .lgrep(tilePatt,art)
    if (verbose)
@@ -728,13 +864,12 @@
          proj4 <- style
         # isPROJ4 <- FALSE
       }
-      if ((proj4=="")&&(!(proj %in% c("auto","internal")))) {
+      if ((proj4=="")&&(!(proj %in% c("auto","internal","keep")))) {
          resetProj <- TRUE
          proj4 <- "auto"
       }
-     # if (is.na(proj4))
       isLonLat <- .lgrep("(\\+proj=longlat|epsg:4326)",proj4)>0
-      if ((proj %in% c("auto"))&&(isLonLat)&&(!isEPSG)) { ## added 2016-08-09
+      if ((proj %in% c("auto"))&&(isLonLat)&&(!isEPSG)&&(style!="keep")) { ## added 2016-08-09
          resetProj <- TRUE
          proj4 <- "auto"
       }
@@ -792,8 +927,15 @@
                rm(asp2,asp2_geom)
             }
          }
-         if (is.list(xy))
-            xy <- matrix(c(unlist(xy)),ncol=2,byrow=TRUE)
+         if (is.list(xy)) {
+            xy <- unlist(xy)
+            if (is.null(xy)) {
+               if (verbose)
+                  cat("Spatial object is NULL")
+               return(NULL)
+            }
+            xy <- matrix(c(xy),ncol=2,byrow=TRUE)
+         }
          if (verbose)
             print(summary(xy))
          lon2 <- xy[,1]
@@ -872,10 +1014,16 @@
          lat_0 <- if (lat_ts>=0) 90 else -90
          if (verbose)
             print(c(lon0=lon_0,lat0=lat_0,lat_ts=lat_ts))
-         if (proj=="auto") {
+         if ((!FALSE)&&(proj=="merc")&&(.lgrep("(polarmap|tile357[123456])",style)))
+            proj <- "laea"
+         else if (proj=="auto") {
             if (("web" %in% style)||(tpat==3))
            # if (style=="web")
                proj <- "merc"
+            else if (.lgrep("tile3857",style))
+               proj <- "merc"
+            else if (.lgrep("(polarmap|tile357[123456])",style))
+               proj <- "laea"
             else if ((any(lat2<0))&&(any(lat2>0)))
                proj <- "merc"
             else if (isEPSG)
@@ -893,6 +1041,14 @@
                           ,"+k=1","+x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs")
          }
          else if (proj=="laea") {
+            if (style=="polarmap") {
+               lon_0[lon_0<(-165) || lon_0>=(+135)] <- -180
+               lon_0[lon_0>=(-165) && lon_0<(-125)] <- -150
+               lon_0[lon_0>=(-125) && lon_0<(-70)] <- -100
+               lon_0[lon_0>=(-70) && lon_0<(-25)] <- -40
+               lon_0[lon_0>=(-25) && lon_0<(+50)] <- 10
+               lon_0[lon_0>=(50) && lon_0<(+135)] <- 90
+            }
             t_srs <- paste("","+proj=laea"
                           ,paste0("+lat_0=",lat_0)
                           ,paste0("+lon_0=",lon_0)
@@ -901,8 +1057,9 @@
          else if (proj=="merc")
             t_srs <- paste("","+proj=merc +a=6378137 +b=6378137"
                           ,"+lat_ts=0.0",paste0("+lon_0=",lon_0)
-                          ,"+x_0=0.0 +y_0=0 +k=1.0"
-                          ,"+units=m +nadgrids=@null +wktext +no_defs")
+                          ,"+x_0=0.0 +y_0=0 +k=1.0 +units=m"
+                         # ,"+nadgrids=@null"
+                          ,"+wktext +no_defs")
          else if ((proj %in% c("longlat"))||(isLonLat)) {
             t_srs <- "+proj=longlat +datum=WGS84 +no_defs"
          }
@@ -919,11 +1076,75 @@
          else
             t_srs <- NULL
          if (is.character(t_srs)) {
+           # bbox <- ursa:::.project(matrix(spatial_bbox(a),ncol=2,byrow=TRUE)
+           #                        ,proj=spatial_crs(a),inv=TRUE)
             if (isSF) {
                obj <- sf::st_transform(obj,t_srs)
+               if ((TRUE)&&(.lgrep("\\+proj=longlat",t_srs))&&(max(lon2)>180)) {
+                  if (verbose)
+                     .elapsedTime("lon+360 -- start")
+                  objG0 <- spatial_geometry(obj)
+                  objG1 <- lapply(objG0,function(g1) {
+                     if (!is.list(g1))
+                        return(.lonPlus360(g1))
+                     ret1 <- lapply(g1,function(g2) {
+                        if (!is.list(g2))
+                           return(.lonPlus360(g2))
+                        lapply(g2,.lonPlus360)
+                     })
+                     attributes(ret1) <- attributes(g1)
+                     ret1
+                  })
+                  attributes(objG1) <- attributes(objG0)
+                  spatial_geometry(obj) <- objG1
+                  if (verbose)
+                     .elapsedTime("lon+360 -- finish")
+               }
             }
-            if (isSP)
+            if (isSP) {
                obj <- sp::spTransform(obj,t_srs)
+               if ((TRUE)&&(.lgrep("\\+proj=longlat",t_srs))&&(max(lon2)>180)) {
+                  if (verbose)
+                     .elapsedTime("lon+360 -- start")
+                  geoType <- spatial_geotype(obj)
+                  if (geoType=="POINT") {
+                     methods::slot(obj,"coords") <- .lonPlus360(methods::slot(obj,"coords"))
+                  }
+                  else {
+                     objG0 <- spatial_geometry(obj)
+                     objG1 <- switch(geoType
+                                    ,POLYGON=methods::slot(objG0,"polygons")
+                                    ,LINE=methods::slot(objG0,"lines")
+                                    ,POINT=g0)
+                     xy <- lapply(objG1,function(z) {
+                        gz <- switch(geoType
+                                    ,POLYGON=methods::slot(z,"Polygons")
+                                    ,LINE=methods::slot(z,"Lines")
+                                    ,POINT=methods::slot(z,"Points"))
+                        gz <- lapply(gz,function(z3) {
+                           methods::slot(z3,"coords") <- .lonPlus360(methods::slot(z3,"coords"))
+                           z3
+                        })
+                        if (geoType=="POLYGON")
+                           methods::slot(z,"Polygons") <- gz
+                        else if (geoType=="LINE")
+                           methods::slot(z,"Lines") <- gz
+                        else if (geoType=="POINT")
+                           methods::slot(z,"Points") <- gz
+                        z
+                     })
+                     if (geoType=="POLYGON")
+                        methods::slot(objG0,"polygons") <- xy
+                     else if (geoType=="LINE")
+                        methods::slot(objG0,"lines") <- xy ## gz? (20190921)
+                     else if (geoType=="POINT")
+                        objG0 <- xy ## gz?  (20190921)
+                     spatial_geometry(obj) <- objG0
+                  }
+                  if (verbose)
+                     .elapsedTime("lon+360 -- finish")
+               }
+            }
          }
         # xy <- .project(xy,t_srs)
         # print(summary(xy))
@@ -975,26 +1196,37 @@
         # print(c(sp::bbox(obj)))
       }
    }
-   if (isSF) {
-      obj_geom <- sf::st_geometry(obj)
-     # bbox <- c(sf::st_bbox(obj_geom)) ## low performance sp<=0.5-2
-      if (inherits(obj,"sfc"))
-         bbox <- c(sf::st_bbox(obj_geom))
-      else
-         bbox <- attr(obj[[attr(obj,"sf_column")]],"bbox") ## ~ sf::st_bbox
-      proj4 <- sf::st_crs(obj)$proj4string
-   }
-   if (isSP) {
-      obj_geom <- switch(geoType,POLYGON=methods::slot(sp::geometry(obj),"polygons")
-                                   ,LINE=methods::slot(sp::geometry(obj),"lines")
-                                  ,POINT=sp::geometry(obj))
-      bbox <- c(sp::bbox(obj))
-      if (length(bbox)==6) {
-         bbox <- bbox[c(1,2,4,5)]
-        # names(bbox) <- c("xmin","ymin","zmin","xmax","ymax","zmax")
+   if (FALSE) { ## deprecated
+      if (isSF) {
+         obj_geom <- sf::st_geometry(obj)
+        # bbox <- c(sf::st_bbox(obj_geom)) ## low performance sp<=0.5-2
+         if (inherits(obj,"sfc"))
+            bbox <- c(sf::st_bbox(obj_geom))
+         else
+            bbox <- attr(obj[[attr(obj,"sf_column")]],"bbox") ## ~ sf::st_bbox
+         proj4 <- sf::st_crs(obj)$proj4string
       }
-      names(bbox) <- c("xmin","ymin","xmax","ymax")
-      proj4 <- sp::proj4string(obj)
+      if (isSP) {
+         obj_geom <- switch(geoType,POLYGON=methods::slot(sp::geometry(obj),"polygons")
+                                      ,LINE=methods::slot(sp::geometry(obj),"lines")
+                                     ,POINT=sp::geometry(obj))
+         bbox <- c(sp::bbox(obj))
+         if (length(bbox)==6) {
+            bbox <- bbox[c(1,2,4,5)]
+           # names(bbox) <- c("xmin","ymin","zmin","xmax","ymax","zmax")
+         }
+         names(bbox) <- c("xmin","ymin","xmax","ymax")
+         proj4 <- sp::proj4string(obj)
+      }
+   }
+   else {
+      bbox <- spatial_bbox(obj)
+      proj4 <- spatial_crs(obj)
+      obj_geom <- spatial_geometry(obj)
+      if (isSP)
+         obj_geom <- switch(geoType,POLYGON=methods::slot(obj_geom,"polygons")
+                                      ,LINE=methods::slot(obj_geom,"lines")
+                                     ,POINT=obj_geom)
    }
    if ((bbox["xmin"]==bbox["xmax"])||(bbox["ymin"]==bbox["ymax"]))
       bbox <- bbox+100*c(-1,-1,1,1)
@@ -1043,14 +1275,16 @@
    }
    if (is.null(g2))
       session_grid(g0)
-   attr(obj,"grid") <- g0
-   attr(obj,"toUnloadMethods") <- toUnloadMethods
-   attr(obj,"colnames") <- dname
-   attr(obj,"style") <- style
-   attr(obj,"geocodeStatus") <- geocodeStatus
-  # attr(obj,"engine") <- ifelse(isSF,"sf","sp")
-   if (exists("dsn"))
-      attr(obj,"dsn") <- dsn
+   if (how_to_cancel_it <- !FALSE) {
+      attr(obj,"grid") <- g0
+      attr(obj,"toUnloadMethods") <- toUnloadMethods
+      attr(obj,"colnames") <- dname
+      attr(obj,"style") <- style
+      attr(obj,"geocodeStatus") <- geocodeStatus
+     # attr(obj,"engine") <- ifelse(isSF,"sf","sp")
+      if (exists("dsn"))
+         attr(obj,"dsn") <- dsn
+   }
   # class(obj) <- c(class(obj),"ursaVectorExternal")
    obj
 }

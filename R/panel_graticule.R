@@ -48,17 +48,23 @@
    }
   # else
   #    panel <- 0L
+   a <- list(col=col,lon=lon,lat=lat,lwd=lwd,lty=lty,panel=panel
+            ,marginalia=marginalia,trim=trim,cex=cex)
    if (verbose)
       str(list(col=col,lon=lon,lat=lat,col=col,lwd=lwd,lty=lty,panel=panel
               ,marginalia=marginalia,trim=trim,cex=cex))
-   .compose_graticule(panel=panel,col=col,border=border,lon=lon,lat=lat,lwd=lwd,lty=lty
-                    ,marginalia=marginalia,trim=trim,language=language,cex=cex
-                    ,verbose=verbose)
+   opStrangeWarn <- options(warn=-1) ## strings not representable in native encoding will be translated to UTF-8
+   ret <- .compose_graticule(panel=panel,col=col,border=border
+                            ,lon=lon,lat=lat,lwd=lwd,lty=lty
+                            ,marginalia=marginalia,trim=trim
+                            ,language=language,cex=cex,verbose=verbose)
+   options(opStrangeWarn)
+   ret
 }
 '.compose_graticule' <- function(panel=0L,col="grey70",border="grey70",lon=NA,lat=NA
                               ,lwd=0.5,lty=2,marginalia=rep(FALSE,4),trim=FALSE
-                              ,language=NA,cex=0.75,verbose=FALSE) {
-  # verbose <- TRUE
+                              ,language=NA_character_,cex=0.75,verbose=FALSE) {
+# verbose <- TRUE
    if (is.na(language)) {
       if (TRUE) {
          ctype <- Sys.getlocale("LC_TIME")
@@ -80,7 +86,7 @@
    maxy <- g1$maxy
    if (any(is.na(marginalia)))
       marginalia <- TRUE
-   if ((!is.na(lon))&&(!is.na(lat)))
+   if ((!anyNA(lon))&&(!anyNA(lat)))
    {
      # dlon <- unique(diff(lon))
      # dlat <- unique(diff(lat))
@@ -560,6 +566,7 @@
             gridline[[i]] <- cbind(NA,NA)
          else {
             ll <- cbind(lon,rep(lat,length(lon)))
+           # print(series(ll,3))
            # gridline[[i]] <- if (isProj & !isLonLat) proj4::project(t(ll),g1$proj4) else ll
             if (isProj & !isLonLat) {
                ll <- .project(ll,g1$proj4)
@@ -569,8 +576,8 @@
                   ll[nrow(ll),1] <- ll[nrow(ll),1]+1e8
                }
                ind <- which(diff(ll[,1])<0)
-               if (length(ind)==2) {
-                  ll <- ll[(ind[1]+1):ind[2],]
+               if ((length(ind)==2)&&(ind[1]+1!=ind[2])) {
+                  ll <- ll[(ind[1]+1):ind[2],,drop=FALSE]
                }
             }
             gridline[[i]] <- ll
@@ -581,8 +588,8 @@
       for (i in seq(along=gridline))
       {
          xy <- gridline[[i]]
-        # if (all(is.na(xy)))
-        #    next
+         if (all(is.na(xy)))
+            next
          if (marginalia[2]) {
             e1 <- which(diff((xy[,1]-minx)>0)!=0)
             for (j in seq_along(e1)) {
@@ -653,8 +660,12 @@
       if (length(ind <- outframe$v<=(-180)))
          outframe$v[ind] <- outframe$v[ind]+360
       outframe$lab <- NA
-      suffNS <- switch(language,ru=c("\xF1.\xF8.","\xFE.\xF8."),c("N","S"))
-      suffEW <- switch(language,ru=c("\xE2.\xE4.","\xE7.\xE4."),c("E","W"))
+     # suffNS <- c("N","S")
+     # suffEW <- c("E","W")
+      suffNS <- switch(language,ru=c("\u0441.\u0448.","\u044E.\u0448."),c("N","S"))
+      suffEW <- switch(language,ru=c("\u0432.\u0434.","\u0437.\u0434."),c("E","W"))
+     # suffNS <- switch(language,ru=c("\xF1.\xF8.","\xFE.\xF8."),c("N","S"))
+     # suffEW <- switch(language,ru=c("\xE2.\xE4.","\xE7.\xE4."),c("E","W"))
       ind <- (outframe$kind==2)
       outframe$lab[ind] <- .degminsec(outframe$v[ind],suffNS)
       ind <- (outframe$kind==1)
@@ -802,7 +813,8 @@
       return(NULL)
    obj <- .getPrm(arglist,class="ursaGridLine",default=NULL)
    g1 <- session_grid()
-   if ((!is.null(g1$labx))&&(!is.null(g1$laby))) {
+  # if ((!is.null(g1$labx))&&(!is.null(g1$laby))) {
+   if ((length(g1$seqx))&&(length(g1$seqy))) {
       .repairForScatterPlot()
       return(NULL)
    }
@@ -810,7 +822,7 @@
       obj <- compose_graticule(...)
    if (is.null(obj$gridline))
       return(NULL)
-   if ((!is.null(attr(g1$columns,"units"))&&(!is.null(attr(g1$rows,"units"))))) {
+   if ((!is.null(attr(g1$seqx,"units"))&&(!is.null(attr(g1$seqy,"units"))))) {
       if (is.null(g1$labx))
          g1$labx <- unique(obj$margin[obj$margin$kind==1,"at"])
       if (is.null(g1$laby))
@@ -881,22 +893,22 @@
       da3 <- if (marginalia[3]) margin[which(margin$side==3),] else NULL
       da4 <- if (marginalia[4]) margin[which(margin$side==4),] else NULL
      # opT <- par(family="Arial Narrow")
-      if (!is.null(da1))
+      if ((!is.null(da1))&&(nrow(da1)))
          with(da1,{
             axis(side=1,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
             mtext(side=1,at=at,text=lab,padj=0.5,adj=adj,cex=cex,col=border)
          })
-      if (!is.null(da2))
+      if ((!is.null(da2))&&(nrow(da2)))
          with(da2,{
             axis(side=2,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
             mtext(side=2,at=at,text=lab,padj=0.4,adj=adj,line=0.6,cex=cex,col=border)
          })
-      if (!is.null(da3))
+      if ((!is.null(da3))&&(nrow(da3)))
          with(da3,{
             axis(side=3,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
             mtext(side=3,at=at,text=lab,padj=-0.25,adj=adj,line=0,cex=cex,col=border)
          })
-      if (!is.null(da4))
+      if ((!is.null(da4))&&(nrow(da4)))
          with(da4,{
             axis(side=4,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
             mtext(side=4,at=at,text=lab,line=0,adj=adj,padj=0.4,cex=cex,col=border)

@@ -1,9 +1,11 @@
 'spatial_write' <- function(obj,fname,layer,driver=NA,compress=""
                         ,ogr2ogr=nchar(Sys.which("ogr2ogr"))>0
-                        ,transform=NA,verbose=FALSE) {
+                        ,verbose=FALSE) {
   # obj <- head(obj,100)
    bname <- basename(fname)
    dname <- dirname(fname)
+   if ((dname!=".")&&(!dir.exists(dname)))
+      dir.create(dname,recursive=TRUE)
    fext <- .gsub("^.+\\.(.+)$","\\1",bname)
    wait <- 60
    interimExt <- c("gpkg","geojson","shp","sqlite")[4]
@@ -111,7 +113,7 @@
       dopt <- character()
       lopt <- character()
       if (driver=="ESRI Shapefile")
-         lopt <- c(lopt,"ENCODING=UTF-8")
+         lopt <- c(lopt,"ENCODING=UTF-8","ADJUST_GEOM_TYPE=ALL_SHAPES")
       if (driver=="MapInfo File")
          dopt <- c(dopt,"FORMAT=MIF")
       if (driver=="SQLite") {
@@ -186,7 +188,7 @@
    }
    appendlayer <- getOption("ursaSpatialMultiLayer")
    appendlayer <- ifelse(is.null(appendlayer),FALSE,appendlayer>1)
-   if ((ogr2ogr)&&(driver %in% "zzzSQLite")) { ## sf>=0.6.3 great improvement
+   if ((ogr2ogr)&&(interimExt!="sqlite")&&(driver %in% "SQLite")) { ## sf>=0.6.3 great improvement
       interim <- TRUE
       driver0 <- driver
       fext0 <- fext
@@ -236,7 +238,7 @@
             Sys.sleep(1)
          }
          options(op)
-         if (!first) {
+         if (!first)  {
             if (i==wait)
                cat(" FAILURE!\n")
             else
@@ -255,8 +257,14 @@
    if (inherits(aname,"try-error"))
       aname <- character()
    for (a in aname) {
-      if (is.ordered(obj[[a]]))
-         obj[[a]] <-  factor(obj[[a]],ordered=FALSE)
+      if (is.ordered(obj[[a]])) {
+         if (.is.numeric(levels(obj[[a]])))
+            obj[[a]] <- as.numeric(as.character(obj[[a]]))
+         else
+            obj[[a]] <-  factor(obj[[a]],ordered=FALSE)
+      }
+      else if ((is.factor(obj[[a]]))&&(.is.numeric(levels(obj[[a]]))))
+         obj[[a]] <- as.numeric(as.character(obj[[a]]))
    }
    if (driver %in% c("ESRI Shapefile")) {
       for (a in aname) {
@@ -274,15 +282,24 @@
       opW <- options(warn=1)
      # dsn <- if (driver %in% c("zzzESRI Shapefile")) dname else fname
       if ((interim)&&(interimExt=="shp")) {
-         colnames(methods::slot(obj,"data")) <- iname <- sprintf("fld%03d",seq_along(colnames(methods::slot(obj,"data"))))
+         colnames(methods::slot(obj,"data")) <- iname <- sprintf("fld%03d"
+                               ,seq_along(colnames(methods::slot(obj,"data"))))
       }
       lch <- getOption("encoding")
-      rgdal::writeOGR(obj,dsn=fname,layer=lname,driver=driver
+      lcl <- localeToCharset()
+      if (length(lcl)>1)
+         lcl <- grep("UTF.*8",lcl,value=TRUE,invert=TRUE,ignore.case=TRUE)
+      if (length(lcl)>1)
+         lcl <- lcl[1]
+      if (!inherits(obj,c("SpatialPointsDataFrame","SpatialLinesDataFrame"
+                         ,"SpatialPolygonsDataFrame")))
+         spatial_data(obj) <- data.frame(dummy=seq_len(spatial_count(obj)))
+      rgdal::writeOGR(obj,dsn=iconv(fname,to="UTF-8"),layer=lname,driver=driver
                      ,dataset_options=dopt,layer_options=lopt
-                     ,encoding=if (lch=="UTF-8") NULL else localeToCharset()
+                     ,encoding=if (lch=="UTF-8") NULL else lcl
                      ,overwrite_layer=TRUE,morphToESRI=FALSE
                      ,verbose=verbose)
-      if ((TRUE)&&(driver=="ESRI Shapefile")) {
+      if ((FALSE)&&(driver=="ESRI Shapefile")) { ## replace "OGC ESRI" by "OGC WKT" 
          prj <- sp::proj4string(obj)
          prj1 <- rgdal::showWKT(prj,morphToESRI=TRUE)
          prj2 <- rgdal::showWKT(prj,morphToESRI=FALSE)
@@ -321,7 +338,7 @@
                   ,delete_dsn=file.exists(fname) & !appendlayer
                   ,update=appendlayer
                   ,quiet=!verbose)
-      if ((TRUE)&&(driver %in% "ESRI Shapefile")) {
+      if ((FALSE)&&(driver %in% "ESRI Shapefile")) { ## replace "OGC ESRI" by "OGC WKT" 
          prjname <- gsub("\\.shp$",".prj",fname)
          wkt1 <- readLines(prjname,warn=FALSE)
          wkt2 <- sf::st_as_text(sf::st_crs(spatial_crs(obj)))
@@ -389,16 +406,26 @@
    }
    if (!nchar(compress))
       return(invisible(NULL))
+   if (verbose)
+      cat("pack...")
    if ((.lgrep("gz",compress))&&(nchar(Sys.which("gzip"))))
-      system2("gzip",list(fname))
+      system2("gzip",c("-f",fname))
    else if (.lgrep("bz(ip)*2",compress)&&(nchar(Sys.which("bzip2"))))
-      system2("bzip2",list(fname))
+      system2("bzip2",c("-f",fname))
    else if (.lgrep("xz",compress)&&(nchar(Sys.which("xz"))))
-      system2("xz",list(fname))
+      system2("xz",c("-f",fname))
    else if (compress=="zip") {
       f <- .dir(path=dname
                ,pattern=paste0("^",lname,"\\.",ext,"$")
                ,full.names=TRUE)
+      if (!length(f)) {
+         s <- paste0("(",paste(paste0("\\",unlist(strsplit("|()[]{}^$*+?",split="+")))
+                              ,collapse="|"),")")
+         lname <- gsub(s,"\\\\\\1",lname)
+         f <- .dir(path=dname
+                  ,pattern=paste0("^",lname,"\\.",ext,"$")
+                  ,full.names=TRUE)
+      }
       z <- paste0(fname,".zip")
       opW <- options(warn=-1)
       first <- TRUE
@@ -421,7 +448,17 @@
             cat(" ok!\n")
       }
       options(opW)
-      utils::zip(z,f,flags="-qm9j") ## verbose output ## 'myzip(z,f,keys="-m -9 -j")'
+      ret <- utils::zip(z,f,flags="-qm9j") ## verbose output ## 'myzip(z,f,keys="-m -9 -j")'
+      if (ret) {
+         opW <- options(warn=1)
+         warning("Unable to compress files (zip)")
+         if (isSevenZip <- nchar(Sys.which("7z"))>0) {
+            ret <- system2("7z",c("a -mx9 -sdel -sccWIN",dQuote(z),dQuote(f)),stdout="nul")
+         }
+        # options(opW)
+      }
    }
+   if (verbose)
+      cat(" done!\n")
    invisible(NULL)
 }

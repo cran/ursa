@@ -169,7 +169,8 @@
                              ,setbound=NA,columns=NA,rows=NA,dim=NA
                              ,bbox=NA,expand=NA
                              ,minx=NA,miny=NA,maxx=NA,maxy=NA,cut=NA
-                             ,proj4=NA,border=0,zero=c("keep","node","center")
+                             ,proj4=NA,crs=NA,border=0
+                             ,zero=c("keep","node","center")
                              ,raster=FALSE,tolerance=NA #1e-10
                              ,verbose=FALSE,...)
 {
@@ -341,10 +342,10 @@
    step2 <- FALSE
    if ((!is.na(bbox[1]))&&(length(bbox)==4))
    {
-      g$minx <- bbox[1]
-      g$miny <- bbox[2]
-      g$maxx <- bbox[3]
-      g$maxy <- bbox[4]
+      g$minx <- unname(bbox[1])
+      g$miny <- unname(bbox[2])
+      g$maxx <- unname(bbox[3])
+      g$maxy <- unname(bbox[4])
       step2 <- TRUE
    }
    else if (!is.na(cut[1])) {
@@ -429,6 +430,8 @@
       g$columns <- as.integer(round(g$columns))
       g$rows <- as.integer(round(g$rows))
    }
+   if ((is.na(proj4))&&(!is.na(crs)))
+      proj4 <- crs
    if (is.character(proj4))
       g$proj4 <- proj4
    else if (is.numeric(proj4))
@@ -471,8 +474,10 @@
       g$columns <- as.integer(round(g$columns))
       g$rows <- as.integer(round(g$rows))
    }
+   g$seqx <- numeric()
+   g$seqy <- numeric()
    if (!raster)
-      return(g)
+      return(invisible(g))
    session_grid(g)
    ursa_new()
 }

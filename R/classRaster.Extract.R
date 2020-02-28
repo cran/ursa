@@ -1,8 +1,17 @@
 '[.ursaRaster' <- function(x,i,j,...,drop=FALSE)
 {
-   verbose <- FALSE
-   if (verbose)
+   verbose <- isTRUE(getOption("ursaDevel"))
+   if (verbose) {
+      cat("----------\n")
+      on.exit(cat("==========\n"))
       print(match.call())
+      ##~ a <- as.list(match.call())$i
+      ##~ print(class(a))
+      ##~ print(is.symbol(a))
+      ##~ print(is.language(a))
+      ##~ print(is.call(a))
+      ##~ q()
+   }
    dimx <- dim(x$value)
    clValue <- class(x$value)
    res <- x
@@ -111,17 +120,27 @@
       else
          res$name <- res$name[i]
       cl <- class(res$value)
+      sp <- attr(res$value,"sparse")
       res$value <- res$value[j,i,drop=drop]
       class(res$value) <- cl
+      attr(res$value,"sparse") <- sp
       res$dim <- dim(res$value)
       return(res)
    }
    res$con$compress <- 0L
    grid <- res$grid
    con <- res$con
-   internalReading <- con$connection %in% c("gzfile")
+   opW <- options(warn=-1)
+   intOverflow <- is.na(with(con,samples*lines*bands*sizeof))
+   options(opW)
+   if (verbose & intOverflow) {
+      print(c(intOverflow=with(con,as.double(samples)*as.double(lines)*
+                                          as.double(bands)*as.double(sizeof))))
+     # intOverflow <- FALSE
+   }
+   intOverflow <- FALSE
+   internalReading <- intOverflow | con$connection %in% c("gzfile")
    externalReading <- !internalReading
-  # print(c(externalReading=externalReading))
    if ((1)&&(!missingJ)&&(is.character(j)))
       stop("TODO: is.character(j)")
    if ((1)&&(!missingI)&&(is.character(i)))
@@ -138,6 +157,9 @@
       }
       missingJ <- TRUE
       missingI <- FALSE
+   }
+   if ((!missingI)&&(is.logical(i))) {
+      i <- which(i)
    }
    if ((!missingI)&&(all(i<0)))
    {
@@ -302,14 +324,17 @@
       nb <- length(i)
       i <- as.integer(i)
       nline <- if (!is.na(con$indexR[1L])) length(con$indexR) else con$lines
-      minJ <- min(con$indexR)-1
+      if (is.na(con$indexR)[1])
+         minJ <- 0L
+      else
+         minJ <- min(con$indexR)-1L
       minI <- min(i)
       toWarp <- with(con,(!is.na(indexR)[1])&&(length(indexR)!=lines)||
                          (!is.na(indexC)[1])&&(length(indexC)!=samples))
       if (con$driver=="ENVI") {
          if (con$interleave=="bil")
          {
-            if ((externalReading)&&(TRUE))
+            if (externalReading)
             {
                if (con$seek)
                   seek(con,where=0L,origin="start",rw="r")
@@ -318,21 +343,39 @@
                   val <- .Cursa("readBilBandInteger",con$fname,dim=xdim,index=i
                            ,n=nb,datatype=con$datatype,swap=con$swap
                            ,res=integer(with(con,nb*samples*lines)))$res
-               else
+               else {
                   val <- .Cursa("readBilBandDouble",con$fname,dim=xdim,index=i
                            ,n=nb,datatype=con$datatype,swap=con$swap
                            ,res=double(with(con,nb*samples*lines)))$res
+               }
             }
             else
             {
                n <- nb*con$samples
                val <- array(NA,dim=c(n,nline))
-               for (r in seq(nline))
-               {
-                  pos <- with(con,(minJ+bands*(r-1)+minI-1)*samples*sizeof)
-                  if (con$seek)
-                     seek(con,where=pos,origin="start",rw="r")
-                  val[,r] <- with(con,.readline(handle,datatype,n,endian))
+               conseq <- all(diff(sort(i))==1)
+               if (conseq) {
+                  for (r in seq(nline)) {
+                    # print(with(con,c(minJ=minJ,rsi=bands*(r-1)+minI-1
+                    #                 ,samples=samples,sizeof=sizeof)))
+                     pos <- with(con,(minJ+bands*(r-1)+minI-1)*samples*sizeof)
+                    # print(c(r=r,pos=pos,n=n))
+                     if (con$seek)
+                        seek(con,where=pos,origin="start",rw="r")
+                     val[,r] <- with(con,.readline(handle,datatype,n,endian))
+                  }
+               }
+               else {
+                  for (r in seq(nline))
+                  {
+                     for (s in seq_along(i)) {
+                        pos <- with(con,(minJ+bands*(r-1)+i[s]-1)*samples*sizeof)
+                        if (con$seek)
+                           seek(con,where=pos,origin="start",rw="r")
+                        s2 <- seq((s-1)*con$samples+1,s*con$samples)
+                        val[s2,r] <- with(con,.readline(handle,datatype,con$samples,endian))
+                     }
+                  }
                }
             }
             if (toWarp) ## added 2013-06-14

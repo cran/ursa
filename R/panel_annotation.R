@@ -36,6 +36,7 @@
    vertical <- .getPrm(arglist,name="vert(ical)*",kwd=kwd,default=FALSE)
    alpha <- .getPrm(arglist,name="(alpha|transp(aren(cy)*)*)",kwd=kwd,default=1)
    interpolate <- .getPrm(arglist,name="interp(olate)*",kwd=kwd,default=FALSE)
+   resample <- .getPrm(arglist,name="resample",kwd=kwd,default=FALSE)
    verbose <- .getPrm(arglist,name="verb(ose)*",kwd=kwd,default=FALSE)
    .panel_annotation(label=label,position=position,lon=lon,lat=lat,x=x,y=y
                                    ,cex=cex,adjust=adjust
@@ -48,7 +49,7 @@
                                ,cex=1,adjust=0.5
                                ,fg="#000000",bg="#FFFFFF1F",buffer=1,fill="#FFFFFF7F"
                                ,font=par("family"),vertical=FALSE
-                               ,alpha=1,interpolate=FALSE
+                               ,alpha=1,interpolate=FALSE,resample=FALSE
                                ,verbose=FALSE,...) {
    if (verbose)
       str(list(label=label,position=position,cex=cex,adjust=adjust,fg=fg,bg=bg
@@ -72,7 +73,7 @@
    else if (!isPicture) {
       vadj <- ifelse(any(as.numeric(unlist(gregexpr("\\\n",label)))<0),vadj0,0.5)
    }
-   if ((!is.na(lon))&&(!is.na(lat))) {
+   if ((!anyNA(lon))&&(!anyNA(lat))) {
       xy <- .project(cbind(lon,lat),g1$proj)
       pos <- c((xy[1,1]-minx)/(maxx-minx),(xy[1,2]-miny)/(maxy-miny))
    }
@@ -120,7 +121,7 @@
       bg <- "#FFFFFF3F"
    if (isPicture) {
       sc <- getOption("ursaPngScale")
-      g2 <- if (is.numeric(sc)) regrid(g1,mul=sc) else g1
+      g2 <- if (is.numeric(sc)) regrid(g1,mul=sc,resample=resample) else g1
       dima <- dim(label)
      # nb <- length(dima) ## -- 20170919
       nb <- dima[3] ## ++ 20170919
@@ -180,13 +181,16 @@
       coord[4] <- maxy-ifelse(isE,height,0)
       coord[2] <- coord[4]-height
    }
-  # rect(coord[1],coord[2],coord[3],coord[4],col="blue")
+  # rect(coord[1],coord[2],coord[3],coord[4],col="#0000FF50")
    if (isPicture) {
       graphics::rasterImage(grDevices::as.raster(label,max=1)
                            ,coord[1],coord[2],coord[3],coord[4]
                            ,interpolate=interpolate)
       par(opt)
       return(invisible(NULL))
+   }
+   if (TRUE) { ## 20180625
+      adjust <- (adjust-0.5)*width/height+0.5 
    }
   # print(c(scale=scale,cex=mycex))
    x <- 0.5*(coord[1]+coord[3])

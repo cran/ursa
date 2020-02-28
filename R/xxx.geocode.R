@@ -21,6 +21,7 @@
       return(pt)
    }
    area <- match.arg(area)
+  # print(c(service=service,loc=loc))
    service <- match.arg(service)
    pSea <- "(Sea|\u043C\u043e\u0440\u0435)" ## 'MOPE' in Russian
    isSea <- .lgrep(paste0("(",pSea,"\\s|\\s",pSea,")"),loc)>0
@@ -30,13 +31,15 @@
    }
    select <- match.arg(select)
    if (service=="nominatim") {
-       ## curl -H Accept-Language:de 'http://nominatim.openstreetmap.org......."
-      src <- paste0("http://nominatim.openstreetmap.org/search.php?q=",loc
+       ## curl -H Accept-Language:de 'https://nominatim.openstreetmap.org......."
+      src <- paste0("https://nominatim.openstreetmap.org/search.php?q=",loc
                   # ,"&polygon_text=1"
                    ,"&format=xml","&bounded=0","&accept-language=en-US,ru")
      # dst <- tempfile() # "nominatim.xml" # tempfile()
       dst <- .ursaCacheDownload(src,quiet=!verbose)
       xmlstring <- scan(dst,character(),quiet=!verbose)
+     # Encoding(xmlstring) <- "UTF-8"
+     # str(as.list(xmlstring))
      # if (dirname(dst)==tempdir())
      #    file.remove(dst)
       ind <- grep("geotext",xmlstring)
@@ -106,7 +109,7 @@
          if ((bounding[,"minx"]<=(-180+dg))&&(bounding[,"maxx"]>=(180-dg))) {
             if (verbose)
                .elapsedTime("correct bounds (180 degree) -- download")
-            src <- paste0("http://nominatim.openstreetmap.org/search.php?q=",loc
+            src <- paste0("https://nominatim.openstreetmap.org/search.php?q=",loc
                          ,"&polygon_text=1"
                          ,"&format=xml","&bounded=0","&accept-language=en-US,ru")
             dst <- .ursaCacheDownload(src,quiet=!verbose)
@@ -159,8 +162,20 @@
    else if (service=="google") {
       src <- paste0("https://maps.googleapis.com/maps/api/geocode/xml?"
                    ,"address=",loc)
+      if (proposed <- TRUE) {
+         apiKey <- getOption("googleMaps")
+         if (is.character(apiKey))
+            src <- paste0(src,"&key=",apiKey)
+      }
       dst <- .ursaCacheDownload(src,quiet=!verbose)
       xmlstring <- scan(dst,character(),quiet=!verbose)
+      istatus <- .grep("<status>",xmlstring)
+      status <- .gsub("<status>(.+)</status>","\\1",xmlstring[istatus])
+      if (status=="OVER_QUERY_LIMIT") {
+         message(paste("Over query limit for Google geocoding."
+                      ,"Try to specify `options(googleMaps=<YOUR_API>)`"))
+         return(NULL)
+      }
       ilat <- .grep("<lat>",xmlstring)
       ilon <- .grep("<lng>",xmlstring)
       glat <- as.numeric(.gsub("<lat>(.+)</lat>","\\1",xmlstring[ilat]))

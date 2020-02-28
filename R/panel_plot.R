@@ -75,14 +75,17 @@
         # ret <- .tryE(.panel_plot(obj,add=TRUE,...))
         # message("===========")
         # str(arglist2)
+        # str(.lgrep("^(plot\\.)*col(o(u)*r)*$",names(arglist2)))
         # message("===========")
-         if ((TRUE)&&(.lgrep("^col",names(arglist2)))) {
+         if ((TRUE)&&(.lgrep("^col(o(u)*r)*$",names(arglist2)))) {
            # stop("I")
             if (is.numeric(col)) {
+              # stop("G")
                ct <- colorize(col)
                col <- ct$colortable[ct$index]
             }
             else if ((is.character(arglist2$col))&&(length(spatial_fields(obj)))) {
+              # stop("H")
                if (!anyNA(match(arglist2$col,spatial_fields(obj)))) {
                  # stop("A")
                   ct <- colorize(spatial_data(obj,subset=col,drop=TRUE))
@@ -121,13 +124,43 @@
                  # stop("C")
                   col <- arglist2$col
                }
-               else {
+               else if ((.is.colortable(arglist2$col))&&
+                       (length(spatial_fields(obj))==1)) {
                  # stop("D")
+                  ct <- arglist2$col
+                 # str(ct)
+                  val <- spatial_data(obj)[,1,drop=TRUE]
+                  if (length(ct)==length(val)) {
+                    # stop("D1")
+                     col <- unname(ct)
+                  }
+                  else {
+                    # stop("D2")
+                    # str(val)
+                    # print(table(val))
+                     col <- colorize(val,colortable=ct)
+                     col <- unname(col$colortable[col$index])
+                  }
+                 # str(col)
+                 # print(table(col))
+               }
+               else {
+                 # stop("E")
                   col <- NULL
                }
             }
-            else
+            else {
+              # stop("F")
                col <- arglist2$col
+               if (length(spatial_fields(obj))==1) {
+                  if (.is.colortable(arglist2$col)) {
+                     ct <- ursa_colortable(arglist2$col)
+                     ind <- match(obj[[1]],names(ct))
+                     if (all(!anyNA(ind)))
+                        col <- unname(ct)[ind]
+                  }
+               }
+            }
             if (!is.null(col))
                arglist2$col <- unclass(col)
          }
@@ -207,12 +240,12 @@
    }
    else {
       ret <- list(name=oname,type="default"
-                 ,col="transparent",border="transparent",lty=1,lwd=1,pch=0,cex=1
-                 ,fill="transparent",bg="transparent",density=NULL,angle=45)
+                 ,col="transparent",border="transparent",lty=1,lwd=1,pch=0,cex=NA
+                 ,fill="transparent",bg="transparent",density=NA,angle=45)
       rname <- names(ret)
       if (.lgrep("polygon",geoType)) { # 20171215 -- 'if (geoType %in% c("POLYGON","MULTIPOLYGON"))'
-         ret$pch <- 22
-         ret$cex <- 3
+         ret$pch <- NA
+        # ret$cex <- 3
       }
       for (i in seq_along(rname)) {
          if (is.na(j <- match(rname[i],aname)))
@@ -229,11 +262,23 @@
       if ((TRUE)&&(.lgrep("point",geoType))&&(!is.null(ct))) {
          ret$col <- ct$colortable
       }
-      if ((ret$bg!="transpareny")&&(ret$border=="transparent")) {
+      if ((all(ret$bg!="transpareny"))&&(all(ret$border=="transparent"))) {
          ret$fill <- ret$bg
       }
+      if ((TRUE)&&(.lgrep("polygon",geoType))) {
+         ret$fill <- ret$col
+         ret$col <- NA
+         ret$lwd <- NA
+         ret$lty <- NA
+      }
    }
-   if (nchar(geoType)) {
+   if (FALSE) {
+      if (length(geoType)>1) {
+         print(geoType)
+        # spatial_write(obj,"res1.sqlite")
+      }
+   }
+   if (any(nchar(geoType)>0)) {
       opR <- getOption("ursaPngLegend")
       options(ursaPngLegend=if (is.null(opR)) list(ret) else c(opR,list(ret)))
    }
@@ -318,8 +363,9 @@
          do.call("polygon",c(unclass(x1),arglist))
       })
    }
-   else
+   else {
       ret <- do.call("plot",c(list(obj),arglist))
+   }
    if (!is.null(opW))
       options(opW)
    ret

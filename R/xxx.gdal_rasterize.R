@@ -80,12 +80,12 @@
    else if ((cond4)&&(nchar(Sys.which("gzip")))) {
       dsn0 <- dsn
       dsn <- tempfile();on.exit(file.remove(dsn))
-      system2("gzip",c("-f -d -c",.dQuote(dsn0)),stdout=dsn)
+      system2("gzip",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
    }
    else if ((cond5)&&(nchar(Sys.which("bzip2")))) {
       dsn0 <- dsn
       dsn <- tempfile();on.exit(file.remove(dsn))
-      system2("bzip2",c("-f -d -c",.dQuote(dsn0)),stdout=dsn)
+      system2("bzip2",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
    }
    else
       dsn <- NA
@@ -119,7 +119,7 @@
    else if ((nchar(Sys.which("gzip")))&&(isZip <- .lgrep("\\.gz$",dsn)>0)) {
       dsn0 <- dsn
       dsn <- tempfile();on.exit(file.remove(dsn))
-      system2("gzip",c("-f -d -c",.dQuote(dsn0)),stdout=dsn)
+      system2("gzip",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
    }
    cmd <- paste("gdalsrsinfo -o proj4",.dQuote(dsn))
    if (verbose)
@@ -127,6 +127,7 @@
    proj4 <- system(cmd,intern=TRUE)
    proj4 <- .gsub("'","",proj4)
    proj4 <- .gsub("(^\\s|\\s$)","",proj4)
+   proj4 <- proj4[nchar(proj4)>0]
    if (noProj <- !length(proj4))
       proj4 <- "+init=epsg:4326"
    ftemp <- .maketmp() # .maketmp() #tempfile(pattern="") # ".\\tmp1"
@@ -211,6 +212,7 @@
    }
    else
       shpname <- dsn
+   dname <- dname[.grep(dmask,dname)] ## ++ 20191009
    if (is.null(dname)) {
       md <- system(paste("ogrinfo -al -so",dsn),intern=TRUE)
       patt <- "^(.+): \\S+ \\(.+\\)$"

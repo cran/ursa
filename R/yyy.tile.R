@@ -10,7 +10,7 @@
    ytile <- floor((1-log(tan(lat_rad)+(1/cos(lat_rad)))/pi)/2*n)
    if (TRUE)
       return(c(xtile,ytile))
-   osm <- paste0("http://",letters[sample(seq(3),1)],".tile.openstreetmap.org")
+   osm <- paste0("https://",letters[sample(seq(3),1)],".tile.openstreetmap.org")
    tile <- paste0(paste(osm,zoom,xtile,ytile,sep="/"),".png")
    message(tile)
   # fname <- "tile.png"
@@ -25,8 +25,9 @@
    optHERE <- getOption("HEREapp")
    TFkey <- getOption("ThunderforestApiKey")
    BingKey <- getOption("BingMapsKey")
+   mapsurferKey <- getOption("openrouteserviceToken")
    s <- list()
-   s$mapnik <- c("http://{abc}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+   s$mapnik <- c("https://{abc}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 ,osmCr) ## # http://{abc}.tile.osm.org/{z}/{x}/{y}.png
    s$osmbw <- c("http://{abc}.tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png"
                ,osmCr)
@@ -36,9 +37,13 @@
                ,paste("\uA9 Openstreetmap France",osmCr))
    s$transport <- c("http://{abc}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png"
                    ,osmCr)
-  # copyright["transport"] <- paste0("Maps \xA9 Thunderforest, Data ",osmCr)
-   s$mapsurfer <- c("http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}"
-                   ,paste0(osmCr,", GIScience Research Group @ Heidelberg University")
+  # copyright["transport"] <- paste0("Maps \uA9 Thunderforest, Data ",osmCr)
+  # s$mapsurfer <- c("http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}"
+  #                 ,paste0(osmCr,", GIScience Research Group @ Heidelberg University")
+  #                 ,"png")
+   s$mapsurfer <- c(paste0("https://api.openrouteservice.org/mapsurfer/{z}/{x}/{y}.png?api_key="
+                          ,mapsurferKey)
+                   ,paste0(osmCr,", powered by MapSurfer.NET")
                    ,"png")
    s$mapsurfer.grayscale <- c("http://korona.geog.uni-heidelberg.de/tiles/roadsg/x={x}&y={y}&z={z}"
                              ,paste0(osmCr,", GIScience Research Group @ Heidelberg University")
@@ -93,6 +98,8 @@
                         ,"jpg")
    s$opentopomap <- c("http://{abc}.tile.opentopomap.org/{z}/{x}/{y}.png"
                      ,paste0(osmCr,", \uA9 OpenTopoMap"))
+   s$polarmap <- c("https://{abc}.tiles.arcticconnect.ca/osm_{l}/{z}/{x}/{y}.png"
+                  ,paste0("Map \uA9 ArcticConnect. Data ",osmCr))
   # http://a.maps.owm.io/map/precipitation_new/6/37/19?appid=b1b15e88fa797225412429c1c50c122a1   
    if (!sum(nchar(server)))
      return(names(s))
@@ -125,6 +132,8 @@
       message("'options(ThunderforestApiKey=<api_key>)' is required")
    if ((.lgrep("^Bing\\.",server))&&(is.null(BingKey)))
       message("'options(BingMapsKey=<api_key>)' is required")
+   if ((.lgrep("mapsurfer",server))&&(is.null(mapsurferKey)))
+      message("'options(openrouteserviceToken=<api_key>)' is required")
   # if (length(server)==1)
   #    style <- unlist(strsplit(server,split="\\s+"))
    tile <- list(name="custom",url="",copyright="   ",fileext="___")
@@ -171,7 +180,8 @@
    tile
 }
 '.tileGet' <- function(z=4,x=10,y=3,minx=-2e7,miny=-2e7,maxx=2e7,maxy=2e7
-                      ,w=256,h=256,url,fileext,ursa=FALSE,verbose=FALSE) {
+                      ,w=256,h=256,url,fileext,ursa=FALSE,cache=TRUE
+                      ,verbose=FALSE) {
    tile <- .gsub("{z}",z,.gsub("{y}",y,.gsub("{x}",x,url)))
    tile <- .gsub("{h}",h,.gsub("{w}",w,tile))
    tile <- .gsub("{maxy}",maxy,.gsub("{maxx}",maxx
@@ -196,9 +206,9 @@
    }
   # fname <- tempfile(fileext=".tile")
   # print(tile)
-   a <- try(fname <- .ursaCacheDownload(tile,mode="wb",quiet=!verbose))
-   if (inherits(a,"try-error")) {
-      return(a)
+   fname <- .ursaCacheDownload(tile,mode="wb",cache=cache,quiet=!verbose)
+   if (inherits(fname,"try-error")) {
+      return(fname)
      # message(a)
      # stop()
    }
@@ -207,6 +217,7 @@
   #              ,extra="-H Accept-Language:de")
    isPNG <- FALSE
    isJPEG <- FALSE
+   isGIF <- FALSE
    if (isPNG <- fileext %in% c("png"))
       a <- try(255*png::readPNG(fname),silent=!verbose)
    else if (isJPEG <- fileext %in% c("jpg","jpeg"))
@@ -216,12 +227,36 @@
       if (inherits(a,"try-error")) {
          a <- try(255*jpeg::readJPEG(fname),silent=!verbose)
          isJPEG <- !inherits(a,"try-error")
+         if (inherits(a,"try-error")) {
+            print("HERE")
+         }
       }
       else
          isPNG <- !inherits(a,"try-error")
    }
    if (inherits(a,"try-error")) {
-      cat(geterrmessage())
+      if (!FALSE) { ## erroneous file extension
+         isPNG <- FALSE
+         isJPEG <- FALSE
+         a <- try(255*png::readPNG(fname),silent=!verbose)
+         if (inherits(a,"try-error"))
+            a <- try(255*jpeg::readJPEG(fname),silent=!verbose)
+         if (inherits(a,"try-error")) {
+           # if (requireNamespace("miss_caTools",quietly=.isPackageInUse())) {
+           #    stop("caTools")
+           # }
+            g0 <- session_grid()
+            a <- read_gdal(fname)
+            session_grid(g0)
+            if (inherits(a,"try-error"))
+               cat(geterrmessage())
+            if (ursa_blank(a,NA))
+               ursa_value(a) <- 0
+            a <- as.array(a)
+         }
+      }
+      else
+         cat(geterrmessage())
       return(a)
    }
   # file.remove(fname)
@@ -259,7 +294,7 @@
                ,columns=dima[2],rows=dima[1],proj4=epsg3857)
    b <- as.integer(255/255*as.ursa(a,aperm=TRUE,flip=TRUE))
    ursa(b,"grid") <- g1
-   attr(b,"copyright") <- "Only for personal use"
+   attr(b,"copyright") <- "For personal use only"
   # session_grid(b)
   # display(b,scale=1,coast=FALSE)
    b

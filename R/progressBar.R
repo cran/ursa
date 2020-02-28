@@ -2,14 +2,28 @@
                            # ,title=basename(strsplit(commandArgs(FALSE)[4],"=")[[1]][2])
                              ,title=.argv0()
                              ,label=""
-                             ,min=0,max=1,initial=min,width=NA,style=1) {
+                             ,min=0,max=1,initial=min,width=NA,style=1,silent=FALSE) {
+   if (silent) {
+      pb <- logical()
+      class(pb) <- "ursaProgressBar"
+      return(pb)
+   }
   # if (.isKnitr())
   #    return(NULL)
-   kind <- match.arg(kind)
-   if ((kind=="tk")&&
-       ((!requireNamespace("tcltk",quietly=.isPackageInUse()))||
-        (!capabilities("tcltk"))))
-      kind <- "txt"
+   if (!.try(kind0 <- match.arg(kind))) {
+      n <- length(kind)
+      max <- if ((n==1)&&(is.numeric(kind))&&(.is.integer(kind))) kind else n
+      kind <- head(eval(formals()$kind),1)
+   }
+   else
+      kind <- kind0
+   if (kind=="tk") {
+      if ((.Platform$OS.type=="unix")&&(!nchar(Sys.getenv("DISPLAY"))))
+         kind <- "txt"
+      else if ((!requireNamespace("tcltk",quietly=.isPackageInUse()))||
+        (!capabilities("tcltk")))
+         kind <- "txt"
+   }
    if ((!is.na(title))&&(!nchar(title)))
       title <- "'ursa' package"
    t1 <- proc.time()[3]
@@ -18,6 +32,10 @@
    if (kind=="tk") {
       if (is.na(width))
          width <- 360
+      retina <- 1 # getOption("ursaRetina")
+      if (is.null(retina))
+         retina <- 1
+      width <- round(width*retina)
       title <- sprintf("%s: %.0f of %.0f",title,initial,max)
       pb <- try(tcltk::tkProgressBar(title=title,label=label,min=min,max=max
                          ,initial=initial,width=width))
@@ -34,7 +52,7 @@
    else
       pb <- utils::txtProgressBar(title=title,label=label,min=min,max=max
                           ,initial=initial,width=width,style=style)
-   pb$optionName <- paste0("ursaProgressBar",.maketmp())
+   pb$optionName <- paste0("ursaProgressBar",basename(.maketmp()))
    op <- list(st)
    names(op) <- pb$optionName
    options(op)
@@ -42,6 +60,8 @@
    pb
 }
 'setUrsaProgressBar' <- function(pb,value,title=NULL,label=NULL) {
+   if (inherits(pb,"ursaProgressBar"))
+      return(pb)
   # if (.isKnitr())
   #    return(pb)
    t2 <- unname(proc.time()[3])
@@ -97,11 +117,11 @@
          stop("PROGRESSBAR")
       }
       if (d4h==0) {
-         d4f <- sprintf(" -%02d:%02d:%02d",d4h,d4m,d4s)
+         d4f <- sprintf("%02d:%02d:%02d",d4h,d4m,d4s)
          d5 <- format(Sys.time()+d6,"(%H:%M:%S)")
       }
       else {
-         d4f <- sprintf(" -%02dh%02dm",d4h,d4m)
+         d4f <- sprintf("%02dh%02dm",d4h,d4m)
          d5 <- format(Sys.time()+d6,"(%d%b %H:%M)")
       }
       d8s <- d8%%60
@@ -117,6 +137,9 @@
          d9 <- sprintf("%02d:%02d:%02d",d9h,d9m,d9s)
       else
          d9 <- sprintf("%02dh%02dm",d9h,d9m)
+      d8 <- paste0("+",d8)
+      d4f <- paste0("-",d4f)
+     # d9 <- paste0("=",d9)
       if ((TRUE)||((st[4]>1500)||(d1>0.05)))
          label <- sprintf("%5.0f%% %9s %9s %9s %12s",d1*100,d8,d4f,d9,d5)
       else
@@ -128,5 +151,8 @@
    ##~ else if ((cl=="winProgressBar")&&(.Platform$OS.type=="windows"))
       ##~ return(utils::setWinProgressBar(pb,value,label=label))
    utils::setTxtProgressBar(pb,value,title=title,label=label)
+}
+'close.ursaProgressBar' <- function(con,...) {
+   invisible(NULL)
 }
 # 'close.ursaProgressBar' <- function(con,...) close(con,...)

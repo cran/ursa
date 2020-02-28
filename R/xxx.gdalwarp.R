@@ -1,3 +1,6 @@
+# https://gis.stackexchange.com/questions/37790/how-to-reproject-raster-from-0-360-to-180-180-with-cutting-180-meridian
+# gdalwarp -t_srs WGS84 ~/0_360.tif 180.tif  -wo SOURCE_EXTRA=1000 --config CENTER_LONG 0
+
 '.gdalwarp' <- function(src,dst=NULL,grid=NULL,resample="near",nodata=NA
                        ,resetGrid=FALSE,opt=NULL,close=FALSE,verbose=0L) {
    if (is.null(grid)) {
@@ -76,6 +79,7 @@
    else if (!is.null(names(opt))) {
       optS <- unlist(opt)
       optF <- paste(paste0("-",names(optS)," ",.dQuote(unname(optS))),collapse=" ")
+      optF <- gsub("\\s*\"TRUE\"","",optF)
       optF <- .gsub("\\s\\\"\\\"","",optF)
    }
    else
@@ -100,7 +104,10 @@
       message(cmd)
    if (verbose>1)
       return(NULL)
+   proj_lib <- Sys.getenv("PROJ_LIB")
+   Sys.setenv(PROJ_LIB=file.path(dirname(dirname(Sys.which("gdalwarp"))),"share/proj"))
    system(cmd)
+   Sys.setenv(PROJ_LIB=proj_lib)
    session_grid(NULL)
    if (inMemory) {
       ret <- if (driver=="ENVI") read_envi(dst) else read_gdal(dst)

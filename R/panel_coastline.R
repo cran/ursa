@@ -48,9 +48,9 @@
    }
    else
       panel <- 0L
-   .compose_coastline(obj=obj,panel=panel,col=col,fill=fill,detail=detail
+   invisible(.compose_coastline(obj=obj,panel=panel,col=col,fill=fill,detail=detail
                      ,density=density,angle=angle
-                     ,land=land,lwd=lwd,lty=lty,fail180=fail180,verbose=verbose)
+                     ,land=land,lwd=lwd,lty=lty,fail180=fail180,verbose=verbose))
 }
 '.compose_coastline' <- function(obj=NULL,panel=0,col=NA,fill="transparent"
                                 ,detail=NA,density=NA,angle=NA,land=FALSE
@@ -85,9 +85,16 @@
                rm(a)
             }
             else if (.isSF(a)) {
-               a <- do.call("rbind",lapply(spatial_coordinates(a),function(x) {
-                  do.call("rbind",lapply(x,rbind,cbind(NA,NA)))
-               }))
+               if (.lgrep("^multi",spatial_shape(a))) {
+                  a <- do.call("rbind",lapply(spatial_coordinates(a),function(x) {
+                     do.call("rbind",lapply(unlist(x,recursive=FALSE),rbind,cbind(NA,NA)))
+                  }))
+               }
+               else {
+                  a <- do.call("rbind",lapply(spatial_coordinates(a),function(x) {
+                     do.call("rbind",lapply(x,rbind,cbind(NA,NA)))
+                  }))
+               }
                coast_xy <- head(a,-1)
                rm(a)
             }
@@ -285,7 +292,8 @@
       fail180 <- (isMerc || isLongLat)
    if ((fail180)||(isLongLat || isMerc)) {
       if (!isLongLat) {
-         B <- mean(abs(.project(rbind(cbind(-180+1e-9,-45),cbind(+180-1e-9,+45))
+         lon0 <- as.numeric(.gsub(".*\\+lon_0=(\\S+)\\s*.*","\\1",proj4))
+         B <- mean(abs(.project(rbind(cbind(lon0-180+1e-9,-45),cbind(lon0+180-1e-9,+45))
                                ,proj4)[,1]))
       }
       else
@@ -619,7 +627,8 @@
    }
    else
       toUnloadMethods <- FALSE
-   src <- "http://data.openstreetmapdata.com/simplified-land-polygons-complete-3857.zip"
+  # src <- "http://data.openstreetmapdata.com/simplified-land-polygons-complete-3857.zip" ## (depredated)
+   src <- "https://osmdata.openstreetmap.de/download/simplified-land-polygons-complete-3857.zip"
    dst <- .ursaCacheDownload(src,mode="wb",quiet=FALSE)
    list1 <- unzip(dst,exdir=tempdir())
    a <- sf::st_read(list1[.grep("\\.shp$",basename(list1))],quiet=TRUE)
@@ -810,7 +819,8 @@
       attr(xy,"south_pole") <- indP
    .elapsedTime(paste0(detail,": coercing - done"))
    if (merge)
-      saveRDS(xy,file.path(getOption("ursaRequisite"),paste0("coast-",detail,".rds")))
+      saveRDS(xy,file.path(getOption("ursaRequisite"),paste0("coast-",detail,".rds"))
+             ,version=2) ## Such files are only readable in R >= 3.5.0.
    if (!.isPackageInUse())
       spatial_write(a,paste0(paste0("coast-",detail,ifelse(merge,"","180")),".sqlite"))
    0L

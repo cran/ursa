@@ -1,4 +1,4 @@
-\name{envi.files}
+\name{envi_files}
 \alias{envi_exists}
 \alias{envi_list}
 \alias{envi_copy}
@@ -14,9 +14,9 @@ Management of ENVI files similar to functions of OS file manager.
 \usage{
 envi_exists(pattern = ".+", path = ".", all.files = FALSE, full.names = TRUE,
            recursive = FALSE, ignore.case = TRUE, exact = FALSE)
-envi_list(pattern = ".+", path = ".", all.files = FALSE, full.names = FALSE,
+envi_list(pattern = ".+", path = ".", all.files = FALSE, full.names = recursive,
           recursive = FALSE, ignore.case = TRUE, exact = FALSE)
-envi_remove(pattern = ".+", path = ".", all.files = FALSE, full.names = FALSE,
+envi_remove(pattern = ".+", path = ".", all.files = FALSE, full.names = recursive,
             recursive = FALSE, ignore.case = TRUE, verbose = FALSE)
 envi_copy(src, dst, overwrite = TRUE)
 envi_rename(src, dst, overwrite = TRUE)
@@ -89,6 +89,7 @@ Functions do not view content of any files. The major identifier of ENVI files i
 %%~ }
 \examples{
 session_grid(NULL)
+wd <- setwd(tempdir())
 a1 <- create_envi("tmp1.envi")
 a2 <- create_envi("tmp2.")
 close(a1,a2)
@@ -102,6 +103,7 @@ envi_exists("nofilewithsuchname")
 envi_exists("tmp[34]")
 envi_remove(".+")
 envi_list()
+setwd(wd)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

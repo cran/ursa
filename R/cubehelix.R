@@ -8,7 +8,7 @@
   # str(match.call())
   # set.seed(as.integer(as.numeric(Sys.time())/10))
   # value <- NULL
-  # verbose <- TRUE
+   verbose <- FALSE
    bg <- getOption("ursaPngBackground")
    bg <- ifelse(is.null(bg),255,sum(c(col2rgb(bg))*c(0.30,0.59,0.11)))
    .dark <- 91 # '63' for monitors, '91' for printers
@@ -16,22 +16,23 @@
   # print(getOption("ursaPngBackground"))
    default.dark <- ifelse(bg>127,.dark,255-.light)
    default.light <- ifelse(bg>127,.light,255-.dark)
-   autobright <- TRUE
+   autobright <- FALSE
    if ((is.na(dark))&&(is.na(light))) {
       dark <- default.dark/255
       light <- default.light/255
+      autobright <- TRUE
    }
    else if ((is.na(dark))&&(!is.na(light))) {
       if (light>1)
          light <- light/255
       dark <- default.dark/255
-      autobright <- FALSE
+     # autobright <- FALSE
    }
    else if ((!is.na(dark))&&(is.na(light))) {
       if (dark>1)
          dark <- dark/255
       light <- default.light/255
-      autobright <- FALSE
+     # autobright <- FALSE
    }
    if ((dark>1)||(light>1)) {
       dark <- dark/255
@@ -181,7 +182,8 @@
   # if ((length(value))&&(nneg>npos))
   #    return(rev(out))
    if (is.na(inv)) {
-      inv <- bg<128
+      cond1 <- !length(value[value>0]) & length(value[value<0])>2
+      inv <- bg<128 | cond1
    }
    if (inv)
       return(rev(out))

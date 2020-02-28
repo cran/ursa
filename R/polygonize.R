@@ -25,7 +25,8 @@
       verbose <- isSP
    g0 <- session_grid()
    if ((!missing(obj))&&(is.numeric(obj))&&(length(obj)==4)&&
-       (!anyNA(match(names(obj),c("minx","maxx","miny","maxy"))))) {
+       ((!anyNA(match(names(obj),c("minx","maxx","miny","maxy"))))||
+        (!anyNA(match(names(obj),c("xmin","xmax","ymin","ymax")))))) {
       obj <- regrid(bbox=unname(obj),dim=c(1,1),proj4=session_crs())
    }
    onlyGeometry <- missing(obj) || .is.grid(obj)
@@ -35,6 +36,7 @@
       return(NULL)
   # requireNamespace("sp",quietly=.isPackageInUse())
   # requireNamespace("methods",quietly=.isPackageInUse())
+  # obj$grid$seqy <- nuimeric()
    g1 <- if (onlyGeometry) {
       if (missing(obj))
          session_grid()
@@ -59,24 +61,43 @@
       if (length(ind))
          b <- b[-ind,]
    }
-   else if (is.ursa(obj))
+   else if (is.ursa(obj)) {
       b <- as.data.frame(obj)
+   }
    else
       b <- obj
   # b <- b[sample(seq(nrow(b)),1e3),]
    n <- nrow(b)
    sa <- vector("list",n)
-   dx <- g1$resx/2
-   dy <- g1$resy/2
+   if (!length(g1$seqx))
+      dx <- g1$resx/2
+   else {
+      dx <- diff(g1$seqx)
+      dx <- (c(head(dx,1),dx)+c(dx,tail(dx,1)))/2
+      ind <- match(b$x,g1$seqx) ## or .near?
+      if (anyNA(ind))
+         stop("TODO: near matching (x-axis)")
+      dx <- dx[ind]/2
+   }
+   if (!length(g1$seqy))
+      dy <- g1$resy/2
+   else {
+      dy <- diff(g1$seqy)
+      dy <- (c(head(dy,1),dy)+c(dy,tail(dy,1)))/2
+      ind <- match(b$y,g1$seqy) ## or .near?
+      if (anyNA(ind))
+         stop("TODO: near matching (y-axis)")
+      dy <- dy[ind]/2
+   }
    if (isSF) {
       if (verbose)
-         cat("create polygons from points...")
+         cat("1 of 3: create polygons from points...")
       xy <- cbind(b$x-dx,b$y-dy,b$x-dx,b$y+dy,b$x+dx,b$y+dy,b$x+dx,b$y-dy
                  ,b$x-dx,b$y-dy)
       if (!onlyGeometry) {
          b <- b[,3:ncol(b),drop=FALSE]
          for (i in seq(ncol(b))) {
-            if (.is.integer(na.omit(b[,i])))
+            if ((!is.factor(b[,i]))&&(.is.integer(na.omit(b[,i]))))
                b[,i] <- as.integer(b[,i])
          }
       }
@@ -88,14 +109,14 @@
          res
       })
       if (verbose)
-         cat(" done!\ncreate geometry...")
+         cat(" done!\n2 of 3: create geometry...")
       sa <- sf::st_sfc(sa)
       if (verbose)
          cat(" done!\n")
       if (!onlyGeometry) {
          if (verbose)
-            cat("assign data to geometry...")
-         sa <- sf::st_sf(b,coords=sa,crs=g1$proj4)
+            cat("3 of 3: assign data to geometry...")
+         sa <- sf::st_sf(b,coords=sa,crs=if (nchar(g1$proj4)) g1$proj4 else sf::NA_crs_)
          if (verbose)
             cat(" done!\n")
       }
@@ -131,7 +152,7 @@
       if (!onlyGeometry) {
          b <- b[,3:ncol(b),drop=FALSE]
          for (i in seq(ncol(b)))
-            if (.is.integer(na.omit(b[,i])))
+            if ((!is.factor(b[,i]))&&(.is.integer(na.omit(b[,i]))))
                b[,i] <- as.integer(b[,i])
          sa <- sp::SpatialPolygonsDataFrame(sa,data=b,match.ID=FALSE)
       }
@@ -145,12 +166,40 @@
    session_grid(g0)
    sa
 }
-'.vectorize' <- function(obj,fname,opt="") {
+'.vectorize' <- function(obj,fname,opt="",engine=c("sf","sp")) {
+   engine <- match.arg(engine)
+   if (engine=="sp") {
+      isSF <- FALSE
+      isSP <- TRUE
+   }
+   else if (engine=="sf") {
+      isSF <- requireNamespace("sf",quietly=.isPackageInUse())
+      isSP <- !isSF
+   }
+   else {
+      loaded <- loadedNamespaces() # .loaded()
+      if ("sf" %in% loaded)
+         isSF <- TRUE
+      else if (("sp" %in% loaded)||("rgdal" %in% loaded))
+         isSF <- FALSE
+      else
+         isSF <- requireNamespace("sf",quietly=.isPackageInUse())
+      isSP <- !isSF
+   }
+   internal <- missing(fname)
+   if (internal) {
+      bname <- tempfile()
+      fname <- paste0(bname,".shp")
+   }
    Fout <- .maketmp()
    write_envi(obj,paste0(Fout,"."))
    cmd <- paste("python",Sys.which("gdal_polygonize.py")
                ,opt," -f \"ESRI Shapefile\"",Fout,".",fname)
    system(cmd)
    envi_remove(Fout)
-   0L
+   if (!internal)
+      return(0L)
+   ret <- spatialize(fname,engine=engine)
+   file.remove(dir(path=dirname(bname),pattern=paste0("^",basename(bname)),full.names=TRUE))
+   ret
 }

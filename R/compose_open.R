@@ -1,8 +1,12 @@
 'compose_open' <- function(...) {
+   retina <- getOption("ursaRetina")
+   if (!is.numeric(retina))
+      retina <- 1
    arglist <- list(...)
    mosaic <- .getPrm(arglist,name="",default=NA,class="")
    fileout <- .getPrm(arglist,name="fileout",default="")
-   dpi <- .getPrm(arglist,name="dpi",default=96L)
+   retina <- .getPrm(arglist,name="retina",default=ifelse(nchar(fileout),1,retina))
+   dpi <- .getPrm(arglist,name="dpi",default=ifelse(.isKnitr(),150L,as.integer(round(96*retina))))
    pointsize <- .getPrm(arglist,name="pointsize",default=NA_real_)
    scale <- .getPrm(arglist,name="^scale$",class="",default=NA_real_)
    width <- .getPrm(arglist,name="width",class=list("integer","character"),default=NA_real_)
@@ -12,11 +16,11 @@
    frame <- .getPrm(arglist,name="((frame|strip)(height)*|colorbar$)",default=NA_real_)
    box <- .getPrm(arglist,name="box",default=TRUE)
    delafter <- .getPrm(arglist,name="(del|remove)after",default=NA)
-   wait <- .getPrm(arglist,name="wait",default=1)
+   wait <- .getPrm(arglist,name="wait",default=switch(.Platform$OS.type,windows=1,3))
    dtype <- if (.Platform$OS.type=="windows") c("cairo","windows")
             else c("cairo","cairo-png","Xlib","quartz")
-   device <- .getPrm(arglist,name="^(device|type)",valid=c("cairo","windows"))
-   antialias <- .getPrm(arglist,name="antialias",valid=c("default","none"))
+   device <- .getPrm(arglist,name="^(device|type)",valid=dtype)
+   antialias <- .getPrm(arglist,name="antialias",valid=c("default","none","cleartype"))
   # font <- .getPrm(arglist,name="(font|family)",valid=ifelse(device=="windows","sans","Tahoma"))
    font <- .getPrm(arglist,name="(^font$|family)",default=ifelse(device=="windows","sans","sans"))
    background <- .getPrm(arglist,name="(background|nodata)",default="white")
@@ -27,14 +31,19 @@
       cr <- attr(mosaic,"copyright")
       if ((is.character(cr))&&(nchar(cr)>1)) {
          mosaic <- compose_design(layout=c(1,1),legend=NULL)
+        # print("WEB #1")
          options(ursaPngWebCartography=TRUE)
          scale <- 1
       }
    }
    else if ((.lgrep("\\+proj=merc",session_proj4()))&&
            (!is.na(.is.near(session_cellsize(),2*6378137*pi/(2^(1:21+8)))))) {
-      options(ursaPngWebCartography=TRUE)
-      scale <- 1
+     # print("WEB #2")
+      arglist <- as.list(match.call())
+      if (!("scale" %in% names(arglist))) {
+         options(ursaPngWebCartography=TRUE)
+         scale <- 1
+      }
    }
    if ((is.character(mosaic))&&(mosaic=="rgb"))
       mosaic <- compose_design(layout=c(1,1),legend=NULL)
@@ -44,7 +53,7 @@
                 ,scale=scale,width=width,height=height
                 ,indent=indent,frame=frame,box=box,delafter=delafter,wait=wait
                 ,device=device,antialias=antialias,font=font
-                ,background=background,dev=dev,verbose=verbose)
+                ,background=background,retina=retina,dev=dev,verbose=verbose)
    if (dev) {
       options(ursaPngPlot=TRUE)
       compose_close(...)
@@ -53,9 +62,14 @@
 }
 '.compose_open' <- function(mosaic=NULL,fileout="",dpi=NA,pointsize=NA,scale=NA
                           ,width=NA,height=NA
-                          ,indent=NA,frame=NA,box=TRUE,delafter=NA,wait=1
+                          ,indent=NA,frame=NA,box=TRUE,delafter=NA,wait=5
                           ,device=NA,antialias=NA,font=NA,background="white"
-                          ,dev=FALSE,verbose=FALSE) {
+                          ,retina=NA,dev=FALSE,verbose=FALSE) {
+   if (is.na(retina)) {
+      retina <- getOption("ursaRetina")
+      if (!is.numeric(retina))
+         retina <- 1
+   }
   # session_pngviewer()
    if (FALSE) {
       str(list(mosaic=if (is.list(mosaic)) sapply(mosaic,class) else class(mosaic)
@@ -67,8 +81,19 @@
    }
    if (!nchar(fileout))
    {
-      if ((!.isRscript())||(!session_pngviewer())||(.isKnitr()))
+     # print(c(batch=.isRscript()))
+     # print(commandArgs(FALSE))
+     # print(c(tempdir=session_tempdir()))
+      if ((FALSE)&&((!.isRscript())||(!session_pngviewer())||(.isKnitr())))
          fileout <- file.path(tempdir(),.maketmp()) ## CRAN Repository Policy
+      else if (!TRUE)
+         fileout <- file.path(tempdir(),basename(.maketmp()))
+      else if (.isKnitr()) {
+         bname <- basename(.maketmp())
+         bname <- gsub("_[0-9a-f]+"
+                  ,paste0("_",knitr::opts_current$get()$label),bname,ignore.case=TRUE)
+         fileout <- file.path(knitr::opts_current$get()$fig.path,bname)
+      }
       else
          fileout <- .maketmp()
       if (is.na(delafter))
@@ -76,13 +101,18 @@
    }
    else if (is.na(delafter))
       delafter <- FALSE
-   if (!.lgrep("\\.png$",fileout))
+   fileext <- if (.lgrep("\\.(jpeg|jpg)$",fileout)) "jpeg" 
+              else if (.lgrep("\\.(webp)$",fileout)) "webp"
+              else "png"
+   isJPEG <- fileext %in% "jpeg"
+   isWEBP <- fileext %in% "webp"
+   if ((!isJPEG)&&(!isWEBP)&&(!.lgrep("\\.png$",fileout)))
       fileout <- paste0(fileout,".png")
    g1 <- session_grid()
   # scale1 <- (18.5*96)/(g1$rows*2.54)
   # scale2 <- (23.7*96)/(g1$columns*2.54)
    paperScale <- 0
-   if (is.character(scale)){
+   if (is.character(scale)) {
       patt <- "\\D*((\\d+(\\.\\d+)*)(\\:))*(\\d+(\\.\\d+)*)\\D*"
       .s0 <- .gsub(patt,"\\2",scale)
       .s <- as.numeric(.gsub(patt,"\\5",scale))
@@ -115,24 +145,26 @@
       if (is.character(height)) {
          .h <- as.numeric(.gsub("\\D*(\\d+(\\.\\d+)*)\\D*","\\1",height))
          height <- dpi*.h/2.54
-         paperScale <- c(1,1) # TRUE
+         paperScale <- c(-1,1) # TRUE
       }
       width <- 1e6
    }
-   scale1 <- ifelse(is.na(height),600,height)/g1$rows
-   scale2 <- ifelse(is.na(width),900,width)/g1$columns
+  # print(c(width=width,s=ifelse(is.na(width),900,width),r=ifelse(is.na(width),900,width)/g1$columns))
+  # print(c(height=height,s=ifelse(is.na(height),600,height),r=ifelse(is.na(height),600,height)/g1$rows))
+   scale1 <- ifelse(is.na(height),600*retina,height)/g1$rows
+   scale2 <- ifelse(is.na(width),900*retina,width)/g1$columns
    rescale <- mosaic$image^(0.1)
    autoscale <- min(scale1,scale2)
    if ((is.na(height))&&(is.na(width)))
       autoscale <- autoscale/mosaic$image^0.25
-  # print(c(v=scale1,h=scale2,autoscale=autoscale))
    if (is.na(scale))
       scale <- autoscale
   # dpiscale <- scale*(2.54/96.0) # 2.54cm per inch / 96 dpi screen
    dpiscale <- scale*(2.54/dpi)
    mainc <- g1$columns*dpiscale
    mainr <- g1$rows*dpiscale
-   pointsize0 <- 12
+  # print(c(v=scale1,h=scale2,autoscale=autoscale,scale=scale,c=g1$columns,r=g1$rows))
+   pointsize0 <- ifelse(.isKnitr(),12,round(12*retina,0))
    if (is.na(pointsize)) {
      # print(c(pointsize0=pointsize0,dpi=dpi,scale=scale,scale0=autoscale))
      # pointsize <- pointsize0*96/dpi*scale/autoscale ## removed 20161217
@@ -188,13 +220,26 @@
    if (verbose)
       print(c(png_width=png_width,png_height=png_height
              ,scale=scale,autoscale=autoscale,pointsize=pointsize,dpi=dpi))
-   a <- try(png(filename=fileout,width=png_width,height=png_height,res=dpi
-           ,bg=background,pointsize=pointsize
-           ,type=device,antialias=antialias,family=font))
-   if (inherits(a,"try-error")) { ## 20180117 patch for conda without cairo
-      png(filename=fileout,width=png_width,height=png_height,res=dpi
-         ,bg=background,pointsize=pointsize
-         ,antialias=antialias,family=font)
+   if (.isJupyter())
+      options(jupyter.plot_mimetypes=ifelse(isJPEG,'image/jpeg','image/png'))
+   if (isJPEG)
+      a <- try(png(filename=fileout,width=png_width,height=png_height,res=dpi
+              ,bg=background,pointsize=pointsize
+              ,type=device,antialias=antialias,family=font))
+   else
+      a <- try(png(filename=fileout,width=png_width,height=png_height,res=dpi
+              ,bg=background,pointsize=pointsize
+              ,type=device,antialias=antialias,family=font))
+   if ((inherits(a,"try-error"))&&(.Platform$OS.type=="windows")) { ## 20180117 patch for conda without cairo
+      device <- "windows"
+      if (isJPEG)
+         png(filename=fileout,width=png_width,height=png_height,res=dpi
+            ,bg=background,pointsize=pointsize
+            ,type=device,antialias=antialias,family=font)
+      else
+         png(filename=fileout,width=png_width,height=png_height,res=dpi
+            ,bg=background,pointsize=pointsize
+            ,type=device,antialias=antialias,family=font)
    }
      # ,family=c("Tahoma","Verdana","Georgia","Calibri","sans")[1]
    nf <- layout(panel,widths=lcm(sizec)
@@ -206,6 +251,10 @@
           ,ursaPngFamily=font,ursaPngWaitBeforeRemove=wait
           ,ursaPngDevice=device,ursaPngShadow=""
           ,ursaPngBackground=background,ursaPngPanel="",ursaPngSkip=FALSE)
+  # if (.isKnitr()) {
+  #   # if (knitr::opts_knit$get(""))
+  #    fileout <- paste0("file:///",fileout)
+  # }
    invisible(fileout)
 }
 '.compose_open.example' <- function() {

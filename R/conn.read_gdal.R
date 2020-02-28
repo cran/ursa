@@ -1,4 +1,33 @@
-'ursa_read' <- function(fname,verbose=FALSE) .read_gdal(fname=fname,verbose=verbose)
+'ursa_read' <- function(fname,verbose=FALSE) {
+   if (envi_exists(fname)) {
+      return(read_envi(fname))
+   }
+   if (!.lgrep("\\.zip$",fname))
+      return(.read_gdal(fname=fname,verbose=verbose))
+   list1 <- unzip(fname,exdir=tempdir());on.exit(file.remove(list1))
+   ind <- .grep("\\.tif(f)*$",list1)
+   if (length(ind)) {
+      aname <- .gsub("\\.tif(f)*","",basename(list1[ind]))
+      if (TRUE) {
+         res <- vector("list",length(aname))
+         names(res) <- aname
+         res <- lapply(list1[ind],.read_gdal,verbose=verbose)
+         names(res) <- aname
+         g <- lapply(res,ursa_grid)
+         if (all(sapply(head(g,-1),function(g2) all.equal(g[[1]],g2))))
+            res <- as.ursa(res)
+         return(res)
+      }
+      for (i in sample(seq_along(aname))) {
+         a <- .read_gdal(fname=list1[ind][i],verbose=verbose)
+         if (!exists("res"))
+            res <- ursa(bandname=aname)
+         res[i] <- a
+      }
+      return(res)
+   }
+   NULL
+}
 'read_gdal' <- function(fname,resetGrid=TRUE,band=NULL,verbose=FALSE,...) { ## ,...
    obj <- open_gdal(fname,verbose=verbose)
    if (is.null(obj))
@@ -18,11 +47,25 @@
       .elapsedTime("rgdal has been loaded")
   # print(geterrmessage())
    op <- options(warn=0-!verbose)
-   a <- rgdal::GDALinfo(fname,returnStats=FALSE,returnRAT=FALSE
-                ,returnColorTable=TRUE,returnCategoryNames=TRUE)
+   a <- try(rgdal::GDALinfo(fname,returnStats=FALSE,returnRAT=FALSE
+                ,returnColorTable=TRUE,returnCategoryNames=TRUE))
    options(op)
-   if (verbose)
-      str(a)
+   if (inherits(a,"try-error")) {
+      fname <- normalizePath(fname)
+      op <- options(warn=0-!verbose)
+      a <- try(rgdal::GDALinfo(fname,returnStats=FALSE,returnRAT=FALSE
+                   ,returnColorTable=TRUE,returnCategoryNames=TRUE))
+      options(op)
+      if (verbose)
+         str(a)
+      if (inherits(a,"try-error")) {
+         if (verbose) {
+            message("It looks like file ",.dQuote(fname)
+                   ," is not found or not GDAL-recognized")
+         }
+         return(NULL)
+      }
+   }
    a1 <- as.numeric(a)
    g1 <- regrid()
    g1$rows <- as.integer(a1[1])

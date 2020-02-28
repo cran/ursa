@@ -3,6 +3,9 @@
 #     file.path(chartr("\\","/",Sys.getenv("R_USER")),"template.idr")))
 # try(Sys.setenv(R_PLASTER_TEMPLATE=system.file("inst","template",package="ursa")
 
+.onLoad.blank <- function(lib, pkg) {
+   invisible(0L)
+}
 .onLoad <- function(lib, pkg) {
    compiler::enableJIT(0) ## speed up if 'ByteCompile: no' in "DESCRIPTION"
   # print("ursa -- .onLoad")
@@ -10,12 +13,15 @@
    options(ursaTimeStart=p,ursaTimeDelta=p)
    rm(p)
   # session_pngviewer()
-   session_tempdir()
    fpath <- getOption("ursaCacheDir") ## e.g., from ~/.Rprofile
-   if ((is.null(fpath))||(!file.exists(fpath)))
-       try(options(ursaCacheDir=file.path(dirname(tempdir()),"RtmpUrsaCache")))
-      # try(options(ursaCacheDir=tempdir())) ##=file.path(dirname(tempdir()),"RtmpUrsaCache")))
+   if (is.null(fpath))
+      try(options(ursaCacheDir=tempdir())) 
+   else
+      if (!file.exists(fpath))
+         dir.create(fpath)
+  ## ursaCacheDir=file.path(dirname(tempdir()),"RtmpUrsaCache") ## out of CRAN policy
    .ursaCacheDirClear()
+   session_tempdir()
   # if ((FALSE)&&(interactive()))
   #    print(data.frame(pngviewer=session_pngviewer()
   #                    ,tempdir=session_tempdir()

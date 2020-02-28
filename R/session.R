@@ -48,7 +48,9 @@
       return(invisible(g1))
    }
    if (is.character(obj)) {
+      opW <- options(warn=2)
       a <- try(open_envi(obj,resetGrid=TRUE,decompress=FALSE))
+      options(opW)
       if (inherits(a,"try-error")) {
          a <- open_gdal(obj)
       }
@@ -78,7 +80,7 @@
    if ((is.na(allow))||(!is.logical(allow))) {
       if (is.logical(opV))
          return(opV)
-      allow <- .isRscript() | .isKnitr() | .isJupyter()
+      allow <- interactive() | .isRscript() | .isKnitr() | .isJupyter() | .isShiny()
 
    }
    opA <- options(ursaAllowPngViewer=allow)[[1]]
@@ -89,16 +91,19 @@
    invisible(opA)
 }
 'session_tempdir' <- function(dst=character()) {
-   opD <- getOption("ursaTempDir")
    if ((is.character(dst))&&(length(dst))) {
-      if ((file.exists(dst))&&(file.info(dst)$isdir)) {
-         options(ursaTempDir=dst)
-         return(invisible(dst))
+      if (!dir.exists(dst)) {
+         opW <- options(warn=2)
+         dir.create(dst)
+         options(opW)
       }
+      options(ursaTempDir=dst)
+      return(invisible(dst))
    }
+   opD <- getOption("ursaTempDir")
    if (length(opD))
       return(opD)
-   dst <- ifelse(.isRscript(),getwd(),tempdir())
+   dst <- ifelse(.isRscript(),ifelse(T,.ursaCacheDir(),getwd()),tempdir()) ## "." <-> 'getwd()'
    options(ursaTempDir=dst)
    return(dst)
 }

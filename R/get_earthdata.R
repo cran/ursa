@@ -3,7 +3,8 @@
 'get_earthdata' <- function(bbox=NA #,c(2000000,400000,2300000,700000)
                            ,res=c("2km","1km","500m","250m")
                            ,date=NA,product="",geocode=""
-                           ,expand=1.05,border=0,display=FALSE,verbose=FALSE) {
+                           ,expand=1.05,border=0,display=FALSE
+                           ,cache=NA,verbose=FALSE) {
    productList <- c('1'="MODIS_Aqua_CorrectedReflectance_Bands721"
                    ,'2'="MODIS_Terra_CorrectedReflectance_Bands721"
                    ,'3'="MODIS_Aqua_CorrectedReflectance_TrueColor"
@@ -18,9 +19,10 @@
    if ((length(bbox)==1)&&(is.na(bbox))) {
       g0 <- session_grid()
       if (.lgrep("\\+proj=merc",g0$proj4)) {
-        # stop("A")
          ll <- with(g0,.project(cbind(c(minx,maxx),c(miny,maxy)),proj4,inv=TRUE))
-         bbox <- c(min(ll[,1]),min(ll[,2]),max(ll[,1]),max(ll[,2]))
+        # bbox <- c(min(ll[,1]),min(ll[,2]),max(ll[,1]),max(ll[,2]))
+         bbox <- c(ll[1,1],ll[1,2],ll[2,1],ll[2,2])
+        # stop("A")
       }
       else if (.gsub("(^\\s|\\s$)","\\1",g0$proj4)==.gsub("(^\\s|\\s$)","\\1",epsg3413)) {
         # stop("B")
@@ -81,6 +83,14 @@
       bbox <- c(ll)[c(1,3,2,4)]
       if (length(bbox)!=4)
          return(productList)
+   }
+   if ((is.na(cache))||(!is.logical(cache))) {
+      cache <- TRUE
+      if (date==Sys.Date()) {
+         t0 <- as.integer(format(as.POSIXlt(Sys.time(),tz="UTC"),"%H"))
+         if (t0<17.5)
+            cache <- FALSE
+      }
    }
    epsg <- if ((any(bbox>(+360)))||(any(bbox<(-180)))) epsg3413 else epsg3857
    is3857 <- epsg==epsg3857
@@ -144,7 +154,7 @@
    a <- .getEarthdataTile(x=tile[,"x"],y=tile[,"y"],z=tile[,"z"]
                          ,epsg=ifelse(is3413,"3413","3857")
                          ,product=product,time=tile[,"time"]
-                         ,verbose=verbose)
+                         ,cache=cache,verbose=verbose)
    for (i in seq(nrow(tile))) {
       if (is.null(a[[i]]))
          next
@@ -164,6 +174,9 @@
             .is.near(g1$miny,g4$miny) & .is.near(g1$maxy,g4$maxy) &
             .is.near(g1$resx,g4$resx) & .is.near(g1$resy,g4$resy) &
             TRUE
+  # print(c(cond1=cond1,cond2=cond2))
+  # print(g1)
+  # print(g4)
    if (cond1 & cond2)
       ursa(b,"grid") <- g4
    session_grid(b)
@@ -174,7 +187,7 @@
 '.getEarthdataTile' <- function(x=13,y=23,z=4,epsg=c("3413","3857")
                       ,product="MODIS_Aqua_CorrectedReflectance_Bands721"
                       ,time=Sys.Date()-2L
-                      ,verbose=FALSE) {
+                      ,cache=TRUE,verbose=FALSE) {
    if (inherits(time,c("Date","POSIXct","POSIXlt")))
       time <- format(time,"%Y-%m-%d")
   # product <- c("Coastlines","arctic_coastlines")[1]
@@ -196,14 +209,24 @@
       download.file(src,dst,mode="wb",method="libcurl",quiet=!verbose)
    }
    a <- vector("list",length(src))
+   if (!cache)
+      dst <- tempfile()
    for (i in seq_along(a)) {
       if (!isBundle) {
-        # res <- try(download.file(src[i],dst[i],mode="wb",quiet=!verbose))
-         dst <- try(.ursaCacheDownload(src[i],mode="wb",quiet=!verbose))
-         if (inherits(dst,"try-error")) {
-            print(dst)
-            a[[i]] <- NULL
-            next
+         if (cache) {
+            dst <- try(.ursaCacheDownload(src[i],mode="wb",quiet=!verbose))
+            if (inherits(dst,"try-error")) {
+               print(dst)
+               a[[i]] <- NULL
+               next
+            }
+         }
+         else {
+            res <- try(download.file(src[i],dst,mode="wb",quiet=!verbose))
+            if (inherits(res,"try-error")) {
+               a[[i]] <- NULL
+               next
+            }
          }
       }
       if (isPNG) {

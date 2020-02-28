@@ -1,4 +1,4 @@
-'compose_panel' <- function(...)
+'compose_panel' <- function(...,silent=FALSE)
 {
    if (.skipPlot(TRUE))
       return(NULL)
@@ -30,7 +30,9 @@
             ret <- do.call("panel_plot",c(arglist[indSP],arglist[other]))$col
          }
          if (length(indSF)) {
-            ret <- do.call("panel_plot",c(arglist[indSF],arglist[other]))$col
+            ret <- do.call("panel_plot",c(arglist[indSF],arglist[other]))#$col
+            if (!is_ursa(ret,"colortable"))
+               ret <- ret$col
          }
          if ((!length(indS))&&(length(other))) {
             ret <- do.call("panel_plot",c(arglist[other]))$col
@@ -126,7 +128,7 @@
       for (i in seq(nl))
       {
          if ((verbose)&&(k==0)) {
-            pb <- ursaProgressBar(min=0,max=ifelse(isRGB,nl,nb))
+            pb <- ursaProgressBar(min=0,max=ifelse(isRGB,nl,nb),silent=silent)
            # setUrsaProgressBar(pb,k)
          }
          k <- k+1L

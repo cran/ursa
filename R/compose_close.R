@@ -5,14 +5,17 @@
    kind <- .getPrm(arglist,name="(^$|crop|kind)",valid=c("crop","crop2","nocrop"))
    border <- .getPrm(arglist,name="(border|frame)",default=5L)
    bpp <- .getPrm(arglist,name="bpp",valid=c(8L,24L)
-              ,default=switch(getOption("ursaPngDevice"),windows=8L,cairo=24L))
-   execute <- .getPrm(arglist,name="(execute|view|open)",default=TRUE)
+              ,default=switch(getOption("ursaPngDevice"),windows=8L,cairo=24L,24L))
+   execute <- .getPrm(arglist,name="(execute|view|open|render)",default=!.isShiny())
    verbose <- .getPrm(arglist,name="verb(ose)*",kwd="close",default=FALSE)
-  # wait_new <- .getPrm(arglist,name="wait",default=)
-   .compose_close(kind=kind,border=border,bpp=bpp,execute=execute,verbose=verbose)
+  # wait <- .getPrm(arglist,name="wait",default=NA_real_)
+   .compose_close(kind=kind,border=border,bpp=bpp,execute=execute#,wait=wait
+                 ,verbose=verbose)
 }
 '.compose_close' <- function(kind=c("crop2","crop","nocrop")
-                            ,border=5,bpp=0,execute=TRUE,verbose=FALSE){
+                            ,border=5,bpp=0,execute=TRUE#,wait=NA
+                            ,verbose=FALSE) {
+   sysRemove <- TRUE
    if (verbose)
       str(list(kind=kind,border=border,bpp=bpp,execute=execute,verbose=verbose))
    toOpen <- session_pngviewer()
@@ -22,40 +25,52 @@
    }
    delafter <- getOption("ursaPngDelafter")
    fileout <- getOption("ursaPngFileout")
+   isJPEG <- .lgrep("(jpg|jpeg)",gsub(".*\\.(.+$)","\\1",fileout))>0
+   isWEBP <- .lgrep("(webp)",gsub(".*\\.(.+$)","\\1",fileout))>0
    if (!(bpp %in% c(8,24)))
-      bpp <- switch(getOption("ursaPngDevice"),windows=8,cairo=24)
+      bpp <- switch(getOption("ursaPngDevice")
+                   ,windows=ifelse(isJPEG | isWEBP,24L,8L),cairo=24L,24L)
    on.exit({
       op <- options()
       if (length(ind <- .grep("^ursaPng.+",names(op))))
          options(lapply(op[ind],function(x) NULL))
       NULL
    })
-   syswait <- FALSE
-   if ((FALSE)&&(execute)) { ## patch for "shell" 
+   if (sysRemove & execute) { ## patch for "shell"
+      sysWait <- FALSE
       con <- showConnections(all=TRUE)
       ind <- which(!is.na(match(con[,"class"],"file")))
-      if (length(ind)) {
-         con <- con[ind,,drop=FALSE]
-         unable <- grep("\\.unpacked(.*)\\~$",con[,"description"])
-         if (length(unable)) {
-            opW <- options(warn=1)
-            w <- paste0("Detected opened connection(s): "
-                       ,paste(.dQuote(basename(con[unable,"description"]))
-                             ,collapse=", ")
-                       ,".")
-            warning(w)
-            w <- "Script is suspended until close of image viewer."
-            message(w)
-            options(opW)
-            syswait <- TRUE
+      if (length(ind)) { ## FAILURES with connections: 1) unpacked, 2) being to pack
+         if (tryToRepair <- FALSE) {
+            con <- con[ind,,drop=FALSE]
+            print(con)
+            unable <- grep("\\.unpacked(.*)\\~$",con[,"description"])
+            if (length(unable)) {
+               opW <- options(warn=1)
+               w <- paste0("Detected opened connection(s): "
+                          ,paste(.dQuote(basename(con[unable,"description"]))
+                                ,collapse=", ")
+                          ,".")
+               warning(w)
+               w <- "Script is suspended until close of image viewer."
+               message(w)
+               options(opW)
+               sysWait <- TRUE
+            }
+         }
+         else if (FALSE) {
+            if (delafter & execute & !.isPackageInUse())
+               cat("Info: required pausing due to opened connection(s)\n")
+            sysRemove <- FALSE
          }
       }
    }
    if (!toOpen) {
       if (delafter)
-         delafter <- dirname(fileout)==tempdir()
+         delafter <- .normalizePath(dirname(fileout))!=.normalizePath(tempdir())
       message(paste("Use",.sQuote("session_pngviewer(TRUE)")
-             ,"\nto open",.sQuote(fileout),"in external software."))
+             ,"\nto open",.sQuote(.normalizePath(fileout))
+             ,"in external software."))
    }
    if (getOption("ursaPngFigure")==0L) ## plot layout only
    {
@@ -67,6 +82,23 @@
         # str(par())
         # plot(ann,add=TRUE)
          grDevices::dev.off()
+         if (proposed <- TRUE) {
+           # print(c(knitr=.isKnitr(),shiny=.isShiny(),jupyter=.isJupyter()))
+            if (.isShiny()) {  ## in 'imageOutput'/'renderImage'
+               return(if (execute) list(src=fileout) else fileout)
+            }
+            if ((execute)&&(.isKnitr())) {
+               execute <- FALSE
+               retK <- knitr::include_graphics(fileout
+                                              ,auto_pdf=FALSE
+                                              ,dpi=getOption("ursaPngDpi"))
+               return(retK)
+            }
+            if (.isJupyter()) {
+               execute <- FALSE
+               return(invisible(IRdisplay::display_png(file=fileout)))
+            }
+         }
          if (execute) {
             if (!toOpen) {
                op <- par(mar=c(0,0,0,0))
@@ -80,18 +112,34 @@
                par(op)
             }
             else {
-               system2("R",list("CMD","open",.dQuote(fileout)),wait=!.isRscript())
-              # system2("open",list(fileout),wait=!.isRscript()) ## wait=syswait
+               if (TRUE)
+                  browseURL(normalizePath(fileout))
+               else if (.Platform$OS.type=="unix")
+                  system2("xdg-open",c(.dQuote(fileout)),wait=!.isRscript())
+               else
+                  system2(file.path(R.home("bin"),"R")
+                         ,c("CMD","open",.dQuote(fileout)),wait=!.isRscript())
+              # system2("open",list(fileout),wait=!.isRscript()) ## wait=sysWait
               # stop("How to implement file association in Unix-like systems?")
             }
          }
-         if (delafter)
-         {
+         if (delafter) {
             if (execute) {
                wait <- getOption("ursaPngWaitBeforeRemove")
-               Sys.sleep(wait)
+               if (!sysRemove)
+                  Sys.sleep(wait)
+               else {
+                  if (wait<5)
+                     wait <- 5
+                  cmd <- paste0("Sys.sleep(",wait,");"
+                               ,"if (file.exists(",sQuote(fileout),"))"
+                               ," file.remove(",sQuote(fileout),")")
+                  system2(file.path(R.home("bin"),"Rscript")
+                         ,c("-e",dQuote(cmd)),wait=FALSE,stdout=NULL)
+               }
             }
-            file.remove(fileout)
+            else if (!sysRemove)
+               file.remove(fileout)
          }
       }
       else { ## original
@@ -122,7 +170,7 @@
    }
    if (bpp==8) {
       if (nchar(Sys.which("i_view32"))) {
-         FoutTmp <- ifelse(dirname(fileout)==".",fileout,normalizePath(fileout))
+         FoutTmp <- ifelse(dirname(fileout)==".",basename(fileout),normalizePath(fileout))
          cmd <- paste("i_view32",FoutTmp,"/bpp=8",paste0("/convert=",FoutTmp))
       }
       else if ((nchar(im <- Sys.getenv("R_IMAGEMAGICK"))>0)&&(file.exists(im))) {
@@ -155,9 +203,30 @@
       }
    }
    if (proposed <- TRUE) {
+      if (.isShiny()) {  ## in 'imageOutput'/'renderImage'
+         return(if (execute) list(src=fileout) else fileout)
+      }
       if ((execute)&&(.isKnitr())) {
          execute <- FALSE
-         retK <- knitr::include_graphics(fileout,dpi=getOption("ursaPngDpi"))
+         if (.isKnitr())
+            delafter <- FALSE & delafter & ## don't delete: longtime rendering cannot find removed file
+               length(grep("self-contained",knitr::opts_knit$get()$rmarkdown.pandoc.args))>0
+         dpi1 <- getOption("ursaPngDpi")
+         dpi2 <- knitr::opts_current$get("dpi")
+         dpi3 <- dpi1/96*dpi2/96
+         retK <- knitr::include_graphics(fileout
+                                        ,auto_pdf=FALSE
+                                        ,dpi=getOption("ursaPngDpi"))
+         if ((delafter)&&(sysRemove))
+            on.exit({
+               wait <- 5
+               cmd <- paste0("Sys.sleep(",wait,");"
+                            ,"if (file.exists(",sQuote(fileout),"))"
+                            ," file.remove(",sQuote(fileout),")")
+               system2(file.path(R.home("bin"),"Rscript")
+                      ,c("-e",dQuote(cmd)),wait=FALSE,stdout=NULL)
+            },add=TRUE)
+        # print(fileout)
          return(retK)
       }
       if (.isJupyter()) {
@@ -168,6 +237,8 @@
         # return(invisible(retK))
       }
    }
+   if (execute | delafter)
+      wait <- getOption("ursaPngWaitBeforeRemove")
    if (execute)
    {
       if (!toOpen) {
@@ -183,12 +254,20 @@
          par(op)
       }
       else {
-         system2("R",list("CMD","open",.dQuote(fileout)),wait=TRUE)
-        # system2("R cmd open",list(,fileout),wait=TRUE) #!.isRscript()) ## wait=syswait
+         if (TRUE)
+            browseURL(normalizePath(fileout))
+         else if (.Platform$OS.type=="unix")
+            system2("xdg-open",c(.dQuote(fileout)),wait=!.isRscript())
+         else
+            system2(file.path(R.home("bin"),"R")
+                   ,c("CMD","open",.dQuote(fileout)),wait=TRUE)
+        # system2("R cmd open",list(,fileout),wait=TRUE) #!.isRscript()) ## wait=sysWait
         # stop("How to implement file association in Unix-like systems?")
       }
-      wait <- getOption("ursaPngWaitBeforeRemove")
-      if (delafter)
+      if (normalizePath(tempdir())==normalizePath(dirname(fileout)))
+         sysRemove=FALSE
+     # print(wait)
+      if ((!sysRemove)&&(delafter))
          Sys.sleep(wait)
    }
    if (delafter) {
@@ -205,8 +284,17 @@
             }
          }
       }
-      else
+      else if (!sysRemove) {
          file.remove(fileout)
+      }
+      else {
+         if (wait<5)
+            wait <- 5
+         cmd <- paste0("Sys.sleep(",wait,");"
+                      ,"if (file.exists(",sQuote(fileout),")) file.remove(",sQuote(fileout),")")
+         system2(file.path(R.home("bin"),"Rscript")
+                ,c("-e",dQuote(cmd)),wait=FALSE,stdout=NULL)
+      }
    }
    if (file.exists(fileout)) {
       return(invisible(fileout))

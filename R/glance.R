@@ -1,6 +1,8 @@
 ## http://leaflet-extras.github.io/leaflet-providers/preview/index.html
 'glance' <- function(...) {
    arglist <- list(...)
+   execute <- .getPrm(arglist,name="(execute|view|open|render)",default=!.isShiny())
+   plotKnitr <- .isKnitr() & execute
    if (!length(arglist)) {
       viewer <- session_pngviewer(TRUE)
       on.exit(session_pngviewer(viewer))
@@ -47,7 +49,7 @@
    }
    if (!is.character(arglist[[1]])) {
       a <- do.call(".glance",arglist)
-      if (.isKnitr())
+      if (plotKnitr)
          return(a)
       return(invisible(a))
    }
@@ -60,18 +62,18 @@
   # }
   # str(arglist)
    if (is.character(arglist[[1]])) {
-      if (envi_exists(arglist[[1]],exact=TRUE)) {
+      if (.lgrep("\\.(gpkg|tab|kml|json|geojson|mif|sqlite|shp|osm)(\\.(zip|gz|bz2))*$"
+                     ,arglist[[1]])) {
+         ret <- do.call(".glance",arglist)
+         if (plotKnitr)
+            return(ret)
+         return(invisible(ret))
+      }
+      else if (envi_exists(arglist[[1]],exact=TRUE)) {
          return(do.call("display",arglist))
       }
       else if (.lgrep("\\.(tif|tiff|img|png|bmp|dat)$",arglist[[1]])) {
          return(do.call("display",arglist))
-      }
-      else if (.lgrep("\\.(gpkg|tab|kml|json|geojson|mif|sqlite|shp|osm)(\\.(zip|gz|bz2))*$"
-                     ,arglist[[1]])) {
-         ret <- do.call(".glance",arglist)
-         if (.isKnitr())
-            return(ret)
-         return(invisible(ret))
       }
       else {
          if ((TRUE)&&  #(!.isPackageInUse())&&
@@ -137,7 +139,7 @@
          else {
            # message("Cannot complete without suggested package 'sf'.")
             ret <- do.call(".glance",arglist)
-            if (.isKnitr())
+            if (plotKnitr)
                return(ret)
             return(invisible(ret))
          }
@@ -153,7 +155,7 @@
                         ,engine=c("native","sp","sf")
                         ,geocode="",place="",area=c("bounding","point")
                         ,zoom=NA,gdal_rasterize=FALSE
-                        ,verbose=FALSE,...) {
+                        ,silent=FALSE,verbose=FALSE,...) {
    arglist <- list(...)
    a <- as.list(match.call())
   # feature <- "geometry"
@@ -181,6 +183,7 @@
   # obj <- spatialize(dsn)
    if (missing(dsn)) {
       dsn <- if (style!="auto") .geomap(style=style) else .geomap()
+      return(display(dsn,...)) ## ++20180617
    }
    toUnloadMethods <- !("methods" %in% .loaded())
    S4 <- isS4(dsn)
@@ -194,13 +197,14 @@
                    ,expand=expand,border=0
                    ,lat0=lat0,lon0=lon0,resetProj=resetProj,style=style#,zoom=NA
                    ,verbose=verbose)
-   
    if (inherits(obj,"NULL"))
       return(invisible(NULL))
    isSF <- inherits(obj,c("sfc","sf"))
    isSP <- !isSF
    g0 <- attr(obj,"grid")
-   g1 <- getOption("ursaSessionGrid")
+   if (is.null(g0))
+      g0 <- session_grid()
+  # g1 <- getOption("ursaSessionGrid")
   # if (identical(g0,g1))
   #    border <- 0
    if ((FALSE)&&(expand!=1)) {
@@ -298,8 +302,9 @@
    }
    else
       basemap <- NULL
-   if ((is.null(basemap))&&(border>0))
+   if ((is.null(basemap))&&(border>0)) {
       g0 <- regrid(g0,border=border)
+   }
    attr(obj,"grid") <- g0
    session_grid(g0)
   # xy <- with(g0,.project(rbind(c(minx,miny),c(maxx,maxy)),proj4,inv=TRUE))
@@ -376,6 +381,7 @@
    if (is.na(alpha))
       alpha <- ifelse(isWeb,ifelse(before,0.75,1),1)
    if (feature=="field") {
+      noData <- length(dname)==0
       ct <- vector("list",length(dname))
       cpg <- NULL#"1251"
       for (i in seq_along(dname)) {
@@ -392,12 +398,19 @@
             val <- iconv(val,"UTF-8","1251")
         # print(all(is.na(val)))
         # print(obj[,dname[i],drop=TRUE][,1])
-         ct[[i]] <- colorize(val,alpha=alpha,...)
+         if (all(is.na(val)))
+            ct[[i]] <- colorize("(all values are NA)")
+         else 
+            ct[[i]] <- colorize(val,alpha=alpha,...)
         # print(names(ct[[i]]$colortable),quote=FALSE)
         # print(ct[[i]])
         # print("-----------------------------------------")
       }
+      if (noData)
+         ct <- list(colorize(seq(spatial_count(obj)),alpha=0.5))
       hasField <- any(sapply(ct,function(x) any(!is.na(x$index))))
+      if ((!hasField)&&(alpha==1))
+         alpha <- 0.5
       if (!gdal_rasterize) {
          if (length(dname))
             res <- lapply(rep(NA,length(ct)),ursa_new)
@@ -405,14 +418,14 @@
             res <- list(geometry=ursa_new())
       }
       if (isWeb) {
-         compose_open(res,scale=1,...)
+         compose_open(res,scale=1,retina=1,...)
       }
       else
          compose_open(res,...)
       gline <- compose_graticule(...)
       if (toCoast)
          cline <- compose_coastline(...)
-      pb <- ursaProgressBar(min=0,max=length(res))
+      pb <- ursaProgressBar(min=0,max=length(res),silent=silent)
       for (i in seq_along(res)) {
          if (isWeb)
             panel_new(fill="transparent",...)
@@ -448,7 +461,10 @@
                bg.polygon[ind] <- "#0000002F"
             }
             if (.lgrep("polygon",geoType)) {
-               lwd <- 0.1
+               if ((T)&&(spatial_count(obj)>1000)&&(sd(spatial_area(obj))<0.05))
+                  lwd <- 1e-6
+               else
+                  lwd <- 0.1
                if (length(ind <- .grep("plot\\.lwd",names(arglist))))
                   lwd <- arglist[[ind]]
                if (lwd==0)
@@ -456,11 +472,16 @@
               # .elapsedTime("Z")
               # panel_plot(obj,col=col,border=bg.polygon,lwd=lwd)
               # str(col)
-              # .elapsedTime("P1")
-               panel_plot(obj,col=col,border=bg.polygon,lwd=lwd,lty="blank")
-              # .elapsedTime("P2")
-               panel_plot(obj,col="transparent",border=bg.polygon,lwd=lwd)
-              # .elapsedTime("P3")
+               if (FALSE) {
+                  .elapsedTime("P1")
+                  panel_plot(obj,col=col,border=bg.polygon,lwd=lwd,lty="blank")
+                  .elapsedTime("P2")
+                  panel_plot(obj,col="transparent",border=bg.polygon,lwd=lwd)
+                  .elapsedTime("P3")
+               }
+               else {
+                  panel_plot(obj,col=col,border=bg.polygon,lwd=lwd)
+               }
             }
             if (.lgrep("point",geoType)) {
                lwd <- 0.25
@@ -522,7 +543,7 @@
          setUrsaProgressBar(pb)
       }
       close(pb)
-      if (length(ct)) {
+      if ((length(ct))&&(!noData)) {
          if (!gdal_rasterize) {
             ct <- lapply(ct,function(x) {
                y <- ursa(x,"colortable") ## y <- x$colortable
@@ -553,22 +574,30 @@
          n <- length(obj_geom)
       if (isSP)
          n <- length(obj_geom)
-      if (isSF) {
-        # da <- obj[,dname,drop=TRUE][,1] ## wrong
-         da <- obj[,dname,drop=TRUE]#[,dname,drop=TRUE]
-         names(da) <- dname
+      if (FALSE) {
+         if (isSF) {
+           # da <- obj[,dname,drop=TRUE][,1] ## wrong
+            da <- obj[,dname,drop=TRUE]#[,dname,drop=TRUE]
+            names(da) <- dname
+         }
+         if (isSP)
+            da <- methods::slot(obj,"data")[,dname,drop=FALSE]
       }
-      if (isSP)
-         da <- methods::slot(obj,"data")[,dname,drop=FALSE]
-      da <- rbind(format(da),paste0(names(da),":"))
-     # print(format(da))
-     # print(da)
-     # e <- format(t(da),justify="right")
-      e <- .gsub("^\\s+","",t(da))
-     # e1 <- paste(apply(e[,c(n+1,1)],1,paste,collapse=" "),collapse="\n")
-     # print(e)
-     # message(e1)
-     # q()
+      else
+         da <- spatial_data(obj)
+      if ((is.data.frame(da))&&(!ncol(da)))
+         da <- NULL
+      if (!is.null(da)) {
+         da <- rbind(format(da),paste0(names(da),":"))
+        # print(da)
+        # print(format(da))
+        # e <- format(t(da),justify="right")
+         e <- .gsub("^\\s+","",t(da))
+        # e1 <- paste(apply(e[,c(n+1,1)],1,paste,collapse=" "),collapse="\n")
+        # print(e)
+        # message(e1)
+        # q()
+     }
       if (!gdal_rasterize)
          res <- ursa_new(nband=n)
       ct <- lapply(seq(n),function(i) colorize(0L))
@@ -633,9 +662,11 @@
             panel_coastline(cline)
          panel_graticule(gline)
          panel_scalebar(pos=ifelse(isWeb,"bottomleft","bottomleft"),...)
-         e1 <- paste(apply(e[,c(n+1,i),drop=FALSE],1,paste,collapse=" ")
-                    ,collapse="\n")
-         panel_annotation(text=e1,adj=0,...) # pos="topleft")
+         if (!is.null(da)) {
+            e1 <- paste(apply(e[,c(n+1,i),drop=FALSE],1,paste,collapse=" ")
+                       ,collapse="\n")
+            panel_annotation(text=e1,adj=0,...) # pos="topleft")
+         }
          setUrsaProgressBar(pb)
       }
       close(pb)
@@ -648,8 +679,17 @@
      # but namespace "methods" is not unloaded, because namespace "sp" is loaded
      # 'as' is not found now
    }
-   if (.isKnitr())
-      return(ret)
+   if (.isKnitr()) {
+      return(invisible(ret))
+      if (proposed <- FALSE) {
+         render <- .getPrm(arglist,name="(open|render|execute|view)",default=TRUE)
+         print(c(render=render))
+         if (render)
+            return(ret)
+         else
+            return(invisible(ret))
+      }
+   }
    invisible(ret)
 }
 '.cmd.glance' <- function() {

@@ -170,7 +170,6 @@
    }
    if (inherits(obj,"stars")) {
       d <- sapply(obj,function(x) length(dim(x)))
-      
       if (any(d!=3))
          stop("import 'stars' object: unhandled 4-dimensional arrays")
       md <- attr(obj,"dimensions")
@@ -181,10 +180,18 @@
       geot <- md$x$geotransform
       columns <- md$x$to
       rows <- md$y$to
-      resx <- geot[2]
-      resy <- -geot[6]
-      minx <- geot[1]
-      maxy <- geot[4]
+      if (!is.null(geot)) {
+         resx <- geot[2]
+         resy <- -geot[6]
+         minx <- geot[1]
+         maxy <- geot[4]
+      }
+      else {
+         resx <- md$x$delta
+         resy <- -md$y$delta
+         minx <- md$x$offset
+         maxy <- md$y$offset
+      }
       maxx <- minx+columns*resx
       miny <- maxy-rows*resy
       g1 <- regrid(minx=minx,maxx=maxx,miny=miny,maxy=maxy,columns=columns,rows=rows
@@ -326,6 +333,9 @@
    isArray <- !is.null(dim(obj)) ## 20170327 replaced 'isArray <- !is.null(dim)'
    if ((!isArray)&&(is.numeric(obj))) {
      # print("NOT-ARRAY")
+      if (!length(obj)) {
+         return(session_grid())
+      }
       res <- ursa_new(obj,...)
       return(res)
    }

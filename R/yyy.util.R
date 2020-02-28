@@ -95,7 +95,7 @@
    invisible(NULL)
 }
 # '.paste' <- function(...,sep="",collapse=NULL) paste(...,sep=sep,collapse=collapse)
-'.maketmp' <- function(n=1,ext="",prefix="") 
+'.maketmp' <- function(n=1,ext="",prefix="")
 {
    if (!nchar(prefix)) {
       prefix <- basename(tempfile("","."))
@@ -118,8 +118,8 @@
    }
    options(ursaTempFileCount=tcount+n)
    res <- paste0("___",list1)
-  # if (!.isRscript())
-  #    res <- file.path(getOption("ursaTempDir"),res)
+   if ((TRUE)||(!.isRscript()))
+      res <- file.path(getOption("ursaTempDir"),res)
    res
 }
 '.args2list' <- function(args) {
@@ -144,9 +144,11 @@
             a[[i]] <- args[i]
       }
    }
-   aname <- sapply(a,function(x){if (length(x)==1) "" else x[1]})
+   variant <- c(1,-1)[1]
+   aname <- sapply(a,function(x) {if (length(x)==variant) "" else x[1]})
    opE <- options(warn=-1,show.error.messages=FALSE)
-   a <- lapply(a,function(x){
+   for (i in seq_along(a)) {
+      x <- a[[i]]
       n <- length(x)
       y <- x[n]
       if (TRUE) {
@@ -156,6 +158,15 @@
          else if (.try(z <- eval(parse(text=y)))) {
             if (!is.null(z))
                y <- z
+         }
+         if (n==-variant) {
+            if (!length(grep("(\\s|\\.)",y))) {
+               y <- length(grep("^[-!]\\S",y))==0
+               if (!y)
+                  aname[i] <- gsub("^[-!]","",aname[i])
+            }
+            else
+               aname[i] <- ""
          }
       }
       else {
@@ -167,14 +178,14 @@
          if (.lgrep("^(-)*\\d+\\.\\d+$",y))
             return(as.numeric(y))
       }
-      y
-   })
+      a[[i]] <- y
+   }
    options(opE)
    names(a) <- aname
    a
 }
 '.is.integer' <- function(x,tolerance=1e-11) {
-   if (inherits(x,c("Date","POSIXt")))
+   if (inherits(x,c("Date","POSIXt","list")))
       return(FALSE)
    hasNA <- anyNA(x)
    if (hasNA)
@@ -242,15 +253,44 @@
          try(res <- x[which.max(predict(locfit::locfit(~x),newdata=x))])
       res
    }
+   isUrsa <- FALSE
+   if (is_spatial(src)) {
+      src <- switch(spatial_geotype(src)
+                   ,POINT=spatial_coordinates(src)
+                   ,stop("'src': unimplemented for ",spatial_geotype(src)))
+   }
+   else if (is_ursa(src)) {
+      src <- as.data.frame(src)[,1:2]
+      isUrsa <- TRUE
+   }
+   if (is_spatial(dst)) {
+      dst <- switch(spatial_geotype(dst)
+                   ,POINT=spatial_coordinates(dst)
+                   ,stop("'dst': unimplemented for ",spatial_geotype(dst)))
+   }
+   else if (is_ursa(dst)) {
+      dst <- as.data.frame(dst)[,1:2]
+   }
    d1 <- dim(src)
    d2 <- dim(dst)
+   if ((is.null(colnames(src)))&&(d1[2]>=2)) {
+      colnames(src) <- .maketmp(d1[2])
+      colnames(src)[1:2] <- c("x","y")
+   }
+   if ((is.null(colnames(dst)))&&(d2[2]>=2)) {
+      colnames(dst) <- .maketmp(d2[2])
+      colnames(dst)[1:2] <- c("x","y")
+   }
    if ((length(d1)<2)||(d1[2]<2)||(length(d2)<2)||(d2[2]<2))
       return(NULL)
+   if ((anyNA(dst[,"x"]))||(anyNA(dst[,"y"]))||
+       (anyNA(src[,"x"]))||(anyNA(src[,"y"])))
+      stop("NA values are not applicable")
    b1 <- .Cursa("dist2dist",x1=as.numeric(dst[,"x"]),y1=as.numeric(dst[,"y"])
-                       ,x2=as.numeric(src[,"x"]),y2=as.numeric(src[,"y"])
-                       ,nxy=nrow(dst),ndf=nrow(src),positive=as.integer(positive)
-                       ,verb=as.integer(verbose)
-                       ,dist=numeric(nrow(src)),ind=integer(nrow(src)))
+                           ,x2=as.numeric(src[,"x"]),y2=as.numeric(src[,"y"])
+               ,nxy=nrow(dst),ndf=nrow(src),positive=as.integer(positive)
+               ,verb=as.integer(verbose)
+               ,dist=numeric(nrow(src)),ind=integer(nrow(src)))
    b1 <- data.frame(ind=b1$ind+1L,dist=b1$dist)
    if (summarize)
    {
@@ -260,19 +300,31 @@
       if (verbose)
          print(c(avg=mean(d),median=median(d),mode2=.modal2(d),mode3=m))
    }
+   if (isUrsa) {
+      return(as.ursa(cbind(src,b1)))
+   }
    b1
 }
 '.is.eq' <- function(x,value) {
-   if (abs(value)<1)
-      abs(x-value)<1e-27
+   if (isAll <- missing(value)) {
+      value <- mean(x,na.omit=TRUE)
+   }
+   if (abs(value)<1e-16)
+      res <- abs(x-value)<1e-27
+   else if (abs(value)<1e-6)
+      res <- abs(x-value)<1e-11
    else
-      abs(x/value-1)<1e-6
+      res <- abs(x/value-1)<1e-6
+   if (isAll)
+      return(all(res))
+   res
 }
 '.is.ge' <- function(x,value) x>value | .is.eq(x,value)
 '.is.le' <- function(x,value) x<value | .is.eq(x,value)
 '.is.gt' <- function(x,value) x>value
 '.is.lt' <- function(x,value) x<value
 '.is.near' <- function(x1,x2,verbose=FALSE) {
+  # https://stackoverflow.com/questions/9508518/why-are-these-numbers-not-equal
    m1 <- match(x1,x2)
    if (all(!is.na(m1))) { ## 20161222 add 'all', removed 'any'
       if (verbose)
@@ -344,7 +396,7 @@
       return(paste0(as.character(x),"\uB0",suffix[1]))
    y
 }
-'.isRscript' <- function() .lgrep("^(--file=|-f$|--slave$)",commandArgs(FALSE))>=2
+'.isRscript' <- function() .lgrep("^(--file=|-f$|-e$|--slave$)",commandArgs(FALSE))>=2
 '.isPackageInUse' <- function() "ursa" %in% loadedNamespaces()
 '.argv0path' <- function() {
    arglist <- commandArgs(FALSE)
@@ -381,13 +433,16 @@
   # if (!cond1)
   #    return(FALSE)
   # is.character(knitr::current_input())
-   ("knitr" %in% loadedNamespaces())&&(is.character(knitr::current_input()))
+   ("knitr" %in% loadedNamespaces())&&(is.character(knitr::current_input()))||(.isShiny())
 }
 '.isJupyter' <- function() {
    "jupyter:irkernel" %in% search()
   # "IRkernel" %in% loadedNamespaces()
 }
-'.open' <- function(...) {
+'.isShiny' <- function() {
+   (("shiny" %in% loadedNamespaces())&&(length(shiny::shinyOptions())>0))
+}
+'.open.canceled' <- function(...) {
    arglist <- lapply(list(...), function(x) {
       if (!file.exists(x)) {
          if (.lgrep("\\%(\\d)*d",x))
@@ -397,7 +452,11 @@
       }
       x
    })
-   system2("R",c("CMD","open",arglist))
+   ret <- system2("R",c("CMD","open",arglist))
+  # browseURL("R",c("CMD","open",arglist))
+   if (length(ret)==1)
+      ret <- ret[[1]]
+   invisible(ret)
 }
 '.isSF' <- function(obj) inherits(obj,c("sf","sfc"))
 '.isSP' <- function(obj) {
@@ -422,4 +481,123 @@
    sprj2 <- .gsub("(^\\s|\\s$)","",sprj2)
    ret <- identical(oprj2,sprj2)
    ret
+}
+'.sample' <- function(x,n) {
+   if (length(x)<=1)
+      return(x)
+   if (missing(n))
+      return(sample(x))
+   if (n>=length(x))
+      return(sample(x))
+   sample(x,n)
+}
+'.system2.patch' <- function(...) {
+  ## in 3.5.0 failure for 'interactive()' & 'system2(...,wait=TRUE)'
+   if (FALSE) #(!interactive())
+      return(system2(...))
+   arglist <- list(...)
+   str(arglist)
+   aname <- names(arglist)
+   if (is.null(aname))
+      return(system2(...))
+   na <- length(arglist)
+   str(aname)
+  # a <- which(sapply(aname,function(x)
+  #                  !inherits(try(match.arg(x,"stdout")),"try-error")))
+   ind <- which(!nchar(aname))
+   cmd1 <- unname(unlist(arglist[ind]))
+   print(cmd1)
+   ind <- seq(na)[-ind]
+   str(ind)
+   isCon <- FALSE
+   arg1 <- list(command=NULL)
+   for (a in aname[ind]) {
+      print(a)
+      ind2 <- try(match.arg(a,"args"))
+      if (!inherits(ind2,"try-error")) {
+         cmd1 <- c(cmd1,arglist[[a]])
+         next
+      }
+      if (!isCon) {
+         ind2 <- try(match.arg(a,"stdout"))
+         if (!inherits(ind2,"try-error")) {
+            cmd1 <- c(cmd1,"1>",arglist[[a]])
+            arg1$show.output.on.console <- FALSE
+            isCon <- TRUE
+            next
+         }
+      }
+      if (!isCon) {
+         ind2 <- try(match.arg(a,"stderr"))
+         if (!inherits(ind2,"try-error")) {
+            cmd1 <- c(cmd1,"2>",arglist[[a]])
+            isCon <- TRUE
+            next
+         }
+      }
+      ind2 <- try(match.arg(a,"wait"))
+      if (!inherits(ind2,"try-error")) {
+         arg1$wait <- arglist[[a]]
+         next
+      }
+     # print(ind2)
+   }
+   arg1$command <- paste(cmd1,collapse=" ")
+   cat("--------\n")
+   str(cmd1)
+   str(arg1)
+  # return(do.call("system",arg1))
+   NULL
+}
+'.origin' <- function () as.Date(as.POSIXlt(Sys.time()-as.numeric(Sys.time()),tz="UTC")) ## "1970-01-01"
+'.evaluate' <- function(arglist,ref,verbose=F & .isPackageInUse()) {
+   if (F & !.isPackageInUse())
+      return(arglist)
+   verbal <- paste0("args evaluating (",paste(ref,collapse=", "),") --")
+   if (verbose)
+      .elapsedTime(paste(verbal,"started"))
+   argname <- character()
+   for (fun in ref)
+      argname <- c(argname,names(as.list(do.call("args",list(fun)))))
+   argname <- unique(argname)
+   rname <- names(arglist)
+   depth <- 1L+.isKnitr()
+  # print(c('as.character(arglist[[1]])'=as.character(arglist[[1]])))
+  # print(c(isPackageInUse=.isPackageInUse()))
+  # print(c('arglist[[1]]'=arglist[[1]]))
+  # try(print(c(a=head(names(as.list(args(arglist[[1]]))))),quote=FALSE))
+  # try(print(c(b=head(names(as.list(args(as.character(arglist[[1]])))))),quote=FALSE))
+  # try(print(c(c=head(names(as.list(args(colorize))))),quote=FALSE))
+  # try(print(c(d=head(names(as.list(args(ursa::colorize))))),quote=FALSE))
+   j <- integer()
+   for (i in seq_along(arglist)[-1]) {
+      if (rname[i]=="obj")
+         next
+      if (!is.language(arglist[[i]]))
+         next
+      if (inherits(try(match.arg(rname[i],argname),silent=TRUE),"try-error"))
+         next
+      res <- try(eval.parent(arglist[[i]],n=depth),silent=TRUE)
+      if (inherits(res,"try-error")) {
+         next
+      }
+      if (is.null(res))
+         j <- c(j,i)
+      else if (is.language(res)) {
+         res <- eval.parent(res,n=depth)
+         if (!is.language(res)) {
+            assign(rname[i],res)
+            arglist[[i]] <- res
+         }
+         else
+            stop("unable to evaluate agrument ",.sQuote(rname[i]))
+      }
+      else
+         arglist[[i]] <- res 
+   }
+   if (length(j))
+      arglist <- arglist[-j]
+   if (verbose)
+      .elapsedTime(paste(verbal,"finished"))
+   arglist
 }

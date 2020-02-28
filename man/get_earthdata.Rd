@@ -9,7 +9,8 @@ Retrive data from Global Imagery Browse Services (GIBS) using API for Developers
 \usage{
 get_earthdata(bbox = NA, res = c("2km", "1km", "500m", "250m"),
               date = NA, product = "", geocode = "",
-              expand = 1.05, border = 0, display = FALSE, verbose = FALSE)
+              expand = 1.05, border = 0, display = FALSE,
+              cache = NA, verbose = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -46,7 +47,10 @@ Numeric. Multiplier for plotting panel zoom in relation to extent of plotting ge
 Integer. Value in pixels of fixed margins around plotting geometry. Ignored if geocoding is not applied. Default is \code{0L}.
 }
   \item{display}{
-Logical. Value \code{TRUE} forced to display image instead of return it. Default is \code{FALSE}.
+Logical. Value \code{TRUE} forces to display image instead of return it. Default is \code{FALSE}.
+}
+  \item{cache}{
+Logical. Is cache used? Default is \code{NA}, which is interpeted as \code{TRUE} for any requested date excepting not late time of today (approximately 17:00 UTC).
 }
   \item{verbose}{
 Logical. Value \code{TRUE} may provide some additional information on console. Default is \code{FALSE}.
@@ -88,11 +92,11 @@ session_grid(NULL)
 pr <- get_earthdata()
 print(pr,quote=FALSE)
 
-\donttest{ ## internet connection is required
+\donttest{ ## internet connection is required -- begin
 a1 <- get_earthdata(bbox=c(2000000,400000,2300000,700000))
 display(a1)
 }
-\donttest{ ## internet connection is required
+\donttest{ ## internet connection is required -- end
 a2 <- get_earthdata(product=2,date=Sys.Date()-7L,res=7,bbox=c(57.8,69.4,62.3,70.8))
 display(a2)
 }

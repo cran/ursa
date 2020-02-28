@@ -19,7 +19,7 @@
 {
    rel <- as.list(match.call())
    fun <- "colorize" #"colorize" ## as.character(rel[1])
-   if (TRUE) { ## ++ 20170629
+   if (!FALSE) { ## ++ 20170629
      # .elapsedTime("---")
      # print(c('as.character(rel[[1]])'=as.character(rel[[1]])))
      # print(c(isPackageInUse=.isPackageInUse()))
@@ -31,6 +31,8 @@
       argname <- names(as.list(args(colorize)))
       rname <- names(rel)
       j <- NULL
+     # str(rel)
+     # print(argname)
       for (i in seq_along(rel)[-1]) {
          if (rname[i]=="obj")
             next
@@ -38,6 +40,15 @@
             res <- eval.parent(rel[[i]])
             if (is.null(res))
                j <- c(j,i)
+            else if (is.language(res)) {
+               res <- eval.parent(res)
+               if (!is.language(res)) {
+                  assign(rname[i],res)
+                  rel[[i]] <- res
+               }
+               else
+                  stop("unable to evaluate agrument ",.sQuote(rname[i]))
+            }
             else
                rel[[i]] <- res 
          }
@@ -46,7 +57,10 @@
          rel <- rel[-j]
      # .elapsedTime("===")
    }
+   else if (TRUE)
+      rel <- .evaluate(rel,"colorize")
    if (is.numeric(alpha)) {
+     ## ?adjustcolor 
       if (all(alpha<=1))
          alpha <- round(alpha*255)
       alpha[alpha<0] <- 0
@@ -97,30 +111,48 @@
       return(res)
    }
    if (!is.ursa(obj)) {
+      daily <- integer()
       isTime <- inherits(obj,c("Date","POSIXct","POSIXlt")[2:3])
       isDate <- inherits(obj,c("Date","POSIXct","POSIXlt")[1])
      # print(c(isCharacter=is.character(obj),isTime=isTime,isDate=isDate))
-      if (inherits(obj,c("Date","POSIXct","POSIXlt")))
+      if (inherits(obj,c("Date","POSIXct","POSIXlt"))) {
+         obj <- sort(obj)
+         od <- sort(unique(diff(sort(unique(obj)))))
+         if (all(od %% min(od) == 0)) {
+            os <- seq(min(obj),max(obj),by=min(od))
+            daily <- match(obj,os)
+         }
+        # daily <- integer()
          obj <- if (nchar(format)) format(obj,format) else as.character(obj)
+      }
       if ((is.numeric(obj))||(is.character(obj))||(is.factor(obj))) {
          isOrdered <- is.ordered(obj)
          isChar <- is.character(obj) | is.factor(obj)
          g1 <- getOption("ursaSessionGrid")
+         ctname <- .grep("colortable",names(rel),value=TRUE)
          if (.is.grid(g1))
             session_grid(NULL)
-         if ((isDate)||(isTime))
-            obj <- sort(obj)
+        # if ((isDate)||(isTime))
+        #    obj <- sort(obj)
          if (isOrdered) {
             levname <- levels(obj)
             obj <- as.integer(obj)-1L
          }
          else if (isChar) {
-            oname <- as.character(obj)
-            obj <- seq_along(obj)
+            if (length(daily)) {
+               oname <- as.character(os)
+               obj <- seq_along(os)
+            }
+            else {
+               oname <- as.character(obj)
+               obj <- seq_along(obj)
+            }
          }
          res <- ursa_new(matrix(rev(obj),nrow=1),flip=FALSE,permute=FALSE) ## rev()?
          if ((isChar)&&(!isOrdered)) {
             res <- reclass(res,src=seq_along(oname),dst=oname)
+            if (length(ctname))
+               ursa(res,"value") <- match(oname,names(rel[[ctname]]))-1L
          }
          rel[["obj"]] <- quote(res)
          if (length(ind <- .grep("lazy",names(rel))))
@@ -147,7 +179,23 @@
             }
             rel[["name"]] <- levname
          }
+         if ((TRUE)&&(length(ctname))) {
+           # rel$value <- seq_along(rel[[ctname]])-1L
+           # rel$name <- names(rel[[ctname]])
+           # rel$pal <- unclass(unname(rel[[ctname]]))
+            rel$stretch <- "category"
+           # rel[[ctname]] <- NULL
+           # print(c(ursa(res,"value")))
+           # str(rel)
+         }
          img <- do.call(fun,rel[-1]) ## RECURSIVE!
+         if (length(ctname)) {
+            img$colortable <- rel[[ctname]]
+         }
+        # if (length(ctname)) {
+        #    str(img)
+        #    q()
+        # }
          if (isOrdered) { ## TODO avoid this double coloring
             levvalue <- .deintervale(levname)
             if ((is.numeric(levvalue))&&(length(levvalue)+1==length(levname))) {
@@ -164,7 +212,9 @@
             session_grid(NULL)
          if (dropIndex)
             return(img$colortable)
-         return(list(index=c(img$value)+1L,colortable=img$colortable))
+         if (!length(daily))
+            return(list(index=c(img$value)+1L,colortable=img$colortable))
+         return(list(index=daily,colortable=img$colortable))
       }
       return(list(index=NA,colortable=NA))
    }
@@ -234,12 +284,14 @@
    }
    if (.is.colortable(colortable)) {
       ct <- ursa_colortable(colortable)
-      value <- names(ct)
       val <- .deintervale(ct,verbose=TRUE)
       interval <- as.integer(length(val)!=length(ct))
       isChar <- is.character(val)
       name <- if (isChar) val else NULL
+      value <- names(ct)
       pal <- as.character(ct)
+      if (isChar)
+         val <- seq_along(val)-1L
       arglist <- list(obj=quote(obj),interval=interval,value=val,name=name
                      ,pal=pal,lazyload=lazyload)
       res <- do.call("colorize",arglist) ## recursive!!!
@@ -282,7 +334,21 @@
          stretch <- "category"
          if ((is.null(palname))&&(is.null(pal))) {
            # palname <- "Paired" ## "random"
-            pal <- cubehelix(value=uniqval)#,rotate=2.5)
+            if (dev <- T) {
+               arglist <- list(...)
+               myname <- names(arglist)
+               ind <- .grep("^pal\\.",myname)
+               if (length(ind)) {
+                  arglist <- arglist[ind]
+                  names(arglist) <- .gsub("(^pal\\.)","",myname[ind])
+                  arglist <- c(list(value=uniqval),arglist)
+                  pal <- do.call("cubehelix",arglist)
+               }
+               else
+                  pal <- cubehelix(value=uniqval)#,rotate=2.5)
+            }
+            else
+               pal <- cubehelix(value=uniqval)#,rotate=2.5)
             inv <- FALSE
          }
       }
@@ -511,6 +577,11 @@
                   next
               # if ((i2<(9))&&(any(abs(v3-v2*(10^i2))>0.499)))
               #    next
+               if (TRUE) { ## 20190306 ++
+                  v4 <- na.omit(v3*10^(-i2)/v2)
+                  if ((length(v4))&&(any(abs(v4-1)>0.101)))
+                     next
+               }
                ok <- TRUE
                break
             }
@@ -656,6 +727,21 @@
                   col <- pal(n)
             }
             else if (is.character(pal)) {
+               if ((length(pal)==1)&&
+                   (requireNamespace("RColorBrewer",quietly=.isPackageInUse()))) {
+                  available <- RColorBrewer::brewer.pal.info
+                  if (!is.na(ind <- match(pal,rownames(available)))) {
+                     pal <- RColorBrewer::brewer.pal(available$maxcolors[ind],pal)
+                     if (available$category[ind]=="qual")
+                        pal <- sample(pal)
+                  }
+                  else if (pal %in% available$category) {
+                     selected <- available[sample(which(available$category==pal),1),]
+                     pal <- RColorBrewer::brewer.pal(selected$maxcolors,rownames(selected))
+                     if (rownames(selected)=="qual")
+                        pal <- sample(pal)
+                  }
+               }
               ## 20180316 added alpha=TRUE
                col <- colorRampPalette(unlist(strsplit(pal,split="\\s+")),alpha=TRUE)(n)
             }
@@ -689,8 +775,9 @@
             th <- th[-c(1,length(th))]
          }
          value <- unique(val[round(length(val)*th)])
-         if (length(value) >= ncolor)
+         if (length(value) >= ncolor) {
             break
+         }
       }
       ok <- FALSE
       for (i2 in -6:+6) ## -4:+4
@@ -709,11 +796,18 @@
      # ok <- FALSE
       if (!ok)
       {
+         event <- FALSE
          for (i2 in 1:3)
          {
             label <- format(value,trim=TRUE,digits=i2)
-            if (length(unique(label))==length(value))
+            if (length(unique(label))==length(value)) {
+               event <- TRUE ## added 20190619
                break
+            }
+         }
+         if (!event) {
+            label <- unique(label)
+            value <- as.numeric(label)
          }
       }
       else
@@ -749,7 +843,7 @@
          ncolor <- (maxb-minb)/byvalue
          rm(minb,maxb)
       }
-      if (is.na(tail)) {
+      if (any(is.na(tail))) {
          tail <- 0.11/ncolor
         # print(c(colors=ncolor,tail=tail))
       }
@@ -799,9 +893,12 @@
       }
       if (verbose)
          print(data.frame(colors=ncolor,min=minvalue,max=maxvalue))
-      if (interval %in% c(2L)) {
+     # str(ncolor)
+      if (interval %in% c(2L,3L)) {
          ncolor <- (ncolor-1)*2+1
       }
+     # str(ncolor)
+     # q()
       if (!is.na(byvalue)) {
          value <- seq(minb,maxb,by=byvalue)
          rm(minb,maxb)
@@ -893,8 +990,11 @@
             mc$lab <- as.Date(mc$at,origin=origin)
          else if (stretch=="time")
             mc$lab <- as.POSIXct(mc$at,origin=origin)
-         if ((nchar(format))&&(stretch %in% c("date","time","julian")))
+         if ((nchar(format))&&(stretch %in% c("date","time","julian"))) {
+            if (stretch %in% "julian")
+               mc$lab <- as.Date(paste0("2018",mc$lab),format="%Y%j")
             mc$lab <- format(mc$lab,format)
+         }
          names(value) <- mc$lab
       }
    }
@@ -1124,7 +1224,23 @@
             }
          }
          else if (is.character(pal)) {
-            col <- colorRampPalette(unlist(strsplit(pal,split="\\s+")),alpha=TRUE)(n)
+            if ((length(pal)==1)&&
+                (requireNamespace("RColorBrewer",quietly=.isPackageInUse()))) {
+               available <- RColorBrewer::brewer.pal.info
+               if (!is.na(ind <- match(pal,rownames(available)))) {
+                  pal <- RColorBrewer::brewer.pal(available$maxcolors[ind],pal)
+                  if (available$category[ind]=="qual")
+                     pal <- sample(pal)
+               }
+               else if (pal %in% available$category) {
+                  selected <- available[sample(which(available$category==pal),1),]
+                  pal <- RColorBrewer::brewer.pal(selected$maxcolors,rownames(selected))
+                  if (rownames(selected)=="qual")
+                     pal <- sample(pal)
+               }
+            }
+            col <- colorRampPalette(unlist(strsplit(pal,split="\\s+"))
+                                   ,alpha=TRUE)(n)
          }
          else
             stop("Unable interpret 'pal' argument")
