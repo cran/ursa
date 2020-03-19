@@ -1,4 +1,13 @@
-2020-02-27
+2020-03-11
+
+### version 3.8.17
+
+-   Fixed for suggested package **`proj4`** (&gt;=1.0.10).
+
+-   Tested on R-devel-r77878 and Rtools 4.0 (2020-02-05); no errors.
+
+-   Added argument `title` in function `print()` for objects of class
+    `ursaRaster` for optional header printing.
 
 ### version 3.8.16
 

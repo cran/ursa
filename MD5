@@ -1,6 +1,6 @@
-1cf45d942d2488e7ee517161364a1b50 *DESCRIPTION
+0a3512d9348db39d63e417c24314869c *DESCRIPTION
 d9f801d4630c37ca27e9f2acd0c1629e *NAMESPACE
-3f3616aeb215696c25705e389140ee5b *NEWS.md
+3db7925175b12fa9af58aa346e881bf1 *NEWS.md
 78a89b19a5722d962e3613f716c01d5c *R/Ops.band_group.R
 5458fae5d15bbab9747166d5a5c1342e *R/Ops.band_stat.R
 d44ba3234a570cd6d8c0f5896e5ebb2a *R/Ops.focal_extrem.R
@@ -17,7 +17,7 @@ f9f4d016b631f57c2f7d252d13162a07 *R/classColorTable.R
 8139f5fdc95f5327fadb5518a100aa6f *R/classConnection.R
 df2546f2adccd2a9612f1307448af523 *R/classGrid.R
 b975685f4a73d5d9751fa28bf56442a8 *R/classRaster.Extract.R
-a37b0e70112574ace4e0165c133757e2 *R/classRaster.R
+098e64184ca00c36d8d9545c85009a04 *R/classRaster.R
 9969c51d3e8b76944fd1dd4d9d96d583 *R/classRaster.Replace.R
 e82d3dad4079f897aad52f787eaf2774 *R/classRaster_GroupGeneric.R
 57e3a840809bb70235abe0c1566cdef5 *R/classRaster_as.array.R
@@ -47,7 +47,7 @@ e2e4c4ad8c6fa7e853dfc5b32b86df49 *R/classRaster_names.R
 a7d09854c2d7ee4973fbb3c3e07fd354 *R/compose_close.R
 eb752b2d8e6b091bd51e17eead5466de *R/compose_design.R
 6c7ef2c512b60c9c7d5561156f5d39cc *R/compose_legend.R
-14c06d797a06cfb3af2346dd60301984 *R/compose_open.R
+e296584b275dac9d84f9a84a1636f296 *R/compose_open.R
 977b54b8e81ae0578a359a363b0907dd *R/compose_panel.R
 addcde2a11f243cf73ca1ba4097fe4c5 *R/compose_plot.R
 4343788cbd7dae2aa5dc9f327c2d0604 *R/conn.create_any.R
@@ -78,9 +78,9 @@ e8b35c870d2cd7da6da2d37fdfa1b572 *R/package_sf.R
 8e4766f1c3afee71f41eb761f26a1cca *R/panel_coastline.R
 7d972f71ce4e0a6f65b2f88c926f78a6 *R/panel_contour.R
 9bc5f9f18477fcb6dfe42523e2f40862 *R/panel_decor.R
-43277c2be7512dc01563cd33fd559b56 *R/panel_graticule.R
+3b2fe97d16630c1b55ff0db7ea778692 *R/panel_graticule.R
 8d547661d28431b6a6e5cc57defee6bd *R/panel_new.R
-07f93918f574f33b01abf8d73464c20b *R/panel_plot.R
+f9faa1dc1e2961217d0af6ca5ef83698 *R/panel_plot.R
 c040ed2d52a437a7162360352fb074cb *R/panel_raster.R
 1328ae139943d974933f053823fe1d0b *R/panel_scalebar.R
 fddf967e6505b47ead4a3d4d04cfb113 *R/panel_shading.R
@@ -105,12 +105,12 @@ e45b8606466cd79e16d55f6665362d86 *R/ursa_dummy.R
 8da814298485d80f6346352c3074e83e *R/ursa_info.R
 eb2058f820b2269401b09b36d2746bdb *R/ursa_new.R
 3b874964f90981cc22670039c512399f *R/ursa_proj.R
-809ab03b9e18f4face23d1dc669e9760 *R/xxx.browse.R
+6f7784a8e8e2d62ce3196df5f60a6417 *R/xxx.browse.R
 d9ebef06491faa30d3fc99059cc60cb5 *R/xxx.fasterize.R
 f6aa2084059c45da54e7d5f8872f6498 *R/xxx.gdal_rasterize.R
 7cb0696d609b85a70eda93fa818b0e88 *R/xxx.gdalwarp.R
 08f8b863baea0dc7baa466c83febfaa2 *R/xxx.geocode.R
-e48385d3c26fb02776b4478e4da314e6 *R/xxx.geomap.R
+15038ed3fec47900d1d8df88fbda2449 *R/xxx.geomap.R
 7f80c2196d1966fd0fa56add6ba42e7a *R/xxx.ncdf.R
 4e0951417636a9053f3c83dd7af3f741 *R/xxx.panel_WMS.R
 90f460a04577138682593bd2318aa9cd *R/xxx.panel_basemap.R
@@ -126,7 +126,7 @@ d3840aa847ac9d00dc43b50987f15287 *R/yyy.getPrm.R
 4e4eebeeafbf8cc0dfa18330f42678c0 *R/yyy.misc.R
 0816d0f62fc268582bb8c49ab03f5d0d *R/yyy.plot.R
 baf0483d871630b523550d27a3cfeed9 *R/yyy.prettyLabel.R
-ee84b1cc5745e165f439aa1b80c44bf0 *R/yyy.project.R
+343a17ae487ab61e7bc98bfd2472e327 *R/yyy.project.R
 40066d6b3791217f5280fd749b12513c *R/yyy.shp.R
 4efa091e4b1ab0799dc8d296f5dd2771 *R/yyy.syno.R
 53a3d663332c6d219e6bfdbb12f275fb *R/yyy.tile.R
@@ -159,7 +159,7 @@ e8339d2187663bacd5dc35df9a1e8f76 *man/classColorTable.Rd
 6154d3b4cf8f1bbd8f53577941aced84 *man/classConnection.Rd
 e619f92cb6b0503075acf515d399b79f *man/classGrid.Rd
 bb9114c3362d7672e229f6b81690d144 *man/classRaster.Extract.Rd
-c4747bddc0163c8543f68d696b73013d *man/classRaster.Rd
+4b2ea7136ff40ac3ac3246a30b7d3562 *man/classRaster.Rd
 ff7b842bff5a59d61ead11b1bf108989 *man/classRaster.Replace.Rd
 030642962f287d6a16bf0e7b33b47183 *man/classRaster_GroupGeneric.Rd
 2118d8c697f05e050a59a906f7ae7fa0 *man/classRaster_as.array.Rd
