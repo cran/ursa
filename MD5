@@ -1,6 +1,6 @@
-0a3512d9348db39d63e417c24314869c *DESCRIPTION
+0147cf967235d86caf871fbb344fa54f *DESCRIPTION
 d9f801d4630c37ca27e9f2acd0c1629e *NAMESPACE
-3db7925175b12fa9af58aa346e881bf1 *NEWS.md
+b8fc9b240befe03b5193253be2639d08 *NEWS.md
 78a89b19a5722d962e3613f716c01d5c *R/Ops.band_group.R
 5458fae5d15bbab9747166d5a5c1342e *R/Ops.band_stat.R
 d44ba3234a570cd6d8c0f5896e5ebb2a *R/Ops.focal_extrem.R
@@ -30,7 +30,7 @@ f2c64bf4dc826ea08170855bfb4b2eee *R/classRaster_c.R
 e85c389d3d521cde1f219e30dc4740bb *R/classRaster_close.R
 079bbdd1595f3844153536caed098806 *R/classRaster_commonGeneric.R
 7444a02075af0d3ac5246f6f8610ff47 *R/classRaster_dim.R
-fb2e81347b69cf32009c4c0aad5126a5 *R/classRaster_head.R
+bcdbbde33d843b2098a7a9e0fe918261 *R/classRaster_head.R
 e7e427f4ac075a9b4ad255787763ae55 *R/classRaster_hist.R
 286eb4af73085e817ce0f9616c541ba7 *R/classRaster_is.na.R
 19d0f944ea257e2c25b2479d81a6e9cf *R/classRaster_length.R
@@ -46,7 +46,7 @@ e2e4c4ad8c6fa7e853dfc5b32b86df49 *R/classRaster_names.R
 0620b661f794179c9fed1b74b8af6ea7 *R/colorize.R
 a7d09854c2d7ee4973fbb3c3e07fd354 *R/compose_close.R
 eb752b2d8e6b091bd51e17eead5466de *R/compose_design.R
-6c7ef2c512b60c9c7d5561156f5d39cc *R/compose_legend.R
+dc6b889d5550a097aa6bedb1f28e3f27 *R/compose_legend.R
 e296584b275dac9d84f9a84a1636f296 *R/compose_open.R
 977b54b8e81ae0578a359a363b0907dd *R/compose_panel.R
 addcde2a11f243cf73ca1ba4097fe4c5 *R/compose_plot.R
@@ -80,7 +80,7 @@ e8b35c870d2cd7da6da2d37fdfa1b572 *R/package_sf.R
 9bc5f9f18477fcb6dfe42523e2f40862 *R/panel_decor.R
 3b2fe97d16630c1b55ff0db7ea778692 *R/panel_graticule.R
 8d547661d28431b6a6e5cc57defee6bd *R/panel_new.R
-f9faa1dc1e2961217d0af6ca5ef83698 *R/panel_plot.R
+f416c3d93b967c9d1ea5abdbc553b1c0 *R/panel_plot.R
 c040ed2d52a437a7162360352fb074cb *R/panel_raster.R
 1328ae139943d974933f053823fe1d0b *R/panel_scalebar.R
 fddf967e6505b47ead4a3d4d04cfb113 *R/panel_shading.R
@@ -92,7 +92,7 @@ c251d3f9a6e8248c499c159fecdb8c33 *R/regrid.R
 a500d8e4cfb840fbc8f1733f3f0fa2d0 *R/session.R
 6e027cfd411307e7dd310ef4a387f6b5 *R/spatial_engine.R
 32ed684a1f6bcb7955c8227a1bd2f064 *R/spatial_read.R
-17f8d5748a58ae48ed3674d8545ed900 *R/spatial_write.R
+4279db985cbd5d6ebd2572f2b4508fbb *R/spatial_write.R
 8c167aecffac9fc7540967775dea0b12 *R/temporal_interpolate.R
 32f63be5da4482dc29f8685a0f6efffb *R/temporal_mean.R
 ac746f93c94fefe8d90be5f97eaada12 *R/ursa_000.R
@@ -116,7 +116,7 @@ f6aa2084059c45da54e7d5f8872f6498 *R/xxx.gdal_rasterize.R
 90f460a04577138682593bd2318aa9cd *R/xxx.panel_basemap.R
 c68b0c86055b0f3d4558b28c85e8fd28 *R/xxx.panel_legend.R
 400486f02046841010934827b3f64980 *R/xxx.polarmap.R
-52910e29a41bee0868bfac5d12e158ca *R/xxx.spatialize.R
+30b42569a6f396ee9c00b2623d7a2aef *R/xxx.spatialize.R
 b9a1b8ced343bbaf38e7e81b715672c5 *R/yyy.C.R
 a1feb44aed5043718b1b1d9a8188ae3e *R/yyy.cache.R
 2a3844d02c138c5bccc84eba2d14761b *R/yyy.connection.R
@@ -130,10 +130,10 @@ baf0483d871630b523550d27a3cfeed9 *R/yyy.prettyLabel.R
 40066d6b3791217f5280fd749b12513c *R/yyy.shp.R
 4efa091e4b1ab0799dc8d296f5dd2771 *R/yyy.syno.R
 53a3d663332c6d219e6bfdbb12f275fb *R/yyy.tile.R
-3af9cb3dea3b224eed061d342371e760 *R/yyy.util.R
+9bfacdc608ce11893637766dc894a898 *R/yyy.util.R
 9caaf6b18d924d4b7f83146040ba4a42 *R/yyy.xtra.R
 be01c7cb26034860dd2ba4f61055c66c *R/zzz.R
-951078889874d3188721bdcc7857e27a *README.md
+7953157071d7d1743531e5c497cf4ec9 *README.md
 829941ed9b665f9f35a784122f5b1eb4 *inst/optional/glance/_glance-example.sh
 79139ed615c49cfd1b42a9585ec195dc *inst/optional/glance/glance.c
 c3ea23c1f33df33771f1a2956d23f8a2 *inst/optional/sponsorship/pb316.png
@@ -208,7 +208,7 @@ bf15510dc1addf5fefa6109a688e2650 *man/display_brick.Rd
 9c07dc7a7e15b9a46c1753e735fdfab6 *man/envi_files.Rd
 09a88c4b8d32c1284084e34d078250bc *man/figures/composedesign.png
 caf4c469c8e88ac5f129d3cecd56ecb4 *man/get_earthdata.Rd
-58bad7319a6c7aaa71f27029e1d9e7c7 *man/glance.Rd
+ec3a85b64830c4385f59e5280ad88dcd *man/glance.Rd
 e79111b82e1f75b679e598c3c8f12923 *man/identify.Rd
 e20ef21197ba1f6b9a8f0acb53c2b70d *man/ignorevalue.Rd
 e986b12a473932531d47b94c52eb3722 *man/legend_align.Rd
@@ -223,7 +223,7 @@ d3d0b826e2a480c9b529e3b6a9d48a83 *man/panel_graticule.Rd
 eede9cfa3a4fcb37695fc4373e4508d0 *man/panel_new.Rd
 fb5d5833a695ccc7c007dbb0f703df8b *man/panel_plot.Rd
 fe105e91285fdc383f8065c548f06ece *man/panel_raster.Rd
-f9944b4488c2ebaf49a1f1838dff3704 *man/panel_scalebar.Rd
+abbc15f2fb5d033f90938c4b0d191071 *man/panel_scalebar.Rd
 486e0cd3d1eb517c86cbe71d4562dff3 *man/panel_shading.Rd
 da26aca4d63f11c9bc1c073e164a9017 *man/pixelsize.Rd
 a67f0d3a071a9ceee44fb38d80ff4984 *man/polygonize.Rd
@@ -239,7 +239,7 @@ a79abf55f59c94688a7dd5728008723c *man/temporal_mean.Rd
 c8fc4f1aa5d17e7abab9ea7c7ecfdbd5 *man/ursa_000.Rd
 10ab3bdbb208657e038d54c76bb84c53 *man/ursa_as.Rd
 607e5fa9bdb3c3c265ace46fee6125fe *man/ursa_blank.Rd
-f28c157b4bf26e2c92426fd16e801507 *man/ursa_cache.Rd
+ba385a843e8da8054ed316327e75244f *man/ursa_cache.Rd
 39a70372045c14f515a1b100cc9b02a5 *man/ursa_crop.Rd
 616dcb6f9f2b8a22fdd319556a632b5c *man/ursa_dummy.Rd
 5a6972542f76b09e435dbacdcfcd0c97 *man/ursa_grid.Rd

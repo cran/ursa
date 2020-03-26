@@ -1,10 +1,19 @@
-2020-03-11
+2020-03-26
+
+### version 3.8.18
+
+-   `spatial_write()`: fixed deprecated (**`sf`** &gt;= 0.9-0) argument
+    `update`-&gt;`append` in suggested `sf::sf_write()`.
+
+-   Re-check “don’t test” examples.
 
 ### version 3.8.17
 
 -   Fixed for suggested package **`proj4`** (&gt;=1.0.10).
 
--   Tested on R-devel-r77878 and Rtools 4.0 (2020-02-05); no errors.
+-   Tested on R-devel (r77878, r77936) and Rtools 4.0 (2020-02-05); no
+    errors. For R-devel (r77936) suggested package **`raster`** should
+    be reinstalled.
 
 -   Added argument `title` in function `print()` for objects of class
     `ursaRaster` for optional header printing.
