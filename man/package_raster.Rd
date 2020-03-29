@@ -64,7 +64,7 @@ Package \pkg{raster} is marked as "Suggested".
 \examples{
 session_grid(NULL)
 if (requireNamespace("raster")) {
-   require(methods) ## need to 'raster::plot'
+   session_grid(regrid(mul=1/4))
    msk <- ursa_dummy(1,min=0,max=100)>40
    a1 <- ursa_dummy(1,min=200,max=500)[msk]
    a2 <- colorize(a1,ramp=FALSE)
@@ -75,7 +75,7 @@ if (requireNamespace("raster")) {
       r1 <- as.Raster(a1)
       message(as.character(class(r1)))
       print(r1)
-      raster::plot(r1)
+      print(raster::spplot(r1))
       b1 <- as.ursa(r1)
       print(c(exported=a1,imported=b1,failed=b1-a1))
       print(c(theSameValue=identical(ursa_value(a1),ursa_value(b1))
@@ -85,7 +85,7 @@ if (requireNamespace("raster")) {
       r2 <- as.Raster(a2)
       message(as.character(class(r2)))
       print(r2)
-      raster::plot(r2)
+      print(raster::spplot(r2))
       b2 <- as.ursa(r2)
       print(c(theSameValue=identical(ursa_value(a2),ursa_value(b2))
              ,rheSameGrid=identical(ursa_grid(a2),ursa_grid(b2))))
@@ -94,7 +94,7 @@ if (requireNamespace("raster")) {
       r3 <- as.Raster(a3)
       message(as.character(class(r3)))
       print(r3)
-      raster::plot(r3)
+      print(raster::spplot(r3))
       raster::plotRGB(r3)
       b3 <- as.ursa(r3)
       print(c(theSameValue=identical(ursa_value(a3),ursa_value(b3))
@@ -104,7 +104,7 @@ if (requireNamespace("raster")) {
       r4 <- as.Raster(a4)
       message(as.character(class(r4)))
       print(r4)
-      raster::plot(r4)
+      print(raster::spplot(r4))
       b4 <- as.ursa(r4)
       print(c(theSameValue=identical(ursa_value(a4),ursa_value(b4))
              ,theSameGrid=identical(ursa_grid(a4),ursa_grid(b4))))

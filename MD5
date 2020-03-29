@@ -1,6 +1,6 @@
-0147cf967235d86caf871fbb344fa54f *DESCRIPTION
+73676fccc653d2acb54aa75adfe26b4f *DESCRIPTION
 d9f801d4630c37ca27e9f2acd0c1629e *NAMESPACE
-b8fc9b240befe03b5193253be2639d08 *NEWS.md
+de78e44faa7a8c9f904d2053b95b8604 *NEWS.md
 78a89b19a5722d962e3613f716c01d5c *R/Ops.band_group.R
 5458fae5d15bbab9747166d5a5c1342e *R/Ops.band_stat.R
 d44ba3234a570cd6d8c0f5896e5ebb2a *R/Ops.focal_extrem.R
@@ -208,13 +208,13 @@ bf15510dc1addf5fefa6109a688e2650 *man/display_brick.Rd
 9c07dc7a7e15b9a46c1753e735fdfab6 *man/envi_files.Rd
 09a88c4b8d32c1284084e34d078250bc *man/figures/composedesign.png
 caf4c469c8e88ac5f129d3cecd56ecb4 *man/get_earthdata.Rd
-ec3a85b64830c4385f59e5280ad88dcd *man/glance.Rd
+99affd2bea62c406d29b34619445b0c7 *man/glance.Rd
 e79111b82e1f75b679e598c3c8f12923 *man/identify.Rd
 e20ef21197ba1f6b9a8f0acb53c2b70d *man/ignorevalue.Rd
 e986b12a473932531d47b94c52eb3722 *man/legend_align.Rd
 32e1e4e3fd6b4e934c13046b8ad53368 *man/legend_colorbar.Rd
 47048e37f16346031c4a9041a0b0f56c *man/legend_mtext.Rd
-08c81236c92471b23a882802d8251a5e *man/package_raster.Rd
+bb712073df9331620f6a276c464012f4 *man/package_raster.Rd
 6cc74c5cdf1391b66cf3a7dcee7fb51f *man/panel_annotation.Rd
 871ebb53ddd3dd88d5e8681b705c627e *man/panel_coastline.Rd
 933dbe10467a0c640ccb581e4058afa5 *man/panel_contour.Rd
@@ -222,7 +222,7 @@ b3db9f5bb93161f7c31dd6fbe3b15eae *man/panel_decor.Rd
 d3d0b826e2a480c9b529e3b6a9d48a83 *man/panel_graticule.Rd
 eede9cfa3a4fcb37695fc4373e4508d0 *man/panel_new.Rd
 fb5d5833a695ccc7c007dbb0f703df8b *man/panel_plot.Rd
-fe105e91285fdc383f8065c548f06ece *man/panel_raster.Rd
+d83d22975790f678898806a13228115e *man/panel_raster.Rd
 abbc15f2fb5d033f90938c4b0d191071 *man/panel_scalebar.Rd
 486e0cd3d1eb517c86cbe71d4562dff3 *man/panel_shading.Rd
 da26aca4d63f11c9bc1c073e164a9017 *man/pixelsize.Rd

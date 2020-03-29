@@ -1,4 +1,8 @@
-2020-03-26
+2020-03-29
+
+### version 3.8.19
+
+-   Minor adjustments for timing of examples.
 
 ### version 3.8.18
 

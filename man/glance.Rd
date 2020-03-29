@@ -163,7 +163,7 @@ cat(" --------- Try in command line: -----------\n")
 message(cmd)
 cat(" ----------- end of quoting ---------------\n")
 \donttest{ ## windows: figure will be opened using *.png file association 
-system(cmd)
+try(system(cmd,wait=FALSE))
 }
 
 require(sp)
