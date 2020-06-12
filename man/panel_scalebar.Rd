@@ -18,12 +18,12 @@ panel_scalebar(...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-   \item{\dots}{Set of argumetns, which are recognized via their names (using \link[base:regex]{regular expressions}) and classes. Passed to non-public \code{.panel_scalebar}, excepting argument \code{scalebar}:
+   \item{\dots}{Set of arguments, which are recognized via their names (using \link[base:regex]{regular expressions}) and classes. Passed to non-public \code{.panel_scalebar}, excepting argument \code{scalebar}:
 %%~       \describe{
-%%~          \item{\code{scalebar}}{Logical or integer. Responsible for should scale bar be displayed or not. If logical and \code{TRUE} then scale bars are plotted on all panel of layout. If logical and \code{FALSE} then scale bars are not displayed. If argument is a vector of positive integers, then scale bars are plotted only in the specified panels, which sequence is defined in \code{\link[ursa]{compose_design}} function and returend from \code{getOption("ursaPngLayout")$layout}. Default is \code{TRUE}.
+%%~          \item{\code{scalebar}}{Logical or integer. Responsible for should scale bar be displayed or not. If logical and \code{TRUE} then scale bars are plotted on all panel of layout. If logical and \code{FALSE} then scale bars are not displayed. If argument is a vector of positive integers, then scale bars are plotted only in the specified panels, which sequence is defined in \code{\link[ursa]{compose_design}} function and returned from \code{getOption("ursaPngLayout")$layout}. Default is \code{TRUE}.
          \tabular{lll}{
             \strong{Pattern} (\code{panel_scalebar}) \tab \strong{Argument} (\code{.panel_scalebar}) \tab \strong{Description}
-            \cr \code{(scalebar|ruler|decor)} \tab \code{   } \tab Logical or integer. Responsible for should scale bar be displayed or not. If logical and \code{TRUE} then scale bars are plotted on all panel of layout. If logical and \code{FALSE} then scale bars are not displayed. If argument is a vector of positive integers, then scale bars are plotted only in the specified panels, which sequence is defined in \code{\link[ursa]{compose_design}} function and returend from \code{getOption("ursaPngLayout")$layout}. Default is \code{TRUE}.
+            \cr \code{(scalebar|ruler|decor)} \tab \code{   } \tab Logical or integer. Responsible for should scale bar be displayed or not. If logical and \code{TRUE} then scale bars are plotted on all panel of layout. If logical and \code{FALSE} then scale bars are not displayed. If argument is a vector of positive integers, then scale bars are plotted only in the specified panels, which sequence is defined in \code{\link[ursa]{compose_design}} function and returned from \code{getOption("ursaPngLayout")$layout}. Default is \code{TRUE}.
             \cr \code{(scalebar\\\\.)*pos(ition)*} \tab \code{position} \tab \emph{See below}.
             \cr \code{(scalebar\\\\.)*w} \tab \code{w} \tab \emph{See below}.
             \cr \code{(scalebar\\\\.)*cex} \tab \code{cex} \tab \emph{See below}.
@@ -60,7 +60,7 @@ The length distortions is taken into account for transverse Mercator (\code{"+pr
 
 Scalebar (single occurence) can be controlled in high-level plot functions (\emph{e.g.}, \code{\link[ursa]{display}}, \code{\link[ursa]{compose_plot}}, \code{\link[ursa]{display_stack}}, \code{\link[ursa]{display_brick}}, \code{\link[ursa]{display_rgb}}, \emph{etc}.). 
 
-To plot scalebar, use argument \code{scalebar=TRUE} and prefix \code{(ruler|scalebar)} (\code{scalebar.*} or \code{ruler.*}) for scalebar's parametes, \emph{e.g.}, \code{scalebar.pos="bottomright"}, \code{scalebar.cex=0.9}.
+To plot scalebar, use argument \code{scalebar=TRUE} and prefix \code{(ruler|scalebar)} (\code{scalebar.*} or \code{ruler.*}) for scalebar's parameters, \emph{e.g.}, \code{scalebar.pos="bottomright"}, \code{scalebar.cex=0.9}.
 
 Scalebar is not displayed for longlat projection (\code{"+proj=longlat"}), where units are degrees.
 }
@@ -103,24 +103,17 @@ session_grid(NULL)
    compose_close(bpp=8)
 
 # example no.4 -- length distortion in the Transverse Mercator projection
-\donttest{ ## internet connection is required; namespace of package 'ggmap' is required
-if (requireNamespace("ggmap")) {
-  # m2 <- ggmap::get_openstreetmap(bbox=c(left=42,bottom=70,right=70,top=82)
-  #                               ,format="png",messaging=TRUE
-  #                               ,scale=34942642,filename="ggmapTempMy")
-   m2 <- try(ggmap::get_googlemap(center=c(lon=56,lat=77.5),zoom=4,scale=1
-                                 ,size=c(320,640),format="png8",messaging=TRUE))
-   if (!inherits(m2,"try-error")) {
-      res <- as.ursa(m2)
-      compose_open(res,legend=NULL,scale=1,pointsize=12)
-      panel_new()
-      panel_raster(res)
-      panel_graticule(decor=TRUE)
-      for (p in c("bottom","center","top"))
-         panel_scalebar(pos=p,w=100)
-      compose_close()
-   }
-}}
+   a1 <- regrid(setbound=c(10,65,71,83),dim=c(100,100),crs=4326)
+   a2 <- polygonize(ursa_bbox(a1))
+   a3 <- spatial_transform(a2,3857)
+   a4 <- regrid(setbound=spatial_bbox(a3),res=20000,crs=spatial_crs(a3))
+   compose_open(legend=NULL)
+   panel_new("white")
+   panel_coastline(fill="#00000010")
+  # panel_graticule()
+   for (p in c("bottom","center","top"))
+      panel_scalebar(pos=p,w=200)
+   compose_close()
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

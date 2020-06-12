@@ -27,7 +27,7 @@
         # session_grid(NULL)
          s2 <- unlist(sapply(s1,.compose_wms,extend=FALSE))
          compose_open(length(s2),legend=NULL,...)#,fileout="res1.png")
-         pb <- ursaProgressBar(min=0,max=length(s2))
+         pb <- ursaProgressBar(min=0,max=length(s2),tail=TRUE)
         # print(getOption("ursaPngScale"))
          for (i in seq_along(s2)) {
             arglist[[1]] <- s2[i]
@@ -72,7 +72,7 @@
       else if (envi_exists(arglist[[1]],exact=TRUE)) {
          return(do.call("display",arglist))
       }
-      else if (.lgrep("\\.(tif|tiff|img|png|bmp|dat)$",arglist[[1]])) {
+      else if (.lgrep("\\.(tif|tiff|img|png|bmp|dat|grb)$",arglist[[1]])) {
          return(do.call("display",arglist))
       }
       else {
@@ -148,7 +148,7 @@
    invisible(0L)
 }
 '.glance' <- function(dsn,layer=".*",grid=NULL,field=".+",size=NA,expand=1
-                        ,border=27,lat0=NA,lon0=NA,resetProj=FALSE
+                        ,border=27,lat0=NA,lon0=NA,resetProj=FALSE,resetGrid=FALSE
                         ,style="auto"
                         ,feature=c("auto","field","geometry"),alpha=NA
                         ,basemap.order=c("after","before"),basemap.alpha=NA
@@ -171,7 +171,7 @@
       geocode <- match.arg(geocode)
    projClass <- c("longlat","stere","laea","merc")
    projPatt <- paste0("(",paste(projClass,collapse="|"),")")
-   staticMap <- c("openstreetmap","google","sputnikmap")
+   staticMap <- c("openstreetmap","sputnikmap","google")
    tileClass <- c(staticMap,.tileService())
    tilePatt <- paste0("(",paste0(unique(c(staticMap,tileClass)),collapse="|"),")")
    basemap.order <- match.arg(basemap.order)
@@ -195,7 +195,9 @@
                    ,place=place,area=area,grid=grid,size=size
                   # ,expand=expand,border=border
                    ,expand=expand,border=0
-                   ,lat0=lat0,lon0=lon0,resetProj=resetProj,style=style#,zoom=NA
+                   ,lat0=lat0,lon0=lon0
+                   ,resetProj=resetProj,resetGrid=resetGrid
+                   ,style=style#,zoom=NA
                    ,verbose=verbose)
    if (inherits(obj,"NULL"))
       return(invisible(NULL))
@@ -425,7 +427,7 @@
       gline <- compose_graticule(...)
       if (toCoast)
          cline <- compose_coastline(...)
-      pb <- ursaProgressBar(min=0,max=length(res),silent=silent)
+      pb <- ursaProgressBar(min=0,max=length(res),silent=silent,tail=TRUE)
       for (i in seq_along(res)) {
          if (isWeb)
             panel_new(fill="transparent",...)

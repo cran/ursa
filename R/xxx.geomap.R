@@ -12,7 +12,7 @@
                            ,"mapnik"),"color")
    if (is.na(zoom))
       zoom <- "0"
-   staticMap <- c("openstreetmap","google","sputnikmap")
+   staticMap <- c("openstreetmap","google$","sputnikmap")
    tilePatt <- paste0("(",paste0(unique(c(staticMap,tileList))
                                 ,collapse="|"),")")
    tilePatt <- .gsub("\\.","\\\\.",tilePatt)
@@ -103,6 +103,8 @@
          else {
             loc <- with(g0,.project(rbind(c(minx,miny),c(maxx,maxy)),proj4,inv=TRUE))
             loc <- c(loc)[c(1,3,2,4)]
+            if ((art=="polarmap")&&(loc[1]>loc[3]))
+               loc <- loc[c(3,2,1,4)]
          }
       }
       if (!((is.numeric(loc))&&(length(loc) %in% c(4,2)))) {
@@ -176,7 +178,7 @@
          s <- 2*B/(2^(1:19+8))
       }
       else {
-         proj4 <- paste("","+proj=merc +a=6378137 +b=6378137"
+         proj4 <- paste("+proj=merc +a=6378137 +b=6378137"
                        ,"+lat_ts=0.0",paste0("+lon_0=",lon_0)
                        ,"+x_0=0.0 +y_0=0 +k=1.0"
                        ,"+units=m +nadgrids=@null +wktext +no_defs")
@@ -272,6 +274,8 @@
          else
             zman <- zoom
       }
+      if ((art=="polarmap")&&(zman>9))
+         zman <- 9
       if (zman!=zoom) {
          if (verbose)
             print(c(zoomAuto=zoom,zoomManual=zman))
@@ -361,7 +365,7 @@
          dx0 <- lon_0*pi/180*B0
          minx <- g0$minx+dx0
          maxx <- g0$maxx+dx0
-         epsg3857 <- paste("","+proj=merc +a=6378137 +b=6378137"
+         epsg3857 <- paste("+proj=merc +a=6378137 +b=6378137"
                           ,"+lat_ts=0.0 +lon_0=0.0"
                           ,"+x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null"
                           ,"+wktext  +no_defs")
@@ -531,12 +535,19 @@
             if (dima[3]==nbmax)
                return(x)
             dim(x) <- c(dima[1]*dima[2],dima[3])
-            for (i in (dima[3]+1L):nbmax)
-               x <- cbind(x,255L)
+            if ((dima[3]==1)&&(all(c(x)==0)))
+               fv <- 0L
+            else
+               fv <- 255L
+            for (i in (dima[3]+1L):nbmax) {
+               x <- cbind(x,fv)
+            }
+           # apply(x,2,function(y) print(summary(y)))
             dim(x) <- c(dima[1],dima[2],nbmax)
             x
          })
       }
+     # str(lapply(img1,dim))
       img <- array(0L,dim=c(256*length(v),256*length(h),nbmax))
       for (i in sample(seq(nrow(tgr)))) {
         # img[igr[i,"y"]*256L+seq(256),igr[i,"x"]*256+seq(256),] <- img2[,,1:3]
@@ -579,8 +590,8 @@
                         ,"?width={w}&height={h}&z={z}&clng={lon}&clat={lat}")
          ,google=paste0("https://maps.googleapis.com/maps/api/staticmap"
                        ,"?center={lat},{lon}&zoom={z}&size={w}x{h}")
-         ,openstreetmap=paste0("http://staticmap.openstreetmap.de/staticmap.php"
-                              ,"?center={lat},{lon}&zoom={z}&size={w}x{h}")
+         ,openstreetmap=paste0("https://staticmap.openstreetmap.de/staticmap.php"
+                              ,"?center={lat},{lon}&zoom={z}&size={w}x{h}") ## &maptype=mapnik
          )
      # php <- switch(art,google="http://maps.googleapis.com/maps/api/staticmap"
      #        ,openstreetmap="http://staticmap.openstreetmap.de/staticmap.php")
@@ -637,7 +648,9 @@
             }
            # fname <- tempfile()
            # download.file(src,fname,mode="wb",quiet=!verbose)
-            fname <- .ursaCacheDownload(src,mode="wb",quiet=!verbose)
+            fname <- .ursaCacheDownload(src,mode="wb"
+                                       ,quiet=!verbose
+                                       )
             j <- if (i==1) 0 else sum(col2[seq(i-1)])
             img[,j+seq(col2[i]),] <- png::readPNG(fname)
            # file.remove(fname)
@@ -667,10 +680,15 @@
             src <- .gsub("^=","",paste(names(src),src,sep="=",collapse="&"))
          }
          if (cache)
-            fname <- .ursaCacheDownload(src,mode="wb",quiet=!verbose)
+            fname <- .ursaCacheDownload(src,mode="wb"
+                                       ,headers=list(#'Referer Page'="https://www.r-project.org"
+                                                    'referfer'="r-ursa package"
+                                                    )
+                                       ,quiet=!verbose)
          else {
             fname <- tempfile()
-            download.file(src,fname,mode="wb",quiet=!verbose)
+            download.file(src,fname,mode="wb"
+                         ,quiet=!verbose)
          }
          basemap <- as.integer(255L*as.ursa(png::readPNG(fname)
                                            ,aperm=TRUE,flip=TRUE))

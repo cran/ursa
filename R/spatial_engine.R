@@ -7,17 +7,27 @@
    isSF <- .isSF(obj)
    isSP <- .isSP(obj)
    if (verbose)
-      print(data.frame(ursa=isUrsa,sf=isSF,sp=isSP,row.names="engine"))
+      print(data.frame(ursa=isUrsa,sf=isSF,sp=isSP,prm=isPrm,row.names="engine"))
    if (isSF) {
       return(sf::st_crs(obj)$proj4string)
    }
    if (isSP) {
-      return(sp::proj4string(obj))
+      if (FALSE) ## `sp`<1.4-2
+         return(sp::proj4string(obj))
+      spCRS <- methods::slot(obj,"proj4string")
+      if (methods::is(spCRS,"CRS")) {
+         wkt <- comment(spCRS)
+         ret <- methods::slot(spCRS,"projargs")
+         if (FALSE) ## possible for future use
+            comment(ret) <- wkt
+         return(ret)
+      }
+      return(NA_character_)
    }
    if (isUrsa)
       return(ursa_proj4(obj))
    if (isPrm) {
-      return(.epsg2proj4(obj,force=TRUE))
+      return(.epsg2proj4(obj,verbose=verbose,force=TRUE))
    }
    return(NULL)
 }
@@ -27,12 +37,12 @@
    if (verbose)
       print(data.frame(sf=isSF,sp=isSP,row.names="engine"))
    if (isSF) {
-      sf::st_crs(obj) <- sf::NA_crs_
-      sf::st_crs(obj) <- value
+      sf::st_crs(obj) <- sf::NA_crs_ ## ??? comment it?
+      sf::st_crs(obj) <- .p4s2epsg(value)
    }
    if (isSP) {
       if (is.numeric(value))
-         value <- .epsg2proj4(value,force=FALSE)
+         value <- .epsg2proj4(value,force=!TRUE)
       sp::proj4string(obj) <- NA_character_
       sp::proj4string(obj) <- value
    }
@@ -277,7 +287,16 @@
          crs <- .epsg2proj4(crs,force=FALSE)
       else if (.isSP(crs))
          crs <- sp::proj4string(crs)
-      return(sp::spTransform(obj,crs,...)) ## sp::CRS(crs) ?
+      opW <- options(warn=ifelse(verbose,0,-1))
+      crs <- methods::slot(sp::CRS(crs,doCheckCRSArgs=TRUE),"projargs")
+      crs0 <- spatial_crs(obj)
+      if (.lgrep("\\+init=epsg\\:\\d+",crs0)) {
+         spatial_crs(obj) <- methods::slot(sp::CRS(crs0,doCheckCRSArgs=TRUE),"projargs")
+      }
+      ret <- sp::spTransform(obj,crs,...)
+      options(opW)
+      return(ret)
+     # return(sp::spTransform(obj,crs,...)) ## sp::CRS(crs) ?
    }
    return(NULL)
 }
@@ -718,7 +737,8 @@
    if (verbose)
       print(data.frame(sf=isSF,sp=isSP,row.names="engine"))
    if (isSF) {
-      sf::st_agr(obj) <- "constant"
+      if (inherits(obj,"sf"))
+         sf::st_agr(obj) <- "constant"
       return(sf::st_centroid(obj))
    }
    if (isSP) {
@@ -766,7 +786,9 @@
    }
    obj
 }
-'spatial_intersection' <- function(x,y,verbose=FALSE) {
+'spatial_intersection' <- function(x,y,geometry=c("default","polygons","lines"
+                                                 ,"points","all"),verbose=FALSE) {
+   geometry <- match.arg(geometry)
    if (is.ursa(x)) {
       if (.isSF(y))
          x <- polygonize(x,engine="sf",verbose=verbose)
@@ -792,23 +814,84 @@
          sf::st_agr(x) <- "constant"
       if (inherits(y,"sf"))
          sf::st_agr(y) <- "constant"
+     # x_
       res <- sf::st_intersection(x,y)
-      if (TRUE) {
-         if (FALSE) {
-           # spatial_geometry(res) <- sf:::st_cast_sfc_default(spatial_geometry(res))
+      if (FALSE) {
+        # spatial_geometry(res) <- sf:::st_cast_sfc_default(spatial_geometry(res))
+      }
+      else {
+         if (geometry=="all")
+            return(res)
+         xGeotype <- as.character(spatial_geotype(x,each=TRUE))
+         yGeotype <- as.character(spatial_geotype(y,each=TRUE))
+         geotype <- as.character(spatial_geotype(res,each=TRUE))
+         uGeotype <- unique(geotype)
+         xPolygon <- .lgrep("polygon",xGeotype)>0
+         xLine <- .lgrep("line",xGeotype)>0
+         xPoint <- .lgrep("point",xGeotype)>0
+         yPolygon <- .lgrep("polygon",yGeotype)>0
+         yLine <- .lgrep("line",yGeotype)>0
+         yPoint <- .lgrep("point",yGeotype)>0
+         if (geometry=="default") {
+            if ((xPolygon)&&(yPolygon))
+               geometry <- "polygons"
+            else if (((xLine)&&(yLine))||((xLine)&&(yPolygon))||((xPolygon)&&(yLine)))
+               geometry <- "lines"
+            else if ((xPoint)||(yPoint))
+               geometry <- "points"
+            else
+               return(res)
          }
-         else {
-            geotype <- spatial_geotype(res)
-            if ("GEOMETRYCOLLECTION" %in% geotype) {
-               if (length(grep("POLYGON",geotype)))
-                  res <- sf::st_collection_extract(res,"POLYGON")
+         if (geometry=="polygons") {
+            ind <- .grep("(polygon|collection)",geotype)
+            if (!length(ind))
+               return(res)
+            res <- res[ind,]
+            geotype <- geotype[ind]
+            if (length(na.omit(match(unique(geotype)
+                                    ,c("POLYGON","MULTIPOLYGON"))))==2) {
+               if (length(ind2 <- .grep("collection",geotype))) {
+                  res <- spatial_bind(res[-ind2,]
+                               ,sf::st_collection_extract(res[ind2,],"POLYGON"))
+                  geotype <- as.character(spatial_geotype(res,each=TRUE))
+               }
+               res <- sf::st_cast(res[grep("POLYGON",geotype),],"MULTIPOLYGON")
             }
-            else if (length(na.omit(match(geotype,c("POLYGON","MULTIPOLYGON"))))==2) {
-               res <- sf::st_cast(res,"MULTIPOLYGON")
+            return(res)
+         }
+         else if (geometry=="lines") {
+            ind <- .grep("(line|collection)",geotype)
+            if (!length(ind))
+               return(res)
+            res <- res[ind,]
+            geotype <- geotype[ind]
+            if (length(na.omit(match(unique(geotype)
+                                    ,c("MULTILINESTRING","LINESTRING"))))==2) {
+               if (length(ind2 <- .grep("collection",geotype))) {
+                  res <- spatial_bind(res[-ind2,]
+                            ,sf::st_collection_extract(res[ind2,],"LINESTRING"))
+                  geotype <- as.character(spatial_geotype(res,each=TRUE))
+               }
+               res <- sf::st_cast(res[grep("LINESTRING",geotype),],"MULTILINESTRING")
             }
-            else if (length(na.omit(match(geotype,c("MULTILINESTRING","LINESTRING"))))==2) {
-               res <- sf::st_cast(res,"MULTILINESTRING")
-            }
+            return(res)
+         }
+         else if (geometry=="points") {
+            ind <- .grep("point",geotype)
+            if (!length(ind))
+               return(res)
+            res <- res[ind,]
+            return(res)
+         }
+         if ("GEOMETRYCOLLECTION" %in% uGeotype) {
+            if (length(grep("POLYGON",uGeotype)))
+               res <- sf::st_collection_extract(res,"POLYGON")
+         }
+         else if (length(na.omit(match(uGeotype,c("POLYGON","MULTIPOLYGON"))))==2) {
+            res <- sf::st_cast(res[grep("POLYGON",geotype),],"MULTIPOLYGON")
+         }
+         else if (length(na.omit(match(uGeotype,c("MULTILINESTRING","LINESTRING"))))==2) {
+            res <- sf::st_cast(res[grep("LINESTRING",geotype),],"MULTILINESTRING")
          }
       }
       return(res)

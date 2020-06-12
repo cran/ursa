@@ -99,7 +99,9 @@ is_spatial_points(obj, verbose = FALSE)
 is_spatial_lines(obj, verbose = FALSE)
 is_spatial_polygons(obj, verbose = FALSE)
 
-spatial_intersection(x, y, verbose = FALSE)
+spatial_intersection(x, y,
+                     geometry=c("default", "polygons", "lines", "points", "all"),
+                     verbose = FALSE)
 spatial_symdifference(x, y, verbose = FALSE)
 spatial_union(x, y, byid=NA, verbose = FALSE)
 
@@ -160,6 +162,9 @@ Character. Filename (source or packed) of spatial data.
   \item{each}{
 Logical. Whether result will be returned for each record (\code{TRUE}) or generalized (\code{FALSE}). Default is \code{FALSE}.
 }
+  \item{geometry}{
+Character. Desired output geometry for \code{engine="sf"}. If \code{"default"} then output geometry is defined internally (e.g., \code{"polygons"} for polygons intersection). If \code{"all"} then no output subsetting. Default is \code{"default"}.
+}
 
   \item{reason}{
 Logical. If \code{TRUE}, then the reason for validity ("Valid Geomerty") or invalidity is returned. If \code{FALSE}, then logical value of validity is returned. Default is \code{FALSE}.
@@ -182,7 +187,7 @@ Further arguments passed to \code{sf::st_transform} or to \code{sp::spTransform}
 
 \code{spatial_data} (\emph{Extract} function) returns attribute table only, without geometry. Subsetting fields can be specified by argument \code{subset} using regular expressions. If \code{drop=TRUE} and selected single column then vector is returned instead of data frame.
 
-\code{spatial_data<-} (\emph{Replace} function) addes spatial data to the object geomerty. Source data (if presents) are droped.
+\code{spatial_data<-} (\emph{Replace} function) adds spatial data to the object geomerty. Source data (if presents) are droped.
 
 \code{spatial_geometry} (\emph{Extract} function) returns only geometry, which format is depended on class of \code{obj}.
 
@@ -192,7 +197,7 @@ Further arguments passed to \code{sf::st_transform} or to \code{sp::spTransform}
 
 \code{spatial_geotype} and \code{spatial_shape} are synonyms; each returns type of spatial data: "POINT", "LINESTRING", "POLYGON", "MULTIPOLYGON", \dots.
 
-\code{spatial_coordinates} returns simpliefied matrix or list of coordinates of original object.
+\code{spatial_coordinates} returns simplified matrix or list of coordinates of original object.
 
 \emph{Extract} functions \code{spatial_fields} and \code{spatial_columns} return column names of spatial attributive table. \code{spatial_columns} is synonym to \code{spatial_fields}.
 

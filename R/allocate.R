@@ -1,12 +1,15 @@
 # for interpoaltion: packages 'interp', 'MBA'. 'akima' is under ACM license
 # D:\ongoing\CloudMailRu\pdf\R\akima_ACM--alternatives_GPL.pdf 
 'allocate' <- function(vec,coords=c("x","y"),nodata=NA,attr=".+",fun=c("mean","sum","n")
-                      ,cellsize=NA,verbose=FALSE)
+                      ,cellsize=NA,resetGrid=FALSE,verbose=FALSE)
 {
+   class(vec) ## initizize evaluation 'vec' before
   # vec <- list(x=vec$x,y=vec$y,conc=vec$conc,speed=vec$speed)
    fun <- match.arg(fun)
    kind <- switch(fun,mean=1L,sum=2L,n=4L,0L)
    onlyGrid <- FALSE
+   if (resetGrid)
+      session_grid(NULL)
    if (is.character(vec)) {
      # vec <- .shp.read(vec)
       vec <- spatialize(vec,engine="sp")
@@ -85,7 +88,7 @@
       colnames(vec) <- c("x","y")
       ind <- .grep("^(lon|lat)",mname)
       if ((length(ind)==2)&&(is.null(proj4)))
-         proj4 <- paste(" +proj=longlat +datum=WGS84 +no_defs")
+         proj4 <- paste("+proj=longlat +datum=WGS84 +no_defs")
    }
    if (is.null(proj4))
       proj4 <- ""

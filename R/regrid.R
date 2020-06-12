@@ -12,6 +12,9 @@
       return(res)
    }
    fun <- "resize" #as.character(match.call())[1]
+   if (.is.ursa_stack(x)) {
+      return(lapply(x,regrid,...))
+   }
    if (!is.ursa(x)) {
       return(.regrid(x,...))
      # return(NULL)
@@ -220,10 +223,10 @@
    }
    if (!is.na(setbound)[1]) {
       setbound <- rep(setbound,length=4)
-      g$minx <- setbound[1]
-      g$miny <- setbound[2]
-      g$maxx <- setbound[3]
-      g$maxy <- setbound[4]
+      g$minx <- unname(setbound[1])
+      g$miny <- unname(setbound[2])
+      g$maxx <- unname(setbound[3])
+      g$maxy <- unname(setbound[4])
       toDefine <- 0L
      # if ((is.na(g$columns))&&(!is.na(columns))) { ## -- 20170613
       if (!is.na(columns)) { ## ++ 20170613
@@ -340,6 +343,7 @@
       g$rows <- as.integer(round(g$rows))
    }
    step2 <- FALSE
+   g2 <- g
    if ((!is.na(bbox[1]))&&(length(bbox)==4))
    {
       g$minx <- unname(bbox[1])
@@ -358,8 +362,8 @@
       g$maxy <- g$maxy+cut[4]
       step2 <- TRUE
    }
-   else
-      step2 <- FALSE
+  # else ## not neccessary: initial value is FALSE
+  #    step2 <- FALSE 
    if (!is.na(minx))
       g$minx <- minx
    if (!is.na(miny))
@@ -384,11 +388,33 @@
    {
       if (zero=="node") {
          if (verbose)
-            print("step2:zero:node")
+            print("step2:zero=node")
          g$minx <- round(g$minx/g$resx)*g$resx
          g$maxx <- round(g$maxx/g$resx)*g$resx
          g$miny <- round(g$miny/g$resy)*g$resy
          g$maxy <- round(g$maxy/g$resy)*g$resy
+      }
+      else if ((T)&&(zero=="keep")&&(!is.na(g2$minx))&&(!is.na(g2$maxx))&&
+                               (!is.na(g2$miny))&&(!is.na(g2$maxy))) {
+         if (verbose)
+            print("step2:zero=keep")
+        # message("g")
+        # print(g,digits=12)
+        # message("g2")
+        # print(g2,digits=12)
+         x <- seq(g2,"x")
+         y <- seq(g2,"y")
+         shift <- c(0,1)[1]
+         indMinX <- which(x<=g$minx-shift*g$resx/2)
+         indMaxX <- which(x>=g$maxx+shift*g$resx/2)
+         indMinY <- which(y<=g$miny-shift*g$resy/2)
+         indMaxY <- which(y>=g$maxy+shift*g$resy/2)
+         if ((length(indMinX))&&(length(indMaxX))&&(length(indMinY))&&(length(indMaxY))) {
+            g$minx <- max(x[indMinX])-g$resx/2
+            g$maxx <- min(x[indMaxX])+g$resx/2
+            g$miny <- max(y[indMinY])-g$resy/2
+            g$maxy <- min(y[indMaxY])+g$resy/2
+         }
       }
       c0 <- with(g,(maxx-minx)/resx)
       r0 <- with(g,(maxy-miny)/resy)
@@ -430,12 +456,21 @@
       g$columns <- as.integer(round(g$columns))
       g$rows <- as.integer(round(g$rows))
    }
+  # str(list(crs=crs,proj4=proj4,'g$proj4'=g$proj4))
    if ((is.na(proj4))&&(!is.na(crs)))
       proj4 <- crs
-   if (is.character(proj4))
-      g$proj4 <- proj4
-   else if (is.numeric(proj4))
-      g$proj4 <- .epsg2proj4(proj4,force=!TRUE)
+   if (FALSE) {
+      if (is.character(proj4))
+         g$proj4 <- proj4
+      else if (is.numeric(proj4))
+         g$proj4 <- .epsg2proj4(proj4,force=!TRUE,verbose=verbose)
+   }
+   else if ((!is.na(proj4))&&(!identical(g$proj4,proj4))) {
+      g$proj4 <- spatial_crs(proj4)
+   }
+  # else {
+  #    message("skip")
+  # }
    if (is.na(g$proj4))
       g$proj4 <- ""
    if (any(border!=0))

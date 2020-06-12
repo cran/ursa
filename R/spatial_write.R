@@ -62,7 +62,7 @@
      # fname1 <- paste0("res",seq_along(obj),".gpkg")
       fname1 <- .maketmp(length(obj),ext=interimExt)
       if (!allSF)
-         pb <- ursaProgressBar(min=0,max=2*length(obj))
+         pb <- ursaProgressBar(min=0,max=2*length(obj),tail=TRUE)
       p4s <- sapply(obj,function(x){
          res <- if (inherits(x,c("sf","sfc"))) sf::st_crs(x)$proj4string
                 else sp::proj4string(x)
@@ -333,7 +333,6 @@
                 ,append=appendlayer))
       }
       if (utils::packageVersion("sf")>="0.9-0") {
-         print(appendlayer)
          sf::st_write(obj,dsn=fname,layer=lname,driver=driver
                      ,dataset_options=dopt,layer_options=lopt
                      ,delete_layer=file.exists(fname) & !appendlayer

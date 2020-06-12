@@ -1,3 +1,19 @@
+'widgetize' <- function(obj,...) {
+  # if (!requireNamespace("widgetframe",quietly=.isPackageInUse()))
+  #    return(browse(obj))
+  # widgetframe::frameWidget(obj)
+   if (is.null(obj))
+      return(invisible(obj))
+   if (!.isKnitr()) {
+      if (is.character(obj)) {
+         return(cat(obj,sep="\n"))
+      }
+      return(browse(obj,...))
+   }
+   if (!inherits(obj,c("htmlwidget","knitr_kable")))
+      return(browse(obj,...))
+   obj
+}
 'browse' <- '.open' <- function(...) {
    arglist <- list(...)
    if (length(ind <- grep("^ref$",ignore.case=FALSE,names(arglist)))) {
@@ -121,17 +137,35 @@
          md5 <- tools::md5sum(ftemp)
          file.remove(ftemp)
          if (is.null(output))
-            output <- .ursaCacheDir()
+            output <- file.path(.ursaCacheDir(),"knit")
          else {
            # TODO 'if (length(grep("\\.html$",output)))...' 
             output <- normalizePath(output)
          }
-         libdir <- file.path(output,"htmlwidgets")
+         libdir <- file.path(output,"site_libs")
          fname <- file.path(output,paste0("htmlwidget_",unname(md5),".html"))
          if (!file.exists(fname)) {
            # obj <- htmlwidgets::prependContent(obj,htmltools::HTML("<style>iframe {border: 3px solid magenta;}</style>"))
+            if (requireNamespace("widgetframe",quietly=.isPackageInUse())) {
+               obj <- widgetframe::frameableWidget(obj)
+            }
             htmlwidgets::saveWidget(obj,file=fname,libdir=libdir
-                                   ,selfcontained=FALSE)
+                                   ,selfcontained=FALSE
+                                   ,knitrOptions=list(hello="World")
+                                   )
+         }
+         a <- readLines(fname)
+         a <- grep("application/json.+data-for=\\\"htmlwidget",a,value=TRUE)
+         id <- gsub("^.+visdat\\W+([0-9a-f]+)\\W+.+$","\\1",a)
+         if ((nchar(id)>4)&&(nchar(id)<36)) {
+            a <- gsub(id,"gggg",a)
+            a <- gsub("(^.+htmlwidget\\W+)([0-9a-f]+)(\\W+.+$)","\\1hhhhh\\3",a)
+            saveRDS(a,ftemp)
+            md5 <- unname(tools::md5sum(ftemp))
+            file.remove(ftemp)
+            ename <- fname
+            fname <- file.path(dirname(fname),paste0("htmlwidget-",md5,".html"))
+            file.rename(ename,fname)
          }
          fname <- gsub("\\\\","/",fname)
          if (.lgrep("^(/\\w|[A-Z\\:\\w])",fname))
@@ -157,7 +191,7 @@
                         ,", echo=F"
                        # ,if (!is.null(oname)) paste0(", fig.cap=",dQuote(oname[k]))
                         ,if (T | !nchar(cap)) paste0(", fig.cap=",dQuote(cap))
-                        ,paste0(", out.extra=",dQuote("style='class=\\\"reset\\\"'"))
+                        ,paste0(", out.extra=",dQuote("class=\\\'reset\\\'"))
                         ,"}")
                  ##~ ,paste0("knitr::include_url(",dQuote(fname)
                                             ##~ #,",height=",dQuote(paste0(round(4.8*96,1),"px"))
@@ -174,6 +208,7 @@
             ret2 <- browseURL(fname)
          }
          else {
+           # writeLines(cmd,"c:/tmp/cap.Rmd")
            # knitr::asis_output(cmd)
             cmd <- knitr::knit_child(text=cmd,quiet=TRUE)
             cat(cmd,sep="\n")

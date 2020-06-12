@@ -101,7 +101,23 @@
                   substr(l[ind],b,b) <- ellipsis
                }
                f$name <- format(l)
-               return(print(f,quote=FALSE))
+               return({
+                  if ((FALSE)||(.isKnitr()))
+                     print(knitr::kable(f,format="pandoc"))
+                  else {
+                     ret <- print(f,quote=FALSE)
+                     if (candidate <- TRUE) {
+                        ct <- ursa(x,"category")
+                        if (!is.null(ct)) {
+                           o <- paste(ct,collapse=", ")
+                           if (nchar(o)>66)
+                              o <- paste0(substr(o,1,65),"\u2026")
+                           cat("   Classes: ",o,"\n")
+                        }
+                     }
+                     invisible(ret)
+                  }
+               })
             }
          }
          for (d in 3:mn) {
@@ -123,5 +139,8 @@
       }
       digits <- 3
    }
-   print(format(e,digits=digits,...),quote=FALSE)
+   if (.isKnitr())
+      knitr::kable(format(e,digits=digits,...))
+   else
+      print(format(e,digits=digits,...),quote=FALSE)
 }

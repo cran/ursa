@@ -305,7 +305,7 @@
    }
    b1
 }
-'.is.eq' <- function(x,value) {
+'.is.eq' <- function(x,value) { ## isTRUE(all.equal(a,b)) https://stackoverflow.com/questions/9508518/why-are-these-numbers-not-equal
    if (isAll <- missing(value)) {
       value <- mean(x,na.omit=TRUE)
    }
@@ -323,7 +323,7 @@
 '.is.le' <- function(x,value) x<value | .is.eq(x,value)
 '.is.gt' <- function(x,value) x>value
 '.is.lt' <- function(x,value) x<value
-'.is.near' <- function(x1,x2,verbose=FALSE) {
+'.is.near' <- function(x1,x2,verbose=FALSE) { 
   # https://stackoverflow.com/questions/9508518/why-are-these-numbers-not-equal
    m1 <- match(x1,x2)
    if (all(!is.na(m1))) { ## 20161222 add 'all', removed 'any'
@@ -334,7 +334,7 @@
    n1 <- length(x1)
    n2 <- length(x2)
    b1 <- .Cursa("isNear",x1=as.numeric(x1),x2=as.numeric(x2),n1=n1,n2=n2
-           ,res=integer(n1),NAOK=TRUE)$res
+           ,res=integer(n1),NAOK=FALSE)$res
    b1[b1==0] <- NA
    if (verbose)
       message(".is.near: fuzzy matching")
@@ -397,7 +397,8 @@
    y
 }
 '.isRscript' <- function() .lgrep("^(--file=|-f$|-e$|--slave$)",commandArgs(FALSE))>=2
-'.isPackageInUse' <- function() "ursa" %in% loadedNamespaces()
+#'.isPackageInUse.deprecated' <- function() "ursa" %in% loadedNamespaces()
+'.isPackageInUse' <- function() "package:ursa" %in% search()
 '.argv0path' <- function() {
    arglist <- commandArgs(FALSE)
    if (length(ind <- .grep("^--file=.+",arglist,ignore.case=FALSE))==1)
@@ -427,7 +428,7 @@
       return(NA)
    !is.null(dim(obj$value))
 }
-'.normalizePath' <- function(path) normalizePath(path,winslash="/",mustWork=FALSE)
+'.normalizePath' <- function(path) normalizePath(path,winslash=.Platform$file.sep,mustWork=FALSE)
 '.isKnitr' <- '.isKnit' <- function() {
   # cond1 <- requireNamespace("knitr",quietly=.isPackageInUse())
   # if (!cond1)
@@ -438,6 +439,24 @@
 '.isJupyter' <- function() {
    "jupyter:irkernel" %in% search()
   # "IRkernel" %in% loadedNamespaces()
+}
+'.isReveal' <- function() {
+   res <- knitr::opts_knit$get("rmarkdown.pandoc.to")
+   if (!is.character(res))
+      return(FALSE)
+   res=="revealjs"
+}
+'.isDashboard' <- function() {
+   if (!all(c("knitr","rmarkdown") %in% loadedNamespaces()))
+      return(FALSE)
+   length(grep("flex.*dashboard"
+              ,rmarkdown::all_output_formats(knitr::current_input())[1]))>0
+}
+'.isVignette' <- function() {
+   if (!all(c("knitr","rmarkdown") %in% loadedNamespaces()))
+      return(FALSE)
+   length(grep("(vignette|html_document)"
+              ,rmarkdown::all_output_formats(knitr::current_input())[1]))>0
 }
 '.isShiny' <- function() {
    (("shiny" %in% loadedNamespaces())&&(length(shiny::shinyOptions())>0))

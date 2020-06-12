@@ -1,5 +1,7 @@
 'polygonize' <- function(obj,fname,engine=c("native","sp","sf")
                         ,verbose=NA,...) {
+  # class(obj)
+   missing(obj) ## keep`session_grid` from reset in `a <- polygonize(envi_read())`
    engine <- match.arg(engine)
    if (engine=="sp") {
       isSF <- FALSE
@@ -116,19 +118,24 @@
       if (!onlyGeometry) {
          if (verbose)
             cat("3 of 3: assign data to geometry...")
-         sa <- sf::st_sf(b,coords=sa,crs=if (nchar(g1$proj4)) g1$proj4 else sf::NA_crs_)
+         p4s <- if (nchar(g1$proj4)) g1$proj4 else sf::NA_crs_
+         sa <- sf::st_sf(b,coords=sa,crs=p4s)
          if (verbose)
             cat(" done!\n")
       }
-      else
-         sf::st_crs(sa) <- g1$proj4
+      else {
+         if (verbose)
+            cat("3 of 3: assign data to geometry... skipped!\n")
+         sf::st_crs(sa) <- .p4s2epsg(g1$proj4)
+        # spatial_crs(sa,verbose=TRUE) <- g1$proj4 ## alt
+      }
       if ((TRUE)&&(!onlyGeometry)) { ## ++ 20171128
          colnames(sa)[head(seq(ncol(sa)),-1)] <- colnames(b)
       }
    }
    else if (isSP) {
       if (verbose) {
-         pb <- ursaProgressBar(min=0,max=n)
+         pb <- ursaProgressBar(min=0,max=n,tail=TRUE)
          i <- -1
          repeat({
             n1 <- n*(10^i)
@@ -148,7 +155,7 @@
       }
       if (verbose)
          close(pb)
-      sa <- sp::SpatialPolygons(sa,proj4string=sp::CRS(prj))
+      sa <- sp::SpatialPolygons(sa,proj4string=sp::CRS(prj,doCheckCRSArgs=FALSE))
       if (!onlyGeometry) {
          b <- b[,3:ncol(b),drop=FALSE]
          for (i in seq(ncol(b)))
@@ -156,8 +163,6 @@
                b[,i] <- as.integer(b[,i])
          sa <- sp::SpatialPolygonsDataFrame(sa,data=b,match.ID=FALSE)
       }
-      if (verbose)
-         close(pb)
    }
    if (!missing(fname)) {
      # return(.shp.write(sa,fname,...))
@@ -188,18 +193,19 @@
    }
    internal <- missing(fname)
    if (internal) {
-      bname <- tempfile()
+      bname <- .maketmp() # tempfile()
       fname <- paste0(bname,".shp")
    }
    Fout <- .maketmp()
    write_envi(obj,paste0(Fout,"."))
    cmd <- paste("python",Sys.which("gdal_polygonize.py")
-               ,opt," -f \"ESRI Shapefile\"",Fout,".",fname)
+               ,opt," -f \"ESRI Shapefile\"",Fout,fname)
    system(cmd)
    envi_remove(Fout)
    if (!internal)
       return(0L)
    ret <- spatialize(fname,engine=engine)
-   file.remove(dir(path=dirname(bname),pattern=paste0("^",basename(bname)),full.names=TRUE))
+   list1 <- dir(path=dirname(bname),pattern=paste0("^",basename(bname)),full.names=TRUE)
+   file.remove(list1)
    ret
 }
