@@ -224,7 +224,10 @@
       suppressWarnings({
          first <- TRUE
          op <- options(warn=2)
+         fname.gz <- paste0(fname,".gz")
          for (i in seq(wait)) {
+            if (file.exists(fname.gz))
+               file.remove(fname.gz)
             if (!file.exists(fname))
                break
             if (file.remove(fname))
@@ -317,7 +320,8 @@
          file.remove(f)
       }
       if (driver %in% c("GeoJSON","KML","GPX")) {
-         obj <- sf::st_transform(obj,4326)
+         if (!identical(spatial_crs(obj),spatial_crs(4326)))
+            obj <- sf::st_transform(obj,4326)
       }
       opW <- options(warn=1)
       if ((interim)&&(interimExt=="shp")) {
@@ -332,7 +336,27 @@
                 ,delete_dsn=file.exists(fname) & !appendlayer
                 ,append=appendlayer))
       }
-      if (utils::packageVersion("sf")>="0.9-0") {
+      jsonSF <- (isSF)&&(driver=="GeoJSON")&&
+         (requireNamespace("geojsonsf",quietly=.isPackageInUse()))
+      if (jsonSF) {
+         if (inherits(obj,"sfc"))
+            writeLines(geojsonsf::sfc_geojson(obj,digits=6),fname)
+         else {
+            da <- spatial_data(obj)
+            if (length(ind <- which(sapply(obj,inherits,"character")))) {
+               for (i in ind) {
+                  obj[,i] <- iconv(obj[,i,drop=TRUE],to="UTF-8")
+               }
+            }
+            if (length(ind <- which(sapply(obj,inherits,"POSIXct")))) {
+               for (i in ind) {
+                  obj[,i] <- format(obj[,i,drop=TRUE],tz="UTC","%Y-%m-%dT%H:%M:%SZ")
+               }
+            }
+            writeLines(geojsonsf::sf_geojson(obj,atomise=F,simplify=F,digits=6),fname)
+         }
+      }
+      else if (utils::packageVersion("sf")>="0.9-0") {
          sf::st_write(obj,dsn=fname,layer=lname,driver=driver
                      ,dataset_options=dopt,layer_options=lopt
                      ,delete_layer=file.exists(fname) & !appendlayer

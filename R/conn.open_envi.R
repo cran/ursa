@@ -100,9 +100,9 @@
       {
          map <- unlist(strsplit(f5,","))
          if (map[1]=="Geographic Lat/Lon")
-            grid$proj4 <- c("4326","+proj=longlat +datum=WGS84 +no_defs")[-1]
+            grid$crs <- c("4326","+proj=longlat +datum=WGS84 +no_defs")[-1]
          else if (map[1]=="UTM")
-            grid$proj4 <- paste("+proj=utm",paste0("+zone=",map[8])
+            grid$crs <- paste("+proj=utm",paste0("+zone=",map[8])
                                ,"+datum=NAD27 +units=m +no_defs")
          op <- options(warn=-1)
          map <- na.omit(as.numeric(map))
@@ -245,7 +245,7 @@
       else
          proj4 <- "*unknown*"
       proj4 <- pr
-      grid$proj4 <- proj4
+      grid$crs <- proj4
    }
    grid$rows <- con$lines
    grid$columns <- con$samples
@@ -352,6 +352,8 @@
    fname.xz <- paste(fname,".xz",sep="")
    fname.bz <- paste(fname,".bz2",sep="")
    fname.aux <- NA
+   if (is.character(cache))
+      cache <- 1L
    if (FALSE)
       NULL
    else if ((file.exists(fname))&&(!file.info(fname)$isdir))
@@ -613,9 +615,62 @@
             con$nodata <- sign(con$nodata)*1.7976931348623e+308
       }
    }
-   if (is.null(grid$proj4))
-      grid$proj4 <- ""
-   if ((!nchar(grid$proj4))&&(nchar(wkt)))
+   res <- NULL
+   if (!is.null(metadata)) {
+      ind1 <- grep("<PAMRasterBand",metadata)
+      ind2 <- grep("</PAMRasterBand",metadata)
+      if ((length(ind1))&&(length(ind1)==length(ind2))) {
+         res <- vector("list",length(ind1))
+        # names(res) <- rep("___",length(ind1))
+         names(res) <- as.character(seq(length(ind1)))
+         patt1 <- "^.*<MDI key=\"(.+)\">(.+)</MDI>.*$"
+         patt2 <- "^.*<Description>(.+)</Description>.*$"
+         for (i in seq_along(ind1)) {
+            md <- metadata[ind1[i]:ind2[i]]
+            if (length(ind4 <- grep(patt2,md)))
+               desc <- gsub(patt2,"\\1",md[ind4])
+            else
+               desc <- character()
+            ord <- as.integer(gsub("^.*band=\"(\\d+)\".*$","\\1",md[1]))
+            ind3 <- grep(patt1,md)
+            if (length(ind3)) {
+               name <- gsub(patt1,"\\1",md[ind3])
+               value <- as.list(gsub(patt1,"\\2",md[ind3]))
+               names(value) <- name
+               if (length(desc))
+                  names(res)[ord] <- desc
+               res[[ord]] <- value
+            }
+         }
+        # str(head(res,3))
+        # q()
+      }
+   }
+   res2 <- NULL
+   ind1 <- grep("<PAMDataset",metadata)
+   ind2 <- grep("</PAMDataset",metadata)
+   if ((length(ind1)==1)&&(length(ind2)==1)) {
+      patt1 <- "^.*<MDI key=\"(.+)\">(.+)</MDI>.*$"
+      md <- metadata[seq(ind1+1L,ind2-1L)]
+      ind3 <- grep(patt1,md)
+      if (length(ind3)) {
+         name <- gsub(patt1,"\\1",md[ind3])
+         value <- as.list(gsub(patt1,"\\2",md[ind3]))
+         names(value) <- name
+         res2 <- list(value)
+         names(res2) <- "Dataset metadata (unstructured)"
+        # if (length(desc))
+        #    names(res)[ord] <- desc
+        # res[[ord]] <- value
+      }
+   }
+   res <- c(res2,res)
+   if (!is.null(res)) {
+      attr(obj,"metadata") <- res
+   }
+   if (is.null(grid$crs))
+      grid$crs <- ""
+   if ((!nchar(grid$crs))&&(nchar(wkt)))
    {
       lverbose <- FALSE
       if (lverbose)
@@ -627,7 +682,7 @@
          if (lverbose)
             message("'gdalsrsinfo' engine (read)")
          if (FALSE) ## slow
-            grid$proj4 <- .gsub("\'","",system2("gdalsrsinfo"
+            grid$crs <- .gsub("\'","",system2("gdalsrsinfo"
                                                ,c("-o proj4",wkt),stdout=TRUE,stderr=FALSE))
          else {
             tmp <- .maketmp()
@@ -635,17 +690,17 @@
             writeLines(wkt,wktin)
             wktout <- paste0(tmp,".wkt~")
             system2("gdalsrsinfo",c("-o proj4",wktin),stdout=wktout,stderr=FALSE)
-            grid$proj4 <- .gsub("\'","",readLines(wktout,warn=FALSE))
+            grid$crs <- .gsub("\'","",readLines(wktout,warn=FALSE))
             file.remove(wktout)
             file.remove(wktin)
-            grid$proj4 <- grid$proj4[nchar(grid$proj4)>0]
+            grid$crs <- grid$crs[nchar(grid$crs)>0]
          }
       }
       else if (!isSF) {
          if (lverbose)
             message("rgdal::showP4")
-         .try(grid$proj4 <- rgdal::showP4(wkt))
-        # .try(grid$proj4 <- attr(rgdal::GDALinfo(con$fname,returnStats=FALSE)
+         .try(grid$crs <- rgdal::showP4(wkt))
+        # .try(grid$crs <- attr(rgdal::GDALinfo(con$fname,returnStats=FALSE)
         #                   ,"projection"))
       }
       else  {
@@ -653,13 +708,13 @@
             message("sf::st_crs")
          opW <- options(warn=ifelse(.isPackageInUse(),-1,1))
          if (utils::packageVersion("sf")<"0.9")
-            .try(grid$proj4 <- sf::st_crs(wkt=wkt)$proj4string)
+            .try(grid$crs <- sf::st_crs(wkt=wkt)$proj4string)
          else
-            .try(grid$proj4 <- sf::st_crs(wkt)$proj4string)
+            .try(grid$crs <- sf::st_crs(wkt)$proj4string)
          options(opW)
         # res <- sf::st_crs(wkt)$proj4string
         # message(res)
-         if ((is.na(grid$proj4))||(!nchar(grid$proj4))) {
+         if ((is.na(grid$crs))||(!nchar(grid$crs))) {
             if (nchar(Sys.which("gdalsrsinfo"))) {
               ## FAILED for prj with 'wkt_esri' spec 
                if (lverbose)
@@ -669,14 +724,14 @@
                writeLines(wkt,wktin)
                wktout <- paste0(tmp,".wkt~")
                system2("gdalsrsinfo",c("-o proj4",wktin),stdout=wktout,stderr=FALSE)
-               grid$proj4 <- .gsub("\'","",readLines(wktout,warn=FALSE))
+               grid$crs <- .gsub("\'","",readLines(wktout,warn=FALSE))
                file.remove(wktout)
                file.remove(wktin)
-               grid$proj4 <- grid$proj4[nchar(grid$proj4)>0]
+               grid$crs <- grid$crs[nchar(grid$crs)>0]
             }
             else {
                message("      sf::st_crs -> rgdal::showP4")
-               .try(grid$proj4 <- rgdal::showP4(wkt))
+               .try(grid$crs <- rgdal::showP4(wkt))
             }
          }
         # stop("This is ureacheable branch! TODO for `sf`>0.8")
@@ -686,7 +741,7 @@
       session_grid(grid)
    }
    con$driver <- "ENVI"
-  # class(grid$proj4) <- c("character","ursaProjection")
+  # class(grid$crs) <- c("character","ursaProjection")
    obj$grid <- grid
    obj$con <- con
    arglist <- list(...)

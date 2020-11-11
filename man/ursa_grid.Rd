@@ -31,7 +31,7 @@ ursa_lines(obj)
 ursa_extent(obj)
 ursa_bbox(obj)
 
-consistent_grid(obj, ref, border = rep(0, 4))
+consistent_grid(obj, ref, expand = 1, border = rep(0, 4))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -43,6 +43,9 @@ consistent_grid(obj, ref, border = rep(0, 4))
 }
   \item{ref}{
 \code{\link[ursa:classGrid]{ursaGrid}} reference object.
+}
+  \item{expand}{
+Podsitive numeric. Multiplier of boundary box.
 }
   \item{border}{
 \code{integer} of length 1 or 4. If length 4, then vector (bottom, left, top, right) in cells for extent expand. If length <4, then value is repeated for length 4. Passed to \code{\link[ursa:regrid]{regrid()}}.
@@ -92,7 +95,7 @@ Nikita Platonov \email{platonov@sevin.ru}
 session_grid(NULL)
 a <- pixelsize()
 print(ursa_grid(a))
-ursa_grid(a)$proj4 <- gsub("\\\\.0+","",ursa_grid(a)$proj4)
+ursa_grid(a)$crs <- gsub("\\\\.0+","",ursa_grid(a)$crs)
 print(ursa_grid(a))
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

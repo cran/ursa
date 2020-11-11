@@ -28,9 +28,18 @@
         # requireNamespace("rgdal",quietly=.isPackageInUse())
       }
    }
-  ## CHECK (currently not quick):
+  ## CHECK LATER (currently not quick):
   # dst <- with(PROJ::proj_trans_generic(src,source="EPSG:4326",target=crs),cbind(x_,y_))
     loaded <- loadedNamespaces()
+    is_proj4 <- (("proj4" %in% loaded)||
+        (TRUE)&&(requireNamespace("proj4",quietly=.isPackageInUse()))) ## currently quicker
+    is_rgdal <- "rgdal" %in% loaded
+    is_sf <- "sf" %in% loaded
+    if ((!is_sf)&&(!is_rgdal)&&(!is_proj4)) {
+       requireNamespace("proj4",quietly=.isPackageInUse())
+       loaded <- loadedNamespaces()
+       is_proj4 <- "proj4" %in% loaded
+    }
   # if ((!FALSE)&&(!("package:rgdal" %in% search()))&&
    if ((!a)&&(("proj4" %in% loaded)||
        ((FALSE)&&(requireNamespace("proj4",quietly=.isPackageInUse()))))) {
@@ -40,6 +49,15 @@
          dimx <- dim(xy)
          if ((dimx==2)&&(dimx[1]==2)) {
             str(dimx)
+         }
+      }
+      if (is.list(proj)) {
+         if ("input" %in% names(proj)) {
+            proj <- proj$input
+         }
+         else {
+            str(proj)
+            stop("undefined handling for `proj` specification")
          }
       }
       if ((!is.character(proj))||(.lgrep("\\+init=epsg\\:\\d+",proj))) {
@@ -145,7 +163,7 @@
          q()
       }
    }
-   if ((FALSE)&&(!inv)&&(.lgrep("\\+proj=merc",g1$proj))) {
+   if ((FALSE)&&(!inv)&&(.lgrep("\\+proj=merc",g1$crs))) {
       g1 <- session_grid()
       ext <- 20037508
       if (g1$maxx>ext) {
@@ -174,6 +192,8 @@
       p4epsg <- paste0("+init=",code)
    else if (.lgrep("^(\\s+)*\\+init=epsg:\\d+",code))
       p4epsg <- .gsub("^\\s+","",code)
+   else if ((force)&&(.lgrep("^ESRI\\:",code,ignore.case=FALSE)))
+      p4epsg <- code
    else if (is.character(code))
       return(code)
    else

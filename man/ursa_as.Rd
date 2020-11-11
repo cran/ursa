@@ -98,7 +98,7 @@ b2a <- as.ursa(c2)
 print(b2a)
 
 session_grid(NULL)
-attr(c2,"proj4") <- NULL
+attr(c2,"crs") <- NULL
 b2b <- as.ursa(c2)
 print(b2b)
 print(ursa_grid(b2b))

@@ -1,9 +1,34 @@
-2020-06-11
+2020-11-10
+
+### version 3.9.1
+
+-   Consistence with imported package **sp** (&gt;=1.4-4) and suggested
+    package **`sf`** (&gt;=0.9-6) is in progress with focus to
+    “proj4string” declaration of CRS.
+
+-   Additional value `shape` for `area` argument and additional value
+    `pickpoint` for `geocode` argument in function `.glance()`.
+
+-   Package **`geojsonsf`** (&gt;=2.0.0) is added as suggested for
+    faster `sf`/GeoJSON import/export.
+
+-   `update_coastline()`: merging of splitted by meridian 180 polygons
+    is changed.
+
+-   Coastline is updated to version 2020-11-08T06:14
+
+### version 3.9 (interim)
+
+-   MAJOR: Field `$proj4` in `ursaGrid` objects is renamed to `$crs` due
+    to activity with PROJ library, but **`ursa`** internally still
+    continues operating with PROJ4 strings. Projection (CRS) values can
+    be extracted or replaced by `ursa_crs()` (or `ursa_proj4()`, synonym
+    to `ursa_crs()`) functions.
 
 ### version 3.8.20
 
 -   Consistence with imported package **sp** (&gt;=1.4-0) and suggested
-    package **`sf`** (0.9-3) is in progress.
+    package **`sf`** (&gt;=0.9-3) is in progress.
 
 -   New argument `engine` in function `read_gdal()` for optional
     importind data via `sf::gdal_read()` function.
