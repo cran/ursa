@@ -1,4 +1,17 @@
-2020-11-10
+2020-12-09
+
+### version 3.9.2
+
+-   Argument `expand` in `regrid()` now supports length 1 or 2 (or,
+    coerced to length 2). Grid expansion is proportional to the side of
+    square, which area is equal to area inside of boundary box.
+
+-   Package **`ragg`** is added as suggested instead of package
+    **`Cairo`**, which is removed from suggested due to poor support
+    font families.
+
+-   Improved handling for systems with unsupported “cairo” graphic
+    system.
 
 ### version 3.9.1
 
@@ -11,6 +24,8 @@
 
 -   Package **`geojsonsf`** (&gt;=2.0.0) is added as suggested for
     faster `sf`/GeoJSON import/export.
+
+-   Package **`leaflet.providers`** is added as suggested.
 
 -   `update_coastline()`: merging of splitted by meridian 180 polygons
     is changed.

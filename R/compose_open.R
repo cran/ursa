@@ -13,7 +13,7 @@
    if ((!is.numeric(retina))||(is.na(retina)))
       retina <- retina0
    dpi <- .getPrm(arglist,name="dpi"
-                 ,default=ifelse(.isKnitr(),3*96L,as.integer(round(96*retina))))
+                 ,default=as.integer(round(ifelse(.isKnitr(),150*retina,96*retina))))
    pointsize <- .getPrm(arglist,name="pointsize",default=NA_real_)
    scale <- .getPrm(arglist,name="^scale$",class="",default=NA_real_)
    width <- .getPrm(arglist,name="width",class=list("integer","character"),default=NA_real_)
@@ -24,16 +24,18 @@
    box <- .getPrm(arglist,name="box",default=TRUE)
    delafter <- .getPrm(arglist,name="(del|remove)after",default=NA)
    wait <- .getPrm(arglist,name="wait",default=switch(.Platform$OS.type,windows=1,3))
-   dtype <- if (.Platform$OS.type=="windows") c("cairo","windows","CairoPNG")
+   dtype <- if (.Platform$OS.type=="windows") c("cairo","windows","agg","cairo-png")
             else c("cairo","cairo-png","Xlib","quartz")
    device <- .getPrm(arglist,name="^(device|type)",valid=dtype)
    antialias <- .getPrm(arglist,name="antialias",valid=c("default","none","cleartype"))
   # font <- .getPrm(arglist,name="(font|family)",valid=ifelse(device=="windows","sans","Tahoma"))
    font <- .getPrm(arglist,name="(^font$|family)",default=ifelse(device=="windows","sans","sans"))
    background <- .getPrm(arglist,name="(background|nodata)",default="white")
-   dev <- .getPrm(arglist,name="^dev$",default=FALSE)
+   dev <- .getPrm(arglist,name="^dev(el)*$",default=FALSE)
    verbose <- .getPrm(arglist,name="verb(ose)*",kwd="open",default=FALSE)
    options(ursaPngWebCartography=FALSE)
+   if (is_spatial(mosaic))
+      session_grid(regrid(spatial_grid(mosaic),border=27))
    if (is.ursa(mosaic)) {
       cr <- attr(mosaic,"copyright")
       if ((is.character(cr))&&(nchar(cr)>1)) {
@@ -48,8 +50,17 @@
      # print("WEB #2")
       arglist <- as.list(match.call())
       if (!("scale" %in% names(arglist))) {
-         options(ursaPngWebCartography=TRUE)
+        # options(ursaPngWebCartography=TRUE) ## -- 20201125
          scale <- 1
+      }
+      if (.is.integer(scale)) ## ++ 20201125
+         options(ursaPngWebCartography=TRUE) 
+   }
+   if (isTRUE(getOption("ursaPngWebCartography"))) {
+      retina1 <- session_grid()$retina
+      if ((retina>1)&&(!is.na(retina1))&&(retina1>1)) {
+         dpi <- round(dpi*retina1/retina)
+         retina <- 2
       }
    }
    if ((is.character(mosaic))&&(mosaic=="rgb"))
@@ -231,16 +242,30 @@
              ,scale=scale,autoscale=autoscale,pointsize=pointsize,dpi=dpi))
    if (.isJupyter())
       options(jupyter.plot_mimetypes=ifelse(isJPEG,'image/jpeg','image/png'))
-   if ((device=="CairoPNG")&&(requireNamespace("Cairo",quietly=.isPackageInUse()))) {
-      a <- try(Cairo::CairoPNG(filename=fileout
-              ,width=png_width,height=png_height,res=dpi
-              ,bg=background,pointsize=pointsize
-              #,type="png"
-              ,antialias=antialias,family=font))
+   if ((device=="agg")&&(requireNamespace("ragg",quietly=.isPackageInUse()))) {
+      a <- try(ragg::agg_png(filename=fileout
+                             ,width=png_width,height=png_height,res=dpi
+                             ,bg=background,pointsize=pointsize
+                            # ,antialias=antialias
+                            # ,family=font
+                             ))
    }
+  # else if ((device=="CairoPNG")&&(requireNamespace("Cairo",quietly=.isPackageInUse()))) {
+  #    a <- try(Cairo::CairoPNG(filename=fileout
+  #            ,width=png_width,height=png_height,res=dpi
+  #            ,bg=background,pointsize=pointsize
+  #            #,type="png"
+  #            ,antialias=antialias,family=font))
+  # }
    else {
       if (device=="default")
          device <- "cairo"
+      if ((device %in% c("cairo","cairo-png"))&&(!capabilities("cairo"))) {
+         if (.Platform$OS.type=="windows")
+            device <- "windows"
+         else
+            device <- if (capabilities("aqua")) "quartz" else "Xlib"
+      }
       a <- try(png(filename=fileout,width=png_width,height=png_height,res=dpi
               ,bg=background,pointsize=pointsize
               ,type=device,antialias=antialias,family=font))

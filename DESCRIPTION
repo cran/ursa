@@ -2,7 +2,7 @@ Package: ursa
 Type: Package
 Title: Non-Interactive Spatial Tools for Raster Processing and
         Visualization
-Version: 3.9.1
+Version: 3.9.2
 Authors@R: person(given="Nikita",family="Platonov",role=c("aut","cre"),email="platonov@sevin.ru",comment=c(ORCID="0000-0001-7196-7882"))
 Author: Nikita Platonov [aut, cre] (<https://orcid.org/0000-0001-7196-7882>)
 Maintainer: Nikita Platonov <platonov@sevin.ru>
@@ -15,10 +15,10 @@ Imports: utils, graphics, grDevices, stats, rgdal, png, jpeg
 Suggests: proj4, sf (>= 0.6-1), raster, ncdf4, locfit, knitr,
         rmarkdown, tcltk, sp, methods, fasterize, IRdisplay, caTools,
         shiny, rgeos, tools, webp, htmlwidgets, htmltools, leaflet,
-        leafem, leafpop, RColorBrewer, Cairo, widgetframe, geojsonsf
-        (>= 2.0.0), leaflet.providers
+        leafem, leafpop, RColorBrewer, ragg, widgetframe, geojsonsf (>=
+        2.0.0), leaflet.providers
 NeedsCompilation: yes
 ByteCompile: no
-Packaged: 2020-11-10 06:55:00 UTC; pl
+Packaged: 2020-12-09 12:12:53 UTC; pl
 Repository: CRAN
-Date/Publication: 2020-11-11 23:10:02 UTC
+Date/Publication: 2020-12-09 17:20:03 UTC

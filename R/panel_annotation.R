@@ -3,15 +3,15 @@
 'panel_annotation' <- function(...)
 {
    if (.skipPlot(TRUE))
-      return(NULL)
+      return(invisible(NULL))
    arglist <- list(...)
-   if (is_spatial(arglist[[1]])) {
+   if ((length(arglist))&&(is_spatial(arglist[[1]]))) {
       obj <- spatial_transform(arglist[[1]],session_crs())
       xy <- spatial_coordinates(obj)
       da <- spatial_data(obj)[[1]]
-      return(lapply(seq_len(spatial_count(obj)),function(i) {
+      return(invisible(lapply(seq_len(spatial_count(obj)),function(i) {
          do.call(panel_annotation,c(x=xy[i,1],y=xy[i,2],label=da[i],arglist[-1]))
-      }))
+      })))
    }
    kwd <- "(caption|ann(otation)*)"
    annotation <- .getPrm(arglist,name=kwd,default=TRUE)
@@ -40,7 +40,8 @@
    lat <- .getPrm(arglist,name="lat(itude)*",kwd=kwd,default=NA_real_)
    x <- .getPrm(arglist,name="x$",kwd=kwd,default=NA_real_)
    y <- .getPrm(arglist,name="y$",kwd=kwd,default=NA_real_)
-   font <- .getPrm(arglist,name="font",kwd=kwd,default=par("family"))
+  # font <- .getPrm(arglist,name="font",kwd=kwd,default=par("family"))
+   font <- .getPrm(arglist,name="font",kwd=kwd,default=getOption("ursaPngFamily"))
    vertical <- .getPrm(arglist,name="vert(ical)*",kwd=kwd,default=FALSE)
    alpha <- .getPrm(arglist,name="(alpha|transp(aren(cy)*)*)",kwd=kwd,default=1)
    interpolate <- .getPrm(arglist,name="interp(olate)*",kwd=kwd,default=FALSE)
