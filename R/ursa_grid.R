@@ -38,6 +38,24 @@
          session_grid(g1)
       return(res)
    }
+   if ((is.numeric(obj))&&(length(obj)==2)) {
+      ref <- round(obj)
+      g1 <- .grid.skeleton()
+      g1$columns <- as.integer(ref[2])
+      g1$rows <- as.integer(obj[1])
+      g1$minx <- 0
+      g1$miny <- 0
+      g1$maxx <- obj[2]
+      g1$maxy <- obj[1]
+      g1$resx <- with(g1,(maxx-minx)/columns)
+      g1$resy <- with(g1,(maxy-miny)/rows)
+      if (TRUE) {
+         retina <- getOption("ursaRetina")
+         if ((is.numeric(retina))&&(retina>1))
+            g1$retina <- retina
+      }
+      return(g1)
+   }
    NULL
 }
 'ursa_grid<-' <- function(obj,value)
@@ -59,11 +77,37 @@
    res
 }
 'consistent_grid' <- function(obj,ref,expand=1,border=rep(0,4)) {
-   verbose <- F # .isPackageInUse()
-   g0 <- getOption("ursaSessionGrid")
+   verbose <- !.isPackageInUse()
+   if (!missing(obj)) {
+      if (is_ursa(obj))
+         obj <- ursa_grid(obj)
+      else if (is_spatial(obj))
+         obj <- spatial_grid(obj)
+   }
+   if (!missing(ref)) {
+      if (is_ursa(ref))
+         ref <- ursa_grid(ref)
+      else if (is_spatial(ref))
+         ref <- spatial_grid(ref)
+      else if ((is.numeric(ref))&&(length(ref)==2)&&(all(ref>0))) {
+         d0 <- round(ref)
+         ref <- .grid.skeleton()
+         ref$minx <- 0
+         ref$maxx <- d0[2]
+         ref$columns <- as.integer(d0[2])
+         ref$miny <- 0
+         ref$maxy <- d0[1]
+         ref$rows <- as.integer(d0[1])
+         ref$resx <- ref$resy <- 1
+      }
+   }
+   g0 <- getOption("ursaPngComposeGrid")
+   isPlot <- isFALSE(is.null(g0))
+   if (!isPlot)
+      g0 <- getOption("ursaSessionGrid")
   # if (identical(obj,g0))
    if (missing(ref)) {
-      if ((!missing(obj))&&(!identical(obj,g0))) {
+      if ((FALSE)&&(!missing(obj))&&(!identical(obj,g0))) {
          ref <- obj
          obj <- g0
       }
@@ -89,35 +133,42 @@
       stop("Unable to detect reference grid. Check 'ref' argument)")
    d1 <- unname(ursa(obj,"dim"))
    d <- min(d2/d1)
+   d.web <- trunc(log(d)/log(2))
+   d.less <- 2^(d.web-1)
+   d.more <- 2^(d.web+1)
    if (d>1) {
       d <- d*expand
      # cat("---------\n")
      # str(obj)
      # g2 <- regrid(obj,expand=d) ## ifelse(isWeb,2^(trunc(log(d)/log(2))+1),d)
-      g2 <- regrid(obj,mul=1/ifelse(isWeb,2^(trunc(log(d)/log(2))+1),d))
+      g2 <- regrid(obj,mul=ifelse(isWeb,d.less,d)) ## d.more d.less d.web
      # str(g2)
      # cat("---------\n")
      # g2$retina <- NA
    }
    else {
       d <- d/expand
-      g2 <- regrid(obj,mul=ifelse(isWeb,2^(trunc(log(d)/log(2))-1),d))
+      g2 <- regrid(obj,mul=ifelse(isWeb,1/d.more,d)) ## d.more d.less d.web
      # g2$retina <- NA
    }
+  # cat("--------------\n")
+  # str(g2)
+  # cat("--------------\n")
    d3 <- c(ursa(g2,"nrow"),ursa(g2,"ncol"))
    if (verbose) {
       print(c(web=isWeb))
       print(c('d1:'=d1))
       print(c('d2:'=d2))
-      print(c(d=d,d.less=2^(trunc(log(d)/log(2))-1)))
+      print(c('d2/d1:'=d2/d1))
+      print(c(d=d,d.less=d.less,d.web=d.web,d.more=d.more))
       print(c('d3:'=d3))
    }
    d4 <- d2-d3
    dx <- rep(floor(d4[1]/2),2)
    dy <- rep(floor(d4[2]/2),2)
-   if (d4[1] %%2 ==1)
+   if (d4[1] %% 2 ==1)
       dx <- dx+c(0,1)
-   if (d4[2] %%2 ==1)
+   if (d4[2] %% 2 ==1)
       dy <- dy+c(0,1)
    b <- c(dx[1],dy[1],dx[2],dy[2])
    g3 <- regrid(g2,border=b)
@@ -126,5 +177,9 @@
    }
    ##~ d4 <- c(ursa(g3,"nrow"),ursa(g3,"ncol"))
    ##~ print(d4)
+   if (isPlot) {
+     # options(ursaPngPanelGrid=g3)
+      session_grid(g3)
+   }
    g3
 }

@@ -7,6 +7,9 @@
          return(res$proj4string)
       return(res)
    }
+   if ((TRUE)&&(is.character(obj))&&(nchar(obj)>0)&&(length(spatial_dir(obj))==1)) {
+      obj <- spatial_read(obj)
+   }
    isUrsa <- is.ursa(obj) | is.ursa(obj,"grid")
    isPrm <- is.numeric(obj) | is.character(obj)
    isSF <- .isSF(obj)
@@ -79,7 +82,7 @@
    isSF <- .isSF(value)
    isSP <- .isSP(value)
    if (verbose)
-      print(data.frame(sf=isSF,sp=isSP,row.names="engine"))
+      print(data.frame(sf=isSF,sp=isSP,row.names="value"))
    if (isSF) {
       if (!.isSF(obj)) {# lost geometry colname
          cname <- colnames(obj)
@@ -105,16 +108,19 @@
                    ,stop(paste("unimplemented selection:",geotype)))
    }
    if (!isSP & !isSF) {
-      print(class(value))
-      stop("no sp, no sf")
       isSF <- .isSF(obj)
       isSP <- .isSP(obj)
+      if (verbose)
+         print(data.frame(sf=isSF,sp=isSP,row.names="obj"))
       if (is.null(value)) {
          if (isSF)
             sf::st_geometry(obj) <- NULL
          if (isSP)
             obj <- methods::slot(obj,"data")
+         return(obj)
       }
+      print(class(value))
+      stop("no sp, no sf")
    }
    obj
 }
@@ -1136,10 +1142,12 @@
    if (is.character(dist)) {
       if (is.null(sc <- getOption("ursaPngScale")))
          sc <- 1
+      if (is.null(retina <- getOption("ursaPngRetina")))
+         retina <- 1
       if (.lgrep("px$",dist)) {
         # print(c(dist=dist))
         # print(c(scale=sc))
-         dist <- session_cellsize()*as.numeric(gsub("px","",dist))/sc
+         dist <- session_cellsize()*as.numeric(gsub("px","",dist))/sc*retina
         # print(c(dist=dist))
       }
       else if (.lgrep("lwd$",dist)) {
@@ -1260,6 +1268,8 @@
 }
 'spatial_bind' <- function(...) {
    arglist <- list(...)
+   if (length(ind <- which(sapply(arglist,is.null))))
+      arglist <- arglist[-ind]
    res <- arglist[[1]]
    isSF <- .isSF(res)
    isSP <- .isSP(res)

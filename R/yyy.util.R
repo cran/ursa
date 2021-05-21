@@ -444,7 +444,12 @@
   # if (!cond1)
   #    return(FALSE)
   # is.character(knitr::current_input())
-   ("knitr" %in% loadedNamespaces())&&(is.character(knitr::current_input()))||(.isShiny())
+   if (.isShiny())
+      return(TRUE)
+   ret <- ("knitr" %in% loadedNamespaces())&&(is.character(knitr::current_input()))
+   if (ret)
+      comment(ret) <- rmarkdown::all_output_formats(knitr::current_input())
+   ret
 }
 '.isJupyter' <- function() {
    "jupyter:irkernel" %in% search()
@@ -456,10 +461,22 @@
       return(FALSE)
    res=="revealjs"
 }
+'.isRemark' <- function() {
+   if (!all(c("knitr","rmarkdown") %in% loadedNamespaces()))
+      return(FALSE)
+   length(grep("moon.*reader"
+              ,rmarkdown::all_output_formats(knitr::current_input())[1]))>0
+}
 '.isDashboard' <- function() {
    if (!all(c("knitr","rmarkdown") %in% loadedNamespaces()))
       return(FALSE)
    length(grep("flex.*dashboard"
+              ,rmarkdown::all_output_formats(knitr::current_input())[1]))>0
+}
+'.isPaged' <- function() {
+   if (!all(c("knitr","rmarkdown") %in% loadedNamespaces()))
+      return(FALSE)
+   length(grep("(thesis|html).*paged"
               ,rmarkdown::all_output_formats(knitr::current_input())[1]))>0
 }
 '.isVignette' <- function() {
@@ -630,3 +647,4 @@
       .elapsedTime(paste(verbal,"finished"))
    arglist
 }
+'.isColor' <- function(x) !inherits(try(col2rgb(x),silent=TRUE),"try-error")

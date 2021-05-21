@@ -41,8 +41,12 @@
       if ((length(panel)==1)&&(panel==0))
          panel <- seq(getOption("ursaPngLayout")$image)
       panel <- -panel
+      internal <- which(marginalia<0)
+      marginalia <- abs(marginalia)
       ind <- match(marginalia,-panel)
       panel[ind] <- -panel[ind]
+      if (length(internal))
+         panel[ind][internal] <- panel[ind][internal]+10000L
      # panel <- marginalia
       marginalia <- TRUE
    }
@@ -831,7 +835,8 @@
       .repairForScatterPlot()
       return(NULL)
    }
-   if ((!(0 %in% obj$panel))&&(!(figure %in% abs(obj$panel))))
+   if ((!(0 %in% obj$panel))&&(!((figure %in% abs(obj$panel))||
+                                 ((figure+10000L) %in% abs(obj$panel)))))
       return(NULL)
    if (FALSE) {
       obj$col <- .getPrm(arglist,name="col",kwd=kwd,default=obj$col)
@@ -843,15 +848,73 @@
    marginalia <- .getPrm(arglist,name="(decor|margin(alia)*)",kwd=kwd
                         ,class=list("integer","logical"),default=marginalia)
    if (is.integer(marginalia)) {
-      marginalia <- rep(figure %in% marginalia,4)
+      marginalia <- rep(figure %in% abs(marginalia),4)
    }
-   if ((any(obj$panel))&&(!(figure %in% obj$panel))) {
+   if ((any(obj$panel))&&(!((figure %in% obj$panel)||((figure+10000L) %in% obj$panel)))) {
       marginalia <- FALSE
    }
    marginalia <- rep(marginalia,length=4)
+   if ((figure+10000L) %in% obj$panel)
+      comment(marginalia) <- "internal"
+   else
+      comment(marginalia) <- NULL
    .panel_graticule(obj,marginalia=marginalia,verbose=verbose)
 }
 '.panel_graticule' <- function(obj,marginalia=rep(TRUE,4),verbose=FALSE) {
+   g1 <- getOption("ursaPngComposeGrid")
+   g2 <- getOption("ursaPngPanelGrid")
+  # print(g1)
+  # print(g2)
+  # internal <- isTRUE(comment(marginalia)=="internal")
+   internal <- !identical(g1,g2)
+   if (internal) {
+      g1a <- g1
+      g2a <- g2
+     # g1a$crs <- NULL
+     # g2a$crs <- NULL
+      if (!identical(g1a,g2a)) {
+         res <- sapply(names(g1a),function(x) {
+           # if (x %in% c("retina"))
+           #    return(TRUE)
+            if ((is.null(g1a[[x]]))||(is.null(g2a[[x]])))
+               return(TRUE)
+            if ((isTRUE(is.na(g1a[[x]])))||(isTRUE(is.na(g2a[[x]]))))
+               return(TRUE)
+            ret <- identical(g1a[[x]],g2a[[x]])
+            if (!ret) {
+               if (is.numeric(g1a[[x]])) {
+                  ret <- .is.eq(g1a[[x]],g2a[[x]])
+               }
+               if (is.character(g1a[[x]])) {
+                  if (length(grep("\\+proj",g1a[[x]]))) {
+                     proj1 <- gsub(".*\\+proj=(\\S+)($|\\s+.*$)","\\1",g1a[[x]])
+                     proj2 <- gsub(".*\\+proj=(\\S+)($|\\s+.*$)","\\1",g2a[[x]])
+                     cond1 <- proj1==proj2
+                  }
+                  else
+                     cond1 <- TRUE
+                  if (length(grep("\\+lon_0",g1a[[x]]))) {
+                     lon1 <- gsub(".*\\+lon_0=(\\S+)($|\\s+.*$)","\\1",g1a[[x]])
+                     lon2 <- gsub(".*\\+lon_0=(\\S+)($|\\s+.*$)","\\1",g2a[[x]])
+                     cond2 <- lon1==lon2
+                  }
+                  else
+                     cond2 <- TRUE
+                  if (length(grep("\\+lat_0",g1a[[x]]))) {
+                     lat1 <- gsub(".*\\+lat_0=(\\S+)($|\\s+.*$)","\\1",g1a[[x]])
+                     lat2 <- gsub(".*\\+lat_0=(\\S+)($|\\s+.*$)","\\1",g2a[[x]])
+                     cond3 <- lat1==lat2
+                  }
+                  else
+                     cond3 <- TRUE
+                  ret <- cond1 & cond2 & cond3
+               }
+            }
+            ret
+         })
+         internal <- !all(res)
+      }
+   }
    with(obj,{
       if (verbose)
          str(list(col=col,lwd=lwd,lty=lty))
@@ -882,7 +945,44 @@
          isLeft <- all(layout[indr,(indc-2L):(indc-1L)]==0)
          isRight <- all(layout[indr,(indc+1L):(indc+2L)]==0)
       }
-      marginalia <- as.integer(marginalia & c(isBottom,isLeft,isTop,isRight))
+      marginalia0 <- marginalia
+      marginalia <- as.integer(marginalia0 & c(isBottom,isLeft,isTop,isRight))
+      if (internal) {
+         if ((sum(marginalia[c(1,3)])>0)&&(sum(marginalia[c(2,4)])))
+            internal <- FALSE
+      }
+     # print(c(bottom=isBottom,left=isLeft,top=isTop,right=isRight))
+      if (internal) {
+         panel2 <- pngOp[["ursaPngLayout"]][["image"]]
+        # fig2 <- pngOp[["ursaPngFigure"]]
+         layout2 <- layout
+         layout2[layout2<=panel2] <- 0L
+         isTop2 <- all(layout2[(indr-2L):(indr-1L),indc]==0)
+         isBottom2 <- all(layout2[(indr+1L):(indr+2L),indc]==0)
+         isLeft2 <- all(layout2[indr,(indc-2L):(indc-1L)]==0)
+         isRight2 <- all(layout2[indr,(indc+1L):(indc+2L)]==0)
+         marginalia2 <- as.integer(marginalia0 & c(isBottom2,isLeft2,isTop2,isRight2))
+         marginalia2 <- as.integer(!marginalia)*marginalia2
+         if ((marginalia[4])&&(marginalia2[2]))
+            marginalia2[2] <- 0L
+         if ((marginalia[2])&&(marginalia2[4]))
+            marginalia2[4] <- 0L
+         if ((marginalia[3])&&(marginalia2[1]))
+            marginalia2[1] <- 0L
+         if ((marginalia[1])&&(marginalia2[3]))
+            marginalia2[3] <- 0L
+        # print(marginalia)
+        # print(marginalia2)
+        # marginalia2 <- marginalia2-marginalia
+         marginalia <- marginalia2+marginalia
+         if ((marginalia2[4]==1)&&((marginalia2[2]==marginalia2[4])))
+            marginalia2[4] <- marginalia[4] <- 0L
+         if ((marginalia2[3]==1)&&((marginalia2[1]==marginalia2[3])))
+            marginalia2[3] <- marginalia[3] <- 0L
+         rm(layout2,isTop2,isBottom2,isLeft2,isRight2,panel2)
+        # print(marginalia)
+        # print(marginalia2)
+      }
       rm(pngOp,layout,layout0,indc,indr,isTop,isBottom,isLeft,isRight)
      # da1 <- if (marginalia[1]) subset(margin,side==1) else NULL
      # da2 <- if (marginalia[2]) subset(margin,side==2) else NULL
@@ -893,33 +993,68 @@
       da3 <- if (marginalia[3]) margin[which(margin$side==3),] else NULL
       da4 <- if (marginalia[4]) margin[which(margin$side==4),] else NULL
      # opT <- par(family="Arial Narrow")
+      if (F & internal) {
+         print(c((!is.null(da1))&&(nrow(da1)&&(marginalia2[1]))
+                ,(!is.null(da2))&&(nrow(da2)&&(marginalia2[2]))
+                ,(!is.null(da3))&&(nrow(da3)&&(marginalia2[3]))
+                ,(!is.null(da4))&&(nrow(da4)&&(marginalia2[4]))
+                ))
+      }
       if ((!is.null(da1))&&(nrow(da1)))
          with(da1,{
-            axis(side=1,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
-            mtext(side=1,at=at,text=lab,padj=0.5,adj=adj,cex=cex,col=border
-                 ,family=getOption("ursaPngFamily")
-                 )
+            if ((internal)&&(marginalia2[1])) {
+               mtext(side=1,at=at,text=lab,padj=-1.7,adj=adj,cex=cex,col=border
+                    ,family=getOption("ursaPngFamily")
+                    )
+            }
+            else {
+               axis(side=1,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
+               mtext(side=1,at=at,text=lab,padj=0.5,adj=adj,cex=cex,col=border
+                    ,family=getOption("ursaPngFamily")
+                    )
+            }
          })
       if ((!is.null(da2))&&(nrow(da2)))
          with(da2,{
-            axis(side=2,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
-            mtext(side=2,at=at,text=lab,padj=0.4,adj=adj,line=0.6,cex=cex,col=border
-                 ,family=getOption("ursaPngFamily")
-                 )
+            if ((internal)&&(marginalia2[2])) {
+               mtext(side=2,at=at,text=lab,padj=0.4,adj=adj,line=-1,cex=cex,col=border
+                    ,family=getOption("ursaPngFamily")
+                    )
+            }
+            else {
+               axis(side=2,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
+               mtext(side=2,at=at,text=lab,padj=0.4,adj=adj,line=0.6,cex=cex,col=border
+                    ,family=getOption("ursaPngFamily")
+                    )
+            }
          })
       if ((!is.null(da3))&&(nrow(da3)))
          with(da3,{
-            axis(side=3,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
-            mtext(side=3,at=at,text=lab,padj=-0.25,adj=adj,line=0,cex=cex,col=border
-                 ,family=getOption("ursaPngFamily")
-                 )
+            if ((internal)&&(marginalia2[3])) {
+               mtext(side=3,at=at,text=lab,padj=-0.25,adj=adj,line=-1.4,cex=cex,col=border
+                    ,family=getOption("ursaPngFamily")
+                    )
+            }
+            else {
+               axis(side=3,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
+               mtext(side=3,at=at,text=lab,padj=-0.25,adj=adj,line=0,cex=cex,col=border
+                    ,family=getOption("ursaPngFamily")
+                    )
+            }
          })
       if ((!is.null(da4))&&(nrow(da4)))
          with(da4,{
-            axis(side=4,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
-            mtext(side=4,at=at,text=lab,line=0,adj=adj,padj=0.4,cex=cex,col=border
-                 ,family=getOption("ursaPngFamily")
-                 )
+            if ((internal)&&(marginalia2[4])) {
+               mtext(side=4,at=at,text=lab,line=0,adj=adj,padj=-1.6,cex=cex,col=border
+                    ,family=getOption("ursaPngFamily")
+                    )
+            }
+            else {
+               axis(side=4,at=at,labels=NA,tcl=-0.2,col=border,lwd=0,lwd.ticks=lwd)
+               mtext(side=4,at=at,text=lab,line=0,adj=adj,padj=0.4,cex=cex,col=border
+                    ,family=getOption("ursaPngFamily")
+                    )
+            }
          })
      # options(opT)
    })
