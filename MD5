@@ -1,6 +1,6 @@
-59213878c650ed76d054a5ce39b683b6 *DESCRIPTION
+74c56e99914fcd353d8e2782e1bc844b *DESCRIPTION
 ce2fa71225db87abf92416492a358a3b *NAMESPACE
-30cc91c47cb16980f1724a6430755541 *NEWS.md
+9b36cd35248488c7d5cc2d61e9e6586f *NEWS.md
 78a89b19a5722d962e3613f716c01d5c *R/Ops.band_group.R
 5458fae5d15bbab9747166d5a5c1342e *R/Ops.band_stat.R
 d44ba3234a570cd6d8c0f5896e5ebb2a *R/Ops.focal_extrem.R
@@ -235,7 +235,7 @@ e63b6762a0fb1ce9a848a5e3b9be6a4a *man/polygonize.Rd
 0c4b1cde5ad0f6f2c88aab84e86f9fe1 *man/progressBar.Rd
 0ee979fa92d1e9eb25d8f0c09fe9d503 *man/reclass.Rd
 f942c36cb915a0cbf060f3d7c05d1db0 *man/regrid.Rd
-c2c4770d66c8587da90454e6b5798168 *man/segmentize.Rd
+af684a0a6e4f1bbe5cf72b662c033efd *man/segmentize.Rd
 300f6e4dbe29b634dfac93276722eeb4 *man/session.Rd
 5f4b0a12a6dcc4cd417450d5c916180b *man/spatial_engine.Rd
 56f9fbd8c7dff54608ffe46371c8a82c *man/spatial_read.Rd

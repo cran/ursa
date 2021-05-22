@@ -1,4 +1,8 @@
-2021-05-21
+2021-05-22
+
+### version 3.9.4
+
+-   Fixed example of `segmentize()` for non-Windows systems.
 
 ### version 3.9.3
 
