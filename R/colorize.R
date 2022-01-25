@@ -263,8 +263,11 @@
             rel$value <- seq(length(ct))-1L
             rel$stretch <- ".onetoone"
          }
+        # print("REC CAT -- begin")
+        # str(rel)
          res <- do.call(fun,rel[-1]) ## RECURSIVE
          names(res$colortable) <- names(ct)
+        # print("REC CAT -- end")
       }
       else { ## dev
          if (nchar(palname)) {
@@ -643,7 +646,8 @@
          }
          sl <- unique(substr(label,nchar(label)-1,nchar(label)))
          if ((length(sl)==1)&&(sl==".0")) {
-            label <- sprintf(sprintf("%%.0f",i2),as.double(label))
+           # label <- sprintf(sprintf("%%.0f",i2),as.double(label)) ## -- 20210916
+            label <- sprintf(sprintf("%%.%df",i2),as.double(label)) ## ++ 20210916
          }
          dv <- diff(sort(v2))
          if (length(dv))
@@ -832,7 +836,8 @@
       {
         # i2 <- i2+1 ## 
          if (i2<0) {
-            label <- sprintf(sprintf("%%f",i2),as.double(round(value,i2+1)))
+           # label <- sprintf(sprintf("%%f",i2),as.double(round(value,i2+1))) # --
+            label <- sprintf("%.0f",as.double(round(value,i2+1))) # ++ 20210524
             i2 <- 0
            # label <- sprintf(sprintf("%%f",i2),as.double(value))
          }
@@ -844,8 +849,9 @@
             label <- sprintf(sprintf("%%.%df",i2),as.double(value))
          }
          sl <- unique(substr(label,nchar(label)-1,nchar(label)))
-         if ((length(sl)==1)&&(sl==".0"))
+         if ((length(sl)==1)&&(sl==".0")) {
             label <- sprintf(sprintf("%%.0f",i2),as.double(value))
+         }
          value <- as.numeric(label)
       }
       names(value) <- label

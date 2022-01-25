@@ -1,8 +1,8 @@
 'panel_cluster' <- function(obj,overlap=1,cex=1,ratio=0.2,col=NULL
                            ,method=c("complete","centroid","single")
-                           ,fun=c("count","sum","mean"),label=fun %in% "count"
+                           ,fun=c("count","sum","mean","label"),label=fun %in% "count"
                            ,ngroup=NA,separate=FALSE,repel=20L,legend="bottomright"
-                           ,title=NULL) {
+                           ,title=NULL,verbose=FALSE) {
    ##~ method <- c('1'="ward.D",'2'="ward.D2",'3'="single",'4'="complete"
               ##~ ,'5'="average",'6'="mcquitty",'7'="median"
               ##~ ,'8'="centroid")[4] ## 3 4! 8 
@@ -10,13 +10,15 @@
    fun <- match.arg(fun)
    cutted <- 1.05
    da <- spatial_data(obj)
+  # str(colnames(da))
+  # str(da[,colnames(da),drop=TRUE])
    if (!is.null(da)) {
       indCat <- which(sapply(colnames(da),function(x)
-                                     inherits(da[,x],c("character","factor"))))[1]
+                                     inherits(da[,x,drop=TRUE],c("character","factor"))))[1]
       isCat <- !is.na(indCat)
       if (fun %in% c("count")) {
          indNum <- which(sapply(colnames(da),function(x)
-                                        inherits(da[,x],c("integer"))))[1]
+                                        inherits(da[,x,drop=TRUE],c("integer"))))[1]
          isNum <- !is.na(indNum)
       }
       else
@@ -26,17 +28,25 @@
       isCat <- FALSE
       isNum <- FALSE
    }
+   if ((isCat)&&(isNum)) {
+      if (length(ind <- which(is.na(da[[indNum]])))) {
+         obj <- obj[-ind,]
+         da <- da[-ind,]
+      }
+   }
    if (isCat) {
       aname <- obj[[indCat]]
       nameCat <- colnames(da)[indCat]
    }
    else {
       if (separate)
-         separate=F
+         separate <- F
       legend <- NULL
    }
-  # print(indCat)
-  # print(indNum)
+   if (verbose) {
+      print(c('Category'=indCat))
+      print(c('Count'=indNum))
+   }
    g1 <- getOption("ursaPngPanelGrid")
    xy <- spatial_coordinates(spatial_transform(spatial_geometry(obj),ursa_crs(g1)))
    xy <- cbind(xy,da)
@@ -54,7 +64,7 @@
    s <- unname((cex*c(annotation=1.5))*overlap*ps/scale*cell*dpi/96*sqrt(2))
    if (!label)
       s <- s*0.5
-   if (!.isPackageInUse())
+   if (verbose)
       print(data.frame(cell=cell,retina=retina,scale=scale
            ,overlap=overlap,dpi=dpi,ps=ps,cex=cex,s=s))
    if (isCat)
@@ -158,7 +168,10 @@
    })
    lut <- do.call(rbind,lutList)
    rownames(lut) <- NULL
-   lut$.r <- lut$.n^ratio # rowSums(lut[,bname,drop=FALSE])^ratio
+   if (is.character("ratio") & "log" %in% ratio)
+      lut$.r <- log(lut$.n+1)
+   else
+      lut$.r <- lut$.n^ratio # rowSums(lut[,bname,drop=FALSE])^ratio
    lut$.r <- lut$.r/min(lut$.r)
    if (repel) {
       if (isTRUE(repel))
@@ -224,6 +237,22 @@
       spatial_write(p,"C:/platt/R/ursa-package/run/panel_cluster/mammal.geojson")
       q()
    }
+   if (F) {
+      ct <- NULL
+      if (T & .is.colortable(col)) {
+         print(bname)
+         print(col)
+         ind <- na.omit(match(bname,names(col)))
+         if (length(ind)!=length(bname))
+            col <- as.character(col)
+         else {
+            print(is.character(col))
+         }
+      }
+      q()
+      print(col)
+      print(bname)
+   }
    if (F & is.character(col)) {
       ct <- ursa_colortable(colorize(bname
                              ,pal=rep(col,length.out=length(bname)),alpha="A0"))
@@ -233,10 +262,20 @@
      # do.call("colorize",c(list(body),col))
       ct <- colorize(bname,pal=rep(col,length.out=length(bname)),alpha="A0")
    }
-   else if (fun %in% c("count")) {
-      ct <- colorize(bname,alpha="A0"
-                                    ,pal.dark=127,pal.light=127,pal.rotate="circle"
-                                    )
+   else if (fun %in% c("count","label")) {
+      hasCT <- FALSE
+      if (T & .is.colortable(col)) {
+         ind <- na.omit(match(bname,names(col)))
+         if (length(ind)==length(bname)) {
+            hasCT <- TRUE
+            ct <- col[ind]
+         }
+      }
+      if (!hasCT)
+         ct <- colorize(bname,alpha="A0"
+                                       ,pal.dark=127,pal.light=127,pal.rotate="circle"
+                                       )
+      rm(hasCT)
       ctInd <- ursa_colortable(ct)
    }
    else {
@@ -248,8 +287,10 @@
       else if (is.character(col)) {
          ct <- colorize(lut[[bname]],stretch="linear",alpha="A0",pal=col)
       }
-      else
-         ct <- colorize(lut[[bname]],stretch="linear",alpha="A0")
+      else {
+        # ct <- colorize(lut[[bname]],stretch="linear",alpha="A0") ## -- 20210909
+         ct <- colorize(bname,stretch="linear",alpha="A0") ## ++ 20210909
+      }
       ctInd <- ursa_colortable(ct)[ursa_colorindex(ct)]
    }
    bg <- if (separate) "white" else ctInd
@@ -262,12 +303,14 @@
       x <- lut$.x[i] # <- mean(da2$x)
       y <- lut$.y[i] # <- mean(da2$y)
       r <- lut$.r[i]
-      if (fun %in% "count") {
+      if (fun %in% c("count","label")) {
          v <- as.integer(lut[i,bname])
-         .panel_pie(v,x=x,y=y,radius=lut$.r[i]*s2,col=ctInd,bg=bg,ball=!label) # lwd=0.5
+         .panel_pie(v,x=x,y=y,radius=lut$.r[i]*s2,col=ctInd,bg=bg,ball=!label
+                   ,verbose=verbose) # lwd=0.5
       }
       else {
-         .panel_pie(1,x=x,y=y,radius=lut$.r[i]*s2,col=ctInd[i],ball=!label)
+         .panel_pie(1,x=x,y=y,radius=lut$.r[i]*s2,col=ctInd[i],ball=!label
+                   ,verbose=verbose)
       }
       p <- sf::st_as_sf(lut[i,],coords=c(".x",".y"),crs=ursa_crs(g1))
       if (F)
@@ -281,6 +324,11 @@
             lab <- sum(v)
          else
             lab <- lut[i,bname]
+         if (fun %in% c("label")) {
+            lname <- names(lab)
+            lab <- lname[which(lab>0)]
+         }
+        # str(lab)
          panel_annotation(x=x,y=y,label=as.character(lab),cex=cex,adj=c(0.5,0.53)
                         # ,fg="#FFFFFFA0",bg="#000000AF"
                         # ,buffer=2/scale
@@ -331,15 +379,24 @@
 }
 '.panel_pie' <- function(z,x=0,y=0,radius=1,edges=200,clockwise=TRUE,init.angle=90
                         ,col=NULL,bg="white"
-                        ,border="white",lty=NULL,lwd=NULL,ball=FALSE) {
+                        ,border="white",lty=NULL,lwd=NULL,ball=FALSE
+                        ,verbose=FALSE) {
    if (!is.numeric(z) || any(is.na(z) | z < 0)) 
        stop("'z' values must be positive.")
+   if (verbose)
+      cat("--------\nPIE\n----------\n")
    g0 <- getOption("ursaPngPanelGrid")
+   if (verbose) {
+      print(session_grid())
+      print(g0)
+      print(getOption("ursaPngComposeGrid"))
+      print(getOption("ursaSessionGrid"))
+   }
    cell <- ursa(g0,"cellsize")
    z <- z/sum(z)
    ind <- which(z>0)
    mul <- cell/radius
-  # print(c(cell=cell,radius=radius,mul=radius/cell))
+  # print(c(pie.cell=cell,pie.radius=radius,pie.mul=radius/cell))
    if (any(z[ind]<mul)) {
       z[ind] <- z[ind]+mul
       z <- z/sum(z)
@@ -355,6 +412,17 @@
    pin <- par("pin")
    usr <- par("usr")
    asp <- c((pin[2]/(usr[4]-usr[3]))/(pin[1]/(usr[2]-usr[1])),1)
+   if (F & verbose) {
+      print(c('pin:'=pin))
+      print(c('usr:'=usr))
+      print(c('byy'=pin[2]/(usr[4]-usr[3])))
+      print(c('byy'=pin[1]/(usr[2]-usr[1])))
+      print(c('byx'=(usr[4]-usr[3])/pin[1]))
+      print(c('byy'=(usr[2]-usr[1])/pin[2]))
+      print(c('asp:'=asp))
+      print(session_grid())
+      .ursaOptions()
+   }
    if (is.null(col))
       col <- ursa_colortable(colorize(seq(nz)))
    if (!is.null(border)) 
@@ -364,22 +432,31 @@
    if (!is.null(lwd)) 
       lwd <- rep_len(lwd, nz)
    twopi <- if (clockwise) -2*pi else 2*pi
-   t2xy <- function(t,scale=c(1,0.7)) {
+  # print(c(pie.asp=asp,pie.scale=c(1,0.7)))
+   't2xy' <- function(t,scale=c(1,0.7)) {
       t2p <- twopi*t+init.angle*pi/180
       if (max(dz)==1) {
+         if (T & verbose)
+            print("MAX(DZ)==1")
          xp <- c(asp[1]*radius*scale[1]*cos(t2p)+x)
          yp <- c(asp[2]*radius*scale[1]*sin(t2p)+y)
       }
       else {
+         if (T & verbose)
+            print("MAX(DZ)!=1")
          xp <- c(0+x,asp[1]*radius*scale[1]*cos(t2p)+x,0+x)
          yp <- c(0+y,asp[2]*radius*scale[1]*sin(t2p)+y,0+y)
       }
       if (length(scale)>1) {
          if (max(dz)==1) {
+            if (T & verbose)
+               print("TWO SCALES: MAX(DZ)==1")
             xp <- c(xp,NA,asp[1]*radius*scale[2]*cos(t2p)+x)
             yp <- c(yp,NA,asp[2]*radius*scale[2]*sin(t2p)+y)
          }
          else {
+            if (T & verbose)
+               print("TWO SCALES: MAX(DZ)!=1")
             xp <- c(xp,NA,0+x,asp[1]*radius*scale[2]*cos(t2p)+x,0+x)
             yp <- c(yp,NA,0+y,asp[2]*radius*scale[2]*sin(t2p)+y,0+y)
          }
@@ -395,7 +472,7 @@
    for (i in seq_len(nz)) {
       n <- max(2,floor(edges*dz[i]))
       if (!ball) {
-         P <- t2xy(seq.int(z[i],z[i+1],length.out=n),scale=c(1,0.7))
+         P <- t2xy(seq.int(z[i],z[i+1],length.out=n),scale=c(1,0.65))
          ##~ polygon(c(P$x,0+x),c(P$y,0+y),border=border[i],col=col[i]
                 ##~ ,lty=lty[i],lwd=lwd[i]
                 ##~ )
@@ -404,7 +481,7 @@
                  ,rule=c("winding","evenodd")[2]
                  )
       }
-      P <- t2xy(seq.int(z[i],z[i+1],length.out=n),scale=ifelse(ball,0.7,0.7))
+      P <- t2xy(seq.int(z[i],z[i+1],length.out=n),scale=ifelse(ball,0.75,0.65))
       polypath(P$x,P$y,border=border[i],col=if (ball) col1[i] else col2[i]
               ,lty=lty[i],lwd=lwd[i]
               ,rule=c("winding","evenodd")[2]

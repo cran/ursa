@@ -133,9 +133,12 @@
    }
    if (!nchar(pattern))
       return(character())
-   if (T) { ## ++ 20210521
+   if (T) { ## ++ 20210521 
+    #  str(list(path=path,pattern=pattern))
       path <- gsub("\\\\","/",path)
-      pattern <- gsub("\\\\","/",pattern)
+      if (grepl("\\\\",pattern))
+         if (!(grepl("(^\\^|\\$$|\\\\[dDwWsS](\\{|\\+|\\*))",pattern)))
+            pattern <- gsub("\\\\","/",pattern) ## failed for sia\\d{4}
    }
    if (.lgrep("(/|\\\\)",pattern))
    {
