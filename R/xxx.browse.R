@@ -10,12 +10,18 @@
       }
       return(browse(obj,...))
    }
-   if (.isRemark())
-      return(browse(obj,...))
+  # if (.isRemark())
+  #    return(browse(obj,...))
    if (inherits(obj,c("datatables")))
       return(browse(obj,...))
+   if (inherits(obj,c("htmlwidget"))) {
+      if (("knitr" %in% loadedNamespaces())&&
+         (isTRUE(knitr::opts_current$get("results")=="asis")))
+         return(browse(obj,...))
+   }
    if (!inherits(obj,c("htmlwidget","knitr_kable")))
       return(browse(obj,...))
+   
    obj
 }
 'browse' <- '.open' <- function(...) {
@@ -261,7 +267,9 @@
                if (.isRemark()) {
                   if (is.null(height))
                      height <- knitr::opts_current$get("out.height")
-                  suffix <- paste0(" style=\"height:",height,"px\"")
+                  if (is.null(width))
+                     width <- "100%"
+                  suffix <- paste0(" style=\"height:",height,"px; width=",width,"\"")
                }
                else
                   suffix <- ""
@@ -275,8 +283,8 @@
                cmd <- paste0("<div class=\"figure\">\n"
                             ,"<div class=\"framed\"",suffix,">\n"
                             ,"<iframe src=",dQuote(fname)
-                            ," width=",dQuote(width)
-                            ," height=",dQuote(height)
+                            ,ifelse(is.null(width),"",paste0(" width=",dQuote(width)))
+                            ,ifelse(is.null(height),"",paste0(" height=",dQuote(height)))
                             ," class=",dQuote("ursa-widgetize"),">"
                             ,"</iframe>\n"
                             ,"</div>\n"
