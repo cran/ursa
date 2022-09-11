@@ -60,7 +60,8 @@
       }
       return(res)
    }
-   if (inherits(obj,c("SpatialPointsDataFrame","SpatialPixelsDataFrame"))) {
+   if (inherits(obj,c("SpatialPointsDataFrame"#,"SpatialPoints"
+                     ,"SpatialPixelsDataFrame"))) {
       return(allocate(obj,...))
    }
    if (inherits(obj,c("RasterBrick","RasterStack","RasterLayer"))) {
@@ -232,6 +233,9 @@
                   if (isColor) {
                      ctCol <- obj$color_tables[[1]]
                      ct <- rgb(ctCol[,1],ctCol[,2],ctCol[,3],ctCol[,4],maxColorValue=255)
+                     if (isClass)
+                        if (length(ct)>length(ctName))
+                           ct <- ct[seq_len(length(ctName))]
                   }
                   else
                      ct <- rep(NA,length(ctName))
@@ -589,7 +593,12 @@
    if (is.character(obj)) {
       if ((FALSE)&&(envi_exists(obj))) ## FALSE to keep alternative to read ENVI using GDAL 
          return(read_envi(obj,...))
+      if ((!FALSE)&&(envi_exists(obj))) {
+         return(read_envi(obj,...))
+      }
       if (file.exists(obj))
+         return(read_gdal(obj,...))
+      if (ursa_exists(obj))
          return(read_gdal(obj,...))
       if (isURL <- .lgrep("^(http://|https://|ftp://|file:///)",obj)>0) {
          arglist <- list(...)

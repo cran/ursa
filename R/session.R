@@ -68,6 +68,13 @@
             if (file.exists(obj)) {
                a <- open_gdal(obj)
             }
+            else {
+               list1 <- dir(path=dirname(obj)
+                           ,pattern=paste0(basename(obj),"\\.(tif|tiff|hfa)$")
+                           ,full.names=TRUE)
+               if (length(list1)==1)
+                  a <- open_gdal(list1)
+            }
          }
          g1 <- a$grid
          if (is_ursa(a))
@@ -121,6 +128,7 @@
                                  ,c(minx=minx,miny=miny,maxx=maxx,maxy=maxy))
 'session_pngviewer' <- function(allow=NA) {
    opV <- getOption("ursaAllowPngViewer")
+  # str(list(allow=allow,opV=opV,isRscript=.isRscript()))
    if ((is.na(allow))||(!is.logical(allow))) {
       if (is.logical(opV))
          return(opV)

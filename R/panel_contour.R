@@ -17,7 +17,9 @@
      # if ((isFilled)||(isColored))
      #    isLine <- TRUE
    }
-  # print(c(line=isLine,filled=isFilled,colored=isColored,label=isLabel))
+   verbose <- .getPrm(list(...),name="verb(ose)*",default=FALSE)
+   if (T & verbose)
+      print(c(line=isLine,filled=isFilled,colored=isColored,label=isLabel))
    if ((!TRUE)&&(isLabel)&&(!isFilled)&&(!isColored)&&(!isLine))
       res <- .panel_contour(obj,expand=0,...)
    else {
@@ -66,21 +68,77 @@
          lwd <- NA
       else
          lwd <- .getPrm(arglist,name="lwd$",default=0.5)
-      col <- .getPrm(arglist,name="col",default="black") ## res$col col.bg
+      col <- .getPrm(arglist,name="col",class=c("character","logical")
+                    ,default="black") ## res$col col.bg
       if ((isLabel)&&(!isLine))
          lty <- "blank"
       else
          lty <- .getPrm(arglist,name="lty",class=list("character","numeric")
                        ,default=1)
-      labcex <- .getPrm(arglist,name="(lab)*cex",default=0.85)
+      labcex <- .getPrm(arglist,name="(lab)*cex",default=1) ## 0.85
       method <- .getPrm(arglist,name="method",default="flattest")
       labels <- .getPrm(arglist,name="label(s)",class="character",default=NULL)
-      if ((isFilled)&&(!isLabel))
+      if ((isLine)&&(!isLabel))
+         drawL <- FALSE
+      else if ((isFilled)&&(!isLabel))
          drawL <- FALSE
       else
          drawL <- TRUE
-      contour(res,levels=res$lev,col=col,lwd=lwd,lty=lty,labels=labels
-                       ,labcex=labcex,method=method,drawlabels=drawL,add=TRUE)
+     # str(list(res="res",levels=res$lev,col=col,lwd=lwd,lty=lty,labels=labels
+     #                  ,labcex=labcex,method=method,drawlabels=drawL,add=TRUE))
+      if (is.character(res$lev)) {
+         if (is.null(labels)) {
+            labels <- res$lev
+         }
+         res$lev <- seq_along(res$lev)-1
+      }
+      if (!length(res$lev)) {
+         if (is.character(res$z)) {
+            res$lev <- seq_along(res$col)-1
+            dimz <- dim(res$z)
+            res$z <- as.integer(factor(res$z,levels=names(res$col)))-1
+            dim(res$z) <- dimz
+         }
+      }
+      if (isTRUE(is.logical(col))) {
+         bright <- mean(colSums(col2rgb(res$col)*c(0.30,0.59,0.11)))
+         bgcol <- ifelse(bright<160,"white","black")
+         col <- c(bgcol,res$col,bgcol)
+         reps <- round(strwidth(labels,cex=labcex)/strwidth(" ",cex=labcex))
+         spaces <- sapply(reps, function(x) paste(rep(" ", round(x)), collapse=""))
+         contour(res,levels=unique(res$lev),col=bgcol,lwd=tail(lwd,1)
+                ,lty=lty,labels=spaces
+                ,labcex=labcex,method=method,drawlabels=T,add=TRUE)
+         contour(res,levels=unique(res$lev),col=col,lwd=head(lwd,1),lty=lty
+                ,labels=spaces
+                ,labcex=labcex,method=method,drawlabels=drawL,add=TRUE)
+         len <- 500
+         usr <- par()$usr
+         xo <- seq(usr[1],usr[2],len=len)
+         yo <- seq(usr[3],usr[4],len=len)
+         dx <- diff(xo[1:2])
+         dy <- diff(yo[1:2])
+         labrange <- seq(-2,2)
+         for (di in labrange) {
+            for (dj in labrange) {
+               if (abs(dj)+abs(di)>3)
+                  next
+               if ((!dj)&(!di))
+                  next
+               o <- res
+               o$x <- o$x+dx/2*di
+               o$y <- o$y+dy/2*dj
+               contour(o,lty=0,labels=labels,levels=unique(res$lev)
+                      ,labcex=labcex,add=TRUE,col=bgcol)
+            }
+         }
+         contour(res,lty=0,labels=labels,levels=unique(res$lev)
+                ,labcex=labcex,add=TRUE,col=col)
+      }
+      else
+         contour(res,levels=unique(res$lev),col=col,lwd=head(lwd,1)
+                ,lty=lty,labels=labels
+                ,labcex=labcex,method=method,drawlabels=drawL,add=TRUE)
    }
    res$col
 }
@@ -143,15 +201,24 @@
          }
          return(NULL)
       }
+      isJulian <- arglist$stretch %in% c("julian")
+      if (isJulian)
+         arglist$interval <- 0L
       obj <- do.call("colorize",c(quote(obj[1]),arglist))
       val <- .deintervale(obj)
       arglist$interval <- !arglist$interval
       arglist$stretch <- "linear"
-      arglist$value <- val
+      if (isJulian) {
+        # arglist$name <- val
+         val <- seq_along(val)
+         arglist$ncolor <- length(val)
+      }
       o <- as.ursa(matrix(val,ncol=1))
       o <- do.call("colorize",c(quote(o),arglist))
       ct2 <- ursa_colortable(o)
    }
+   else
+      isJulian <- FALSE
    ct <- ursa_colortable(obj)
    if (!before) {
       ct3 <- ursa_colortable(obj)
@@ -177,6 +244,10 @@
   # obj <- reclass(discolor(obj),ct) ## 20170608 proposed
    res <- as.matrix(obj,coords=TRUE)
    val <- .deintervale(ct)
+   if (isJulian) {
+      vname <- val
+      val <- seq_along(vname)
+   }
    oneBreak <- length(val)==1
    if (!is.character(val))
       dval <- if (oneBreak) 0 else diff(val)/2
@@ -187,10 +258,16 @@
    }
    else {
       res$lev <- c(head(val,1)-2*head(dval,1),val,tail(val,1)+2*tail(dval,1))
+      if (isJulian) {
+         lev <- rep("***",length(res$lev))
+         lev[1] <- "low"
+         lev[length(lev)] <- "high"
+         lev[match(val,res$lev)] <- vname
+         res$lev <- lev
+      }
       val <- c(head(val,1)-head(dval,1),head(val,-1)+dval,tail(val,1)+tail(dval,1))
    }
    if (oneBreak) {
-      res$lev <- res$lev[1:2]
       if (val[1]==0)
          val <- c(-1e-6,1e-6)
       else

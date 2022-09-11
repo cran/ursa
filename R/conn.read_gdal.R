@@ -1,9 +1,9 @@
-'ursa_read' <- function(fname,verbose=FALSE) {
+'ursa_read' <- function(fname,verbose=FALSE) { ## ,resetGrid=TRUE
    if (envi_exists(fname)) {
-      return(read_envi(fname))
+      return(read_envi(fname)) # ,resetGrid=resetGrid
    }
    if (!.lgrep("\\.zip$",fname)) {
-      return(read_gdal(fname=fname,verbose=verbose))
+      return(read_gdal(fname=fname,verbose=verbose)) ## ,resetGrid=resetGrid
      # return(.read_gdal(fname=fname,verbose=verbose))
    }
    list1 <- unzip(fname,exdir=tempdir());on.exit(file.remove(list1))
@@ -32,6 +32,14 @@
 }
 'read_gdal' <- function(fname,resetGrid=TRUE,band=NULL
                        ,engine=c("native","rgdal","sf"),verbose=FALSE,...) { ## ,...
+  # if (resetGrid)
+  #    session_grid(NULL)
+   if (!file.exists(fname)) {
+      list1 <- dir(path=dirname(fname),pattern=paste0("^",basename(fname)),full.names=TRUE)
+      list1 <- list1[.grep("\\.(tif|tiff|img|hfa)$",basename(list1))]
+      if (length(list1)==1)
+         fname <- list1
+   }
    engine <- match.arg(engine)
    loaded <- loadedNamespaces() #.loaded()
    forceSF <- isTRUE(getOption("ursaForceSF"))

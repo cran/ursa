@@ -1,8 +1,23 @@
-2022-02-22
+2022-09-11
 
 <!--
-+ Depends on R (>= 4.1.0) insdead of R (>= 3.0.0) due to using native pipes `|>` in code.
++ Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to using native pipes `|>` in code.
++ Ongoing...
 -->
+
+### version 3.9.7
+
+-   New function `palettize()` as a wrapper
+    `ursa_colortable(colorize(...))`.
+
+-   New argunent `expand` in function `ursa_crop()` for spatial
+    expansion using relative value.
+
+-   New argument `by` in function `segmentize()` to split segments by
+    specified field name.
+
+-   New function `spatial_levelsplit()` trasforms nested polygons (e.g.,
+    polygonized isolines) to intervaled non-overlapped polygons.
 
 ### version 3.9.6
 
@@ -20,7 +35,7 @@
 -   `update_coastline()` is now forced not to use s2 spherical geometry
     package. Fixed polygons merging in `update_coastline()`.
 
--   Coastline is updated to version 2022-02-22T04:17.
+-   Coastline is updated to version 2022-03-07T04:39.
 
 ### version 3.9.5
 
@@ -243,8 +258,8 @@
 ### version 3.8.12
 
 -   Default style for web basemaps is OSM Mapnik tiles insead of OSM
-    static map due to
-    [limitations](http://staticmap.openstreetmap.de/staticmap.php).
+    static map.
+    <!-- due to [limitations](http://staticmap.openstreetmap.de/staticmap.php). -->
 
 -   Parsing of metadata from object of package **stars** (&gt;=0.2).
 

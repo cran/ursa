@@ -35,6 +35,13 @@
    fname <- .ursaCacheDownload(tile,mode="wb",quiet=!verbose)
    return(tile)
 }
+# https://www.esri.com/arcgis-blog/products/product/mapping/web-map-zoom-levels-updated/
+'.webResolution' <- function(zoom) {
+   s <- 2*6378137*pi/(2^(1:21+8))
+   if (missing(zoom))
+       return(s)
+   s[zoom]
+}
 # https://leaflet-extras.github.io/leaflet-providers/preview/
 # https://leaflet-extras.github.io/leaflet-providers/leaflet-providers.js
 '.tileService' <- function(server="") {
@@ -192,6 +199,9 @@
                                   ,"/{z}/{x}/{y}{r}.png","?api_key=",StadiaKey)
                            ,StadiaCr)
    s$'Stamen.Terrain' <- c(paste0("https://stamen-tiles-{abcd}.a.ssl.fastly.net/terrain"
+                                  ,"/{z}/{x}/{y}{r}.png")
+                          ,StamenCr)
+   s$'Stamen.TonerLite' <- c(paste0("https://stamen-tiles-{abcd}.a.ssl.fastly.net/toner-lite"
                                   ,"/{z}/{x}/{y}{r}.png")
                           ,StamenCr)
    s$'rumap' <- c("https://{abcd}tilecart.kosmosnimki.ru/rw/{z}/{x}/{y}.png"

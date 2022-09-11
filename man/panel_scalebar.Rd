@@ -89,31 +89,35 @@ session_grid(NULL)
    compose_open(a)
    panel_new()
    panel_raster(a)
+   \donttest{panel_graticule()}
+   \donttest{panel_coastline()}
    panel_scalebar()
    compose_close()
 
 # example no.2 -- indirect usage
-   display_rgb(ursa_dummy(nband=3,min=0,max=255)
+   display_rgb(ursa_dummy(nband=3,min=0,max=255),coastline=FALSE
               ,scalebar=TRUE,scalebar.col="white",scalebar.fill="black")
 
 # example no.3 -- for paper copy
-   a <- colorize(pixelsize(),breakvalue=seq(400,650,by=50),palname="Greys",inv=FALSE)
+   a <- colorize(pixelsize(),breakvalue=seq(400,650,by=50),pal="Greys",inv=FALSE)
    compose_open(scale="1:95000000",dpi=150,device="cairo",family="Times")
-   compose_plot(a,gridline=FALSE,scalebar=TRUE,scalebar.x=1,units=expression(km^2))
+   compose_plot(a,graticule=TRUE,coastline=FALSE,scalebar=TRUE,scalebar.x=1,units=expression(km^2))
    compose_close(bpp=8)
 
 # example no.4 -- length distortion in the Transverse Mercator projection
+\donttest{
    a1 <- regrid(setbound=c(10,65,71,83),dim=c(100,100),crs=4326)
    a2 <- polygonize(ursa_bbox(a1))
    a3 <- spatial_transform(a2,3857)
    a4 <- regrid(setbound=spatial_bbox(a3),res=20000,crs=spatial_crs(a3))
    compose_open(legend=NULL)
    panel_new("white")
-   panel_coastline(fill="#00000010")
+   panel_coastline(fill="#00000010",detail="l")
   # panel_graticule()
    for (p in c("bottom","center","top"))
       panel_scalebar(pos=p,w=200)
    compose_close()
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -21,16 +21,23 @@
 }
 'panel_legend' <- function(items,...)
 {
-   verbose <- !.isPackageInUse()
+  # verbose <- !.isPackageInUse()
+   verbose <- .getPrm(list(...),name="verb(ose)*",default=!.isPackageInUse())
    if (.skipPlot(TRUE))
       return(NULL)
    if (missing(items))
       items <- getOption("ursaPngLegend")
-  # if (length(items))(inherits(items,"ursaLegend"))
+   else if (is.list(items)) {
+      items <- lapply(items,function(item) {
+         if ((length(item)==1)&&(is.list(item)))
+            return(item[[1]]) # return(unlist(item,recursive=FALSE))
+         item
+      })
+   }
    items <- items[!sapply(items,is.null)]
    if (!length(items))
       return(invisible(NULL))
-   arglist <- as.list(args(legend))
+   arglist <- head(as.list(args(legend)),-1)
    items2 <- list(list(...))
    if (verbose) {
       message("-------")
@@ -65,6 +72,8 @@
             next
          if (verbose)
             message(a)
+         if (isTRUE(getOption("ursaNoticeMatchCall")))
+            message('panel_legend: try `mget(names(match.call())[-1])` instead of `as.list(match.call())`')
          res <- try(eval.parent(arglist[[a]]))
          if (inherits(res,"try-error")) {
             next
@@ -82,8 +91,20 @@
       lname[ind] <- iname[ind]
    arglist[["legend"]] <- lname
   # arglist[["pch"]] <- unname(sapply(items,function(x) x$pch))
+  # arglist[["title.cex"]] <- arglist[["cex"]]
+   if (length(ind <- which(sapply(arglist,class) %in% "call"))) {
+      arglist[ind] <- lapply(names(arglist)[ind],function(a) {
+         arglist[[a]] <- with(arglist,eval(as.call(arglist[[a]])))
+      })
+   }
    if (verbose)
       str(arglist)
    ret <- do.call("legend",arglist)
+   ##~ ret <- legend(x="topright",legend=c("213856","213857"),fill="transparent"
+                ##~ ,col="white",border="transparent",pch=21,density=NA
+                ##~ ,bty="o",bg="#0000007F",box,lwd=0.1,box.lty="solid"
+                ##~ ,box.col="black",pt.bg=c('213856'="#978035FF",'213857'="#677EC9FF")
+                ##~ ,pt.cex=2.5,pt.lwd=2,adj=c(0,0.5),text.col="white",merge=FALSE
+                ##~ ,horiz=TRUE,title.col="white",title.adj=0.5)
    invisible(ret)
 }

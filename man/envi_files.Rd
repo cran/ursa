@@ -4,6 +4,7 @@
 \alias{envi_copy}
 \alias{envi_rename}
 \alias{envi_remove}
+\alias{ursa_exists}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 ENVI File Manipulation 
@@ -20,6 +21,8 @@ envi_remove(pattern = ".+", path = ".", all.files = FALSE, full.names = recursiv
             recursive = FALSE, ignore.case = TRUE, verbose = FALSE)
 envi_copy(src, dst, overwrite = TRUE)
 envi_rename(src, dst, overwrite = TRUE)
+
+ursa_exists(fname)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -57,9 +60,13 @@ Strings of length 1 or more. Name or directory name path of destination ENVI fil
   \item{overwrite}{
 Logical. \code{TRUE} overwrites destinations ENVI files. \code{FALSE} does nothing if destinaton ENVI file exists.
 }
+  \item{fname}{
+Character. Full file name or file pattern with file path.
+}
 }
 \details{
 Functions do not view content of any files. The major identifier of ENVI files in file system is ENVI header (*.hdr) file. Binary file is searching along 1) original *.envi, *.bin, *.img, *.dat extensions, 2) externally packing *.gz. *.bz2, *.xz extensions, or 3) packed by this package *.envigz, *.bingz extensions. Functions \code{envi_copy()} and \code{envi_rename()} keeps original extension of ENVI binary file; use \code{\link[base:files]{file.rename}} to rename ENVI binary file.
+
 }
 \value{
 \code{envi_exists()} returns integer number of found ENVI files.
@@ -71,6 +78,9 @@ Functions do not view content of any files. The major identifier of ENVI files i
 \code{envi_copy()} returns 0L.
 
 \code{envi_rename()} returns value of \code{\link[base:files]{file.rename}}, which is applied to objects in file system.
+
+\code{ursa_exists()} returs \code{TRUE} if any *.tif, *.tiff, *.bin, *.hfa file is found.
+
 }
 %%~ \references{
 %%~ %% ~put references to the literature/web site here ~
