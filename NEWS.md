@@ -1,9 +1,22 @@
-2022-09-11
+2022-11-16
 
 <!--
 + Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to using native pipes `|>` in code.
 + Ongoing...
 -->
+
+### version 3.9.8
+
+-   Minor changes in `ursa.c` file for removing warnings during
+    `r-devel-linux` compilation (`-Wstrict-prototypes`).
+
+-   New function `sort()` for `ursaRaster` objects for ordering based on
+    band names.
+
+-   ‘session\_grid()’ prioritizes raster rather vector files, with the
+    same names of files.
+
+-   Coastline is updated to version 2022-11-16T04:45.
 
 ### version 3.9.7
 
