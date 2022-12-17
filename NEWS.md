@@ -1,9 +1,22 @@
-2022-11-16
+2022-12-17
 
 <!--
 + Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to using native pipes `|>` in code.
 + Ongoing...
 -->
+
+### version 3.9.9
+
+-   ongoing…
+
+-   Added `quantile_global()`, `quantile_band()` and `quantile_local`
+    functions().
+
+-   Speeding up elapsed time for `panel_raster()` example.
+
+-   Packages **`terra`** and **`stars`** added as suggested for
+    development purpose. New function `as_stars()` creates object of
+    class `stars` without **`stars`** package.
 
 ### version 3.9.8
 

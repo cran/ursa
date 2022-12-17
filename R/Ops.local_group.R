@@ -153,9 +153,7 @@
    })
    res <- as.ursa(t(qv))
   # ursa_value(res) <- t(qv)
-   print(res)
   # display(res)
-   q()
    session_grid(g0)
    res
 }
