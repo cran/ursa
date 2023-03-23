@@ -1,16 +1,23 @@
-2022-12-17
+2023-03-23
 
 <!--
-+ Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to using native pipes `|>` in code.
++ Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to using native pipes `|>` in code
++ Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to changed behaviour in `*apply()` functions with argument `simplify`
 + Ongoing...
 -->
 
+### version 3.9.10
+
+-   Foreign functions are symbolic insead of character after [R-devel
+    BUG FIXES
+    2023-03-20](https://developer.r-project.org/blosxom.cgi/R-devel/NEWS/2023/03/20#n2023-03-20).
+
+-   Coastline is updated to version 2023-03-23T05:08.
+
 ### version 3.9.9
 
--   ongoing…
-
 -   Added `quantile_global()`, `quantile_band()` and `quantile_local`
-    functions().
+    functions based on `stats::quantile()`.
 
 -   Speeding up elapsed time for `panel_raster()` example.
 
@@ -351,9 +358,9 @@
 
     -   Changed cache management (after Uwe Ligges code review).
 
-    -   In \*.Rd files ‘\\{dontrun}’ is replaced to ‘\\{donttest}’
-        (after Swetlana Herbrandt review). Packages `caTools`, `ggmap`
-        are added as ‘Suggested’ for running of examples.
+    -   In \*.Rd files ‘\\dontrun}’ is replaced to ‘\\donttest}’ (after
+        Swetlana Herbrandt review). Packages `caTools`, `ggmap` are
+        added as ‘Suggested’ for running of examples.
 
 ### version 3.8.7
 

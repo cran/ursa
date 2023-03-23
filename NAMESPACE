@@ -1,4 +1,4 @@
-useDynLib(ursa)
+useDynLib(ursa,.registration=TRUE,.fixes="C_")
 
 importFrom("grDevices", "col2rgb", "colorRampPalette", "rgb", "png",
            "graphics.off", "as.raster","svg")
@@ -13,11 +13,6 @@ importFrom("stats", "aggregate", "density", "loess", "median", "pf",
 importFrom("utils", "str", "download.file", "head", "tail", "methods",
            "object.size", "unzip", "URLencode", "localeToCharset",
            "read.table", "write.table", "browseURL")
-export(".onAttach")
-export(".onDetach")
-export(".onLoad")
-export(".onLoad.blank")
-export(".onUnload")
 export("allocate")
 export("as.Raster")
 export("as.ursa")
