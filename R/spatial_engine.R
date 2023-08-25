@@ -814,10 +814,13 @@
                                                ,recursive=FALSE,ignore.case=TRUE) {
    patt0 <- "\\.(gpkg|tab|kml|json|geojson|mif|sqlite|shp|osm)(\\.(zip|gz|bz2))*$"
    if (devel <- TRUE & all(!dir.exists(path))) {
-      dpath <- list.dirs(dirname(path),full.names=FALSE)
-      ind <- grep(basename(path),dpath,ignore.case=ignore.case)
-      if (length(ind)==1)
-         path <- file.path(dirname(path),dpath[ind])
+      dname <- dirname(path)
+      if (dname!=".") {
+         dpath <- list.dirs(dirname(path),full.names=FALSE)
+         ind <- grep(basename(path),dpath,ignore.case=ignore.case)
+         if (length(ind)==1)
+            path <- file.path(dirname(path),dpath[ind])
+      }
    }
    res <- dir(path=path,pattern=patt0,full.names=full.names
              ,recursive=recursive,ignore.case=ignore.case)
@@ -948,17 +951,34 @@
          sf::st_agr(x) <- "constant"
       if (inherits(y,"sf"))
          sf::st_agr(y) <- "constant"
+      if (missedAttrTable <- is.null(spatial_data(x))) {
+         xname <- basename(tempfile(pattern="field",tmpdir=""))
+         spatial_data(x) <- data.frame(array(0,dim=c(spatial_length(x),1)
+                                            ,dimnames=list(NULL,xname)))
+         sf::st_agr(x) <- "constant"
+      }
       res <- try(sf::st_intersection(x,y))
       if (inherits(res,"try-error")) {
          if (length(grep("st_crs\\(x\\) == st_crs\\(y\\) is not TRUE"
                         ,as.character(res))))
          res <- sf::st_intersection(x,spatial_transform(y,x))
       }
+      if (missedAttrTable) {
+         x <- spatial_geometry(x)
+         res[[xname]] <- NULL
+      }
       if (is.null(spatial_data(res))) {
          if (!is.null(spatial_data(x)))
             spatial_data(res) <- spatial_data(x)
          else if (!is.null(spatial_data(y)))
             spatial_data(res) <- spatial_data(y)
+      }
+      if (length(ind <- grep("\\.1$",spatial_fields(res)))) {
+         rname <- spatial_fields(res)
+         for (i in ind) {
+            if (identical(res[[gsub("\\.1$","",rname[i])]],res[[rname[i]]]))
+               res[[rname[i]]] <- NULL
+         }
       }
       if (FALSE) {
         # spatial_geometry(res) <- sf:::st_cast_sfc_default(spatial_geometry(res))
@@ -1284,6 +1304,12 @@
    arglist <- list(...)
    if (length(ind <- which(sapply(arglist,is.null))))
       arglist <- arglist[-ind]
+   if (!length(arglist))
+      return(NULL)
+   if ((length(arglist)==1)&&
+       (any(sapply(arglist[[1]],is_spatial)))&&
+       (!is_spatial(arglist[[1]])))
+      arglist <- arglist[[1]]
    res <- arglist[[1]]
    isSF <- .isSF(res)
    isSP <- .isSP(res)
@@ -1330,7 +1356,7 @@
 }
 'spatial_basename' <- function(fname) {
    gsub(paste0("\\."
-              ,"(shp|geojson|json|sqlite|gpkg|mif|kml|osm|tif|envi|bin|envigz|img|bingz)"
+              ,"(shp|geojson|json|sqlite|gpkg|mif|kml|osm|csv|tif|envi|bin|envigz|img|bingz)"
               ,"(\\.(gz|bz2|zip|rar))*$")
        ,"",basename(fname),ignore.case=TRUE)
 }

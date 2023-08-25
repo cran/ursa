@@ -2,7 +2,7 @@
                            ,method=c("complete","centroid","single")
                            ,fun=c("count","sum","mean","label"),label=fun %in% "count"
                            ,ngroup=NA,separate=FALSE,repel=20L,legend="bottomright"
-                           ,title=NULL,verbose=FALSE,...) {
+                           ,title=NULL,verbose=FALSE) {
    ##~ method <- c('1'="ward.D",'2'="ward.D2",'3'="single",'4'="complete"
               ##~ ,'5'="average",'6'="mcquitty",'7'="median"
               ##~ ,'8'="centroid")[4] ## 3 4! 8 
@@ -77,6 +77,7 @@
       else
          bname <- ".undefined"
    }
+   bname <- bname[!is.na(bname)]
    if ((separate)&&(isCat)&&(!is.na(ngroup))&&(length(ngroup)!=length(bname))&&(ngroup[1]>2)) {
       tg <- table(xy4[[nameCat]])
      # print(tg)
@@ -99,7 +100,7 @@
    }
   # print(ngroup)
    lutList <- lapply(if (separate) bname else ".+",function(sep) {
-     # message(sQuote(sep),":")
+      message(sQuote(sep),":")
      # print(ngroup[sep])
      # return(NULL)
      # str(xy4)
@@ -114,9 +115,10 @@
          chcD <- 1L
       }
       else {
+         print("C")
          len <- dist(xy5[,c("x","y")])
         # str(xy5)
-        # print(summary(len))
+         print(summary(len))
          chc <- hclust(len,method=method)
          if ((length(ngroup)>1)&&(!is.null(names(ngroup))))
             ng <- ngroup[sep]
@@ -132,6 +134,7 @@
             chcD <- cutree(chc,h=s)
          }
       }
+      print("D")
       ta <- table(chcD)
       ##~ print(ta)
       ##~ print(table(cutree(chc,h=s)))
@@ -166,6 +169,7 @@
                       ,by=list(.x=lut$.x,.y=lut$.y),sum)
       lut
    })
+   q()
    lut <- do.call(rbind,lutList)
    rownames(lut) <- NULL
    if (is.character("ratio") & "log" %in% ratio)
@@ -297,7 +301,7 @@
    if (length(bg)==1)
       bg <- rep(bg,length(ctInd))
    bg <- col2rgb(bg)/255
-   bg <- rgb(bg[1,],bg[2,],bg[3,],alpha=ifelse(separate,0.6,0.2))
+   bg <- rgb(bg[1,],bg[2,],bg[3,],alpha=0.2)
    s2 <- s/ifelse(label,2,1.5)/overlap
    for (i in seq(nrow(lut))) {
       x <- lut$.x[i] # <- mean(da2$x)
@@ -331,8 +335,7 @@
         # str(lab)
          panel_annotation(x=x,y=y,label=as.character(lab),cex=cex,adj=c(0.5,0.53)
                         # ,fg="#FFFFFFA0",bg="#000000AF"
-                         ,buffer=2/scale ## commment it
-                        # ,buffer=2
+                        # ,buffer=2/scale
                          )
       }
       if (F) {
@@ -342,21 +345,12 @@
       }
    }
    if (!is.null(legend)) {
-      sc <- 96*getOption("ursaPngRetina")/getOption("ursaPngDpi")
-      if (T)
-         str(list('par(cex)'=par("cex"),cex=cex,scale=getOption("ursaPngScale")
-                 ,retina=getOption("ursaPngRetina"),ps=getOption("ursaPngPointsize")
-                 ,dpi=getOption("ursaPngDpi"),sc=sc))
       legend(legend,legend=bname,title=title
-            ,col=ctInd
-            ,cex=c(1,cex)[1]/par("cex")
-            ,pch=21
-            ,pt.lwd=ifelse(label,1,0)*2.4/par("cex")*sc
-            ,pt.cex=1.8/par("cex")
+            ,col=ctInd,cex=c(1,cex)[1]/par("cex")
+            ,pch=21,pt.lwd=ifelse(label,1,0)*2.4/par("cex"),pt.cex=1.8/par("cex")
             ,box.lwd=0.1,bg="#FFFFFFAF"
            # ,pt.bg=ursa_colortable(colorize(seq_along(ctInd),pal=ctInd,alpha="30"))
             ,pt.bg=if (label) bg else ctInd
-            ,...
             )
      # return(invisible(ct)) ## colortable of obj[[indCat]]
       return(invisible(ursa_colortable(ct)))
@@ -435,13 +429,8 @@
    }
    if (is.null(col))
       col <- ursa_colortable(colorize(seq(nz)))
-   if (!is.null(border)) {
-      border1 <- rep_len(border,nz)
-      border2 <- rep_len("#FFFFFF",nz)
-      gscale <- colSums(col2rgb(col)*c(0.30,0.59,0.11))
-      if (all(gscale>160))
-         border2[] <- "#00000080"
-   }
+   if (!is.null(border)) 
+      border <- rep_len(border, nz)
    if (!is.null(lty)) 
       lty <- rep_len(lty, nz)
    if (!is.null(lwd)) 
@@ -486,18 +475,18 @@
    }
    for (i in seq_len(nz)) {
       n <- max(2,floor(edges*dz[i]))
-      if (!ball) { ## external circle
+      if (!ball) {
          P <- t2xy(seq.int(z[i],z[i+1],length.out=n),scale=c(1,0.65))
          ##~ polygon(c(P$x,0+x),c(P$y,0+y),border=border[i],col=col[i]
                 ##~ ,lty=lty[i],lwd=lwd[i]
                 ##~ )
-         polypath(P$x,P$y,border=border2[i],col=col1[i]
+         polypath(P$x,P$y,border=border[i],col=col1[i]
                  ,lty=lty[i],lwd=lwd[i]
                  ,rule=c("winding","evenodd")[2]
                  )
       }
       P <- t2xy(seq.int(z[i],z[i+1],length.out=n),scale=ifelse(ball,0.75,0.65))
-      polypath(P$x,P$y,border=border1[i],col=if (ball) col1[i] else col2[i]
+      polypath(P$x,P$y,border=border[i],col=if (ball) col1[i] else col2[i]
               ,lty=lty[i],lwd=lwd[i]
               ,rule=c("winding","evenodd")[2]
               )
