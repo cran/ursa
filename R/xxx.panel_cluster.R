@@ -2,7 +2,7 @@
                            ,method=c("complete","centroid","single")
                            ,fun=c("count","sum","mean","label"),label=fun %in% "count"
                            ,ngroup=NA,separate=FALSE,repel=20L,legend="bottomright"
-                           ,title=NULL,verbose=FALSE) {
+                           ,title=NULL,verbose=FALSE,...) {
    ##~ method <- c('1'="ward.D",'2'="ward.D2",'3'="single",'4'="complete"
               ##~ ,'5'="average",'6'="mcquitty",'7'="median"
               ##~ ,'8'="centroid")[4] ## 3 4! 8 
@@ -99,8 +99,10 @@
      # print(ngroup)
    }
   # print(ngroup)
-   lutList <- lapply(if (separate) bname else ".+",function(sep) {
-      message(sQuote(sep),":")
+  # print(xy4)
+   bname <- bname[bname %in% xy4[[3]]]
+   lutList <- lapply(if (separate) sample(bname) else ".+",function(sep) {
+     # message(sQuote(sep),":")
      # print(ngroup[sep])
      # return(NULL)
      # str(xy4)
@@ -115,16 +117,21 @@
          chcD <- 1L
       }
       else {
-         print("C")
          len <- dist(xy5[,c("x","y")])
         # str(xy5)
-         print(summary(len))
+        # print(summary(len))
          chc <- hclust(len,method=method)
          if ((length(ngroup)>1)&&(!is.null(names(ngroup))))
             ng <- ngroup[sep]
          else
             ng <- ngroup
-         if (min(len[len>0])>s*0.75)
+         if (all(len==0)) {
+            cat("----------------------------------------\n")
+            str(xy5[,c("x","y")])
+            str(len)
+            ng <- NA
+         }
+         else if (min(len[len>0])>s*0.75)
             ng <- NA
         # print(data.frame(ng=ng,len=min(len[len>0])))
          if (!is.na(ng)) {
@@ -134,7 +141,6 @@
             chcD <- cutree(chc,h=s)
          }
       }
-      print("D")
       ta <- table(chcD)
       ##~ print(ta)
       ##~ print(table(cutree(chc,h=s)))
@@ -169,7 +175,6 @@
                       ,by=list(.x=lut$.x,.y=lut$.y),sum)
       lut
    })
-   q()
    lut <- do.call(rbind,lutList)
    rownames(lut) <- NULL
    if (is.character("ratio") & "log" %in% ratio)
@@ -351,6 +356,7 @@
             ,box.lwd=0.1,bg="#FFFFFFAF"
            # ,pt.bg=ursa_colortable(colorize(seq_along(ctInd),pal=ctInd,alpha="30"))
             ,pt.bg=if (label) bg else ctInd
+            ,...
             )
      # return(invisible(ct)) ## colortable of obj[[indCat]]
       return(invisible(ursa_colortable(ct)))

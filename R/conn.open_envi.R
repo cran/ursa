@@ -9,6 +9,7 @@
    grid <- .grid.skeleton()
    if (missing(fname))
       stop("filename is missing")
+   fname <- gsub("\\.$","",fname)
    wname <- fname
    fname <- envi_list(wname,exact=TRUE)
    dname <- unique(dirname(fname))
@@ -711,10 +712,10 @@
       }
       else if (!isSF) {
          if (lverbose)
-            message("rgdal::showP4")
-         .try(grid$crs <- rgdal::showP4(wkt))
-        # .try(grid$crs <- attr(rgdal::GDALinfo(con$fname,returnStats=FALSE)
-        #                   ,"projection"))
+            message("showP4() in 'rgdal'")
+         .try(grid$crs <- .rgdal_showP4(wkt))
+        # .try(grid$crs <- attr(GDALinfo(con$fname,returnStats=FALSE)
+        #                   ,"projection")) ## GDALinfo() from 'rgdal'
       }
       else  {
          if (lverbose)
@@ -743,8 +744,8 @@
                grid$crs <- grid$crs[nchar(grid$crs)>0]
             }
             else {
-               message("      sf::st_crs -> rgdal::showP4")
-               .try(grid$crs <- rgdal::showP4(wkt))
+               message("      sf::st_crs -> showP4() in 'rgdal'")
+               .try(grid$crs <- .rgdal_showP4(wkt))
             }
          }
         # stop("This is ureacheable branch! TODO for `sf`>0.8")

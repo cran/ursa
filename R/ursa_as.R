@@ -152,13 +152,23 @@
       }
       return(res)
    }
-   if ((is.list(obj))&&(!anyNA(match(c("filename","cols","rows","bands","crs"
+   if ((is.list(obj))&&(!anyNA(match(c("filename","cols","rows","bands","driver"
                                       ,"geotransform","datatype","meta")
                                     ,names(obj))))) { ## from 'sf::gdal_read'
      # .elapsedTime("A")
       columns <- obj$cols[2]
       rows <- obj$rows[2]
       bands <- obj$bands[2]
+      if (length(ind <- grep("(^crs$|^wkt|wkt$)",names(obj))))
+         crs <- obj[[ind]]
+     # if (!is.na(crs))
+     #    crs <- crs$proj4string
+      if (is.character(crs))
+         crs <- sf::st_crs(crs)$proj4string
+      else if (inherits(crs,"crs"))
+         crs <- crs$proj4string
+      if (is.na(crs))
+         crs <- ""
      # patt <- "^Band_(\\d+)=\\t*(.+)$"
      # bname <- grep(patt,obj$meta,value=TRUE)
      # b1 <- .grep(patt,obj$meta,value=TRUE)
@@ -182,7 +192,7 @@
      # .elapsedTime("I")
       if (F) 
          g1 <- regrid(setbound=c(minx,miny,maxx,maxy),dim=c(rows,columns)
-                     ,crs=obj$crs$proj4string)
+                     ,crs=crs)
       else {
          g1 <- .grid.skeleton()
          g1$columns <- as.integer(columns)
@@ -193,7 +203,7 @@
          g1$maxy <- maxy
          g1$resx <- with(g1,(maxx-minx)/columns)
          g1$resy <- with(g1,(maxy-miny)/rows)
-         g1$crs <- obj$crs$proj4string
+         g1$crs <- crs
       }
       if (is.na(g1$crs))
          g1$crs <- ""
@@ -233,6 +243,8 @@
                   if (isColor) {
                      ctCol <- obj$color_tables[[1]]
                      ct <- rgb(ctCol[,1],ctCol[,2],ctCol[,3],ctCol[,4],maxColorValue=255)
+                     if (all(substr(ct,8,9)=="FF"))
+                        ct <- substr(ct,1,7)
                      if (isClass)
                         if (length(ct)>length(ctName))
                            ct <- ct[seq_len(length(ctName))]
@@ -264,6 +276,13 @@
                bname <- obj$description
                if (any(nchar(bname)>0)) {
                   names(res) <- gsub("\\t","",bname) ## patch for ENVI 'band name'
+               }
+               else {
+                  patt <- "^Band_(\\d+)=(.+)$"
+                  j <- grep(patt,obj$meta)
+                  ind <- as.integer(gsub(patt,"\\1",obj$meta[j]))
+                  bname <- gsub(patt,"\\2",obj$meta[j])
+                  names(res)[ind] <- bname
                }
             }
             else {
@@ -400,10 +419,16 @@
          ##~ str(a1[[1]]$finalize())
          ##~ q()
       }
-      bbox <- obj@ptr$extent$vector[c(1,3,2,4)]
-      res <- obj@ptr$res
-      crs <- obj@ptr$get_crs("proj4")
-      aname <- obj@ptr$names
+     # bbox <- obj@ptr$extent$vector[c(1,3,2,4)]
+     # res <- obj@ptr$res
+     # crs <- obj@ptr$get_crs("proj4")
+     # aname <- obj@ptr$names
+      bbox <- as.vector(terra::ext(obj))[c(1,3,2,4)]
+      res <- terra::res(obj)
+      crs <- terra::crs(obj,proj=TRUE)
+     # sn <- methods::slotNames(obj)
+     # aname <- methods::slot(obj,sn)$names
+      aname <- names(obj) ## wrong, TODO
       g1 <- regrid(bbox=bbox,res=res,crs=crs)
       if (identical(bbox,c(0,0,1,1)))
          g1 <- regrid(bbox=c(0,0,rev(dim(g1))),res=1,crs=crs)
