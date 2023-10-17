@@ -285,8 +285,8 @@
    basemapRetina <- FALSE
    if (isWeb) {
       bbox <- with(g0,c(minx,miny,maxx,maxy))
-      lim <- c(.project(matrix(bbox,ncol=2,byrow=TRUE)
-                                               ,g0$crs,inv=TRUE))[c(1,3,2,4)]
+      lim <- c(.project(matrix(bbox,ncol=2,byrow=TRUE),g0$crs
+                       ,inv=TRUE,verbose=verbose))[c(1,3,2,4)]
       ostyle <- unlist(strsplit(style,split="\\s+"))
       isStatic <- ostyle[1] %in% staticMap
       ustyle <- ""#ostyle[1]

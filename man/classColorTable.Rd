@@ -45,7 +45,7 @@ Named character vector. In Replacement functions:
 
 For \code{ursa_colortable()}: values are colors in \dQuote{#RRGGBB} notation or \R color names (\code{\link[grDevices]{colors}}). \code{names(value)} are names of categories.
 
-For \code{names()}: values are names of categories. If length of names is \code{n-1}, where \code{n} is length of colors, then intervaling is assumed, and code{value} are assign to interval breaks.
+For \code{names()}: values are names of categories. If length of names is \code{n-1}, where \code{n} is length of colors, then intervaling is assumed, and \code{value} are assign to interval breaks.
 }
   \item{i}{
 Integer vector. Indices specifying elements to extract part (subset) of color table.

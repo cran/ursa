@@ -6,13 +6,16 @@
                          ,style="auto" ## auto none internal keep
                         # ,zoom=NA
                          ,subset="",verbose=FALSE,...) {
-   engList <- as.character(as.list(match.fun("spatialize"))[["engine"]])[-1]
-   if (length(engine)<length(engList)) {
-      if (!.isPackageInUse()) {
+   if (.isPackageInUse()) {
+      engine <- match.arg(engine)
+   }
+   else {
+      engList <- as.character(as.list(match.fun("spatialize"))[["engine"]])[-1]
+      if (length(engine)<length(engList)) {
          engList <- c(engList,"sp")
       }
+      engine <- match.arg(engine,engList)
    }
-   engine <- match.arg(engine,engList)
    if (resetGrid)
       session_grid(NULL)
    toResetGrid <- 0L

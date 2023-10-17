@@ -100,9 +100,10 @@
    }
   # print(ngroup)
   # print(xy4)
-   bname <- bname[bname %in% xy4[[3]]]
-   lutList <- lapply(if (separate) sample(bname) else ".+",function(sep) {
-     # message(sQuote(sep),":")
+   if (!fun %in% c("mean","sum"))
+      bname <- bname[bname %in% xy4[[3]]]
+   lutList <- lapply(if (separate | length(bname)>1e6) sample(bname) else ".+",function(sep) {
+      message(sQuote(sep),":")
      # print(ngroup[sep])
      # return(NULL)
      # str(xy4)
@@ -113,6 +114,7 @@
       }
       else
          xy5 <- xy4
+     # print(bname)
       if (nrow(xy5)<2) {
          chcD <- 1L
       }
@@ -151,6 +153,7 @@
       lut <- cbind(.x=NA,.y=NA,.r=NA,.n=NA,data.frame(lut,check.names=FALSE))
       xy5 <- data.frame(xy5,.cluster=chcD)
       for (i in seq(nrow(lut))) {
+         print(bname)
          da2 <- xy5[xy5$.cluster==i,]#c("x","y")]
         # print(da2)
          if (isCat) {
@@ -177,6 +180,7 @@
    })
    lut <- do.call(rbind,lutList)
    rownames(lut) <- NULL
+  # print(lut)
    if (is.character("ratio") & "log" %in% ratio)
       lut$.r <- log(lut$.n+1)
    else
