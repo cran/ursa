@@ -99,11 +99,16 @@
      # print(ngroup)
    }
   # print(ngroup)
-  # print(xy4)
-   if (!fun %in% c("mean","sum"))
-      bname <- bname[bname %in% xy4[[3]]]
-   lutList <- lapply(if (separate | length(bname)>1e6) sample(bname) else ".+",function(sep) {
-      message(sQuote(sep),":")
+   print(series(xy4))
+   str(bname)
+   if ((!fun %in% c("mean","sum"))&&(ncol(xy4)>3))
+      bname <- bname[bname %in% xy4[[4]]]
+   lutSep <- if (separate | length(bname)>1e6) sample(bname) else ".+"
+   str(bname)
+   print(lutSep)
+   lutList <- lapply(lutSep,function(sep) {
+      if (verbose)
+         message(sQuote(sep),":")
      # print(ngroup[sep])
      # return(NULL)
      # str(xy4)
@@ -153,7 +158,8 @@
       lut <- cbind(.x=NA,.y=NA,.r=NA,.n=NA,data.frame(lut,check.names=FALSE))
       xy5 <- data.frame(xy5,.cluster=chcD)
       for (i in seq(nrow(lut))) {
-         print(bname)
+         if (verbose)
+            print(bname)
          da2 <- xy5[xy5$.cluster==i,]#c("x","y")]
         # print(da2)
          if (isCat) {

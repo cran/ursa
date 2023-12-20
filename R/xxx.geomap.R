@@ -9,7 +9,7 @@
    geocode <- match.arg(geocode,geocodeList)
    if (!sum(nchar(style)))
       style <- paste(switch(geocode,nominatim="openstreetmap",pickpoint="openstreetmap"
-                           ,google="google","mapnik"),"color")
+                           ,google="google","CartoDB"),"color")
    if (is.na(zoom))
       zoom <- "0"
    isWGS84 <- .lgrep("(maps\\.yandex|^(Yandex|\u042f\u043d\u0434\u0435\u043a\u0441)$)"
