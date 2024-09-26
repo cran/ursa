@@ -36,8 +36,9 @@
          arglist$nodata <- .optimal.nodata(obj$value)
       res <- do.call("create_envi",c(list(obj),arglist))
    }
-   if (isRaster)
+   if (isRaster) {
       res[] <- obj
+   }
    close(res)
    return(invisible(res$con$datatype))
 }

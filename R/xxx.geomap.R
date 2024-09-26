@@ -19,7 +19,7 @@
                                 ,collapse="|"),")")
    tilePatt <- .gsub("\\.","\\\\.",tilePatt)
    artPatt <- .gsub("\\.","\\\\.",tilePatt)
-   if (!.lgrep(tilePatt,style))
+   if (!.lgrep(tilePatt,style,ignore.case=FALSE))
       art <- "none"
    else {
       if (length(style)>1)
@@ -29,11 +29,11 @@
       else if ((artStyle <- gsub("\\s(color|gr[ae](scale)*)","",style)) %in% tileList)
          art <- artStyle
       else
-         art <- .gsub2(tilePatt,"\\1",style)
+         art <- .gsub2(tilePatt,"\\1",style,ignore.case=FALSE)
      # print(art);q()
      # proj <- "merc"
    }
-   canUrl <- length(unlist(regmatches(style,gregexpr("\\{[xyz]\\}",style))))==3
+   canUrl <- length(unlist(regmatches(style,gregexpr("(\\{z\\}|\\{x\\}|\\{(-)*y\\})",style))))==3
    isSAScache <- FALSE
    if (!canUrl) {
       sascache <- style
@@ -93,7 +93,9 @@
                else {
                   o2 <- p2$options
                   if (!"variant" %in% names(o2))
-                     o2$variant=s2
+                     o2$variant <- s2
+                  if (!is.null(p2$url))
+                     sUrl <- p2$url
                }
                for (oname in names(o2)) {
                   if (oname=="attribution") {
@@ -233,7 +235,7 @@
       len[len>mlen] <- mlen
    }
    if (trytodeprecate20230723 <- TRUE) {
-      canUrl <- length(unlist(regmatches(style,gregexpr("\\{[xyz]\\}",style))))==3
+      canUrl <- length(unlist(regmatches(style,gregexpr("\\{(z|x|(-)*y)\\}",style))))==3
       if (!canUrl) {
          sascache <- style
          if (!length(ind <- which(dir.exists(sascache))))
@@ -275,7 +277,7 @@
    geocodeStatus <- FALSE
    if (.isSP(loc)) {
       proj4 <- sp::proj4string(loc)
-      if (!.lgrep("\\+proj=longlat",proj4)) {
+      if (!.isLongLat(proj4)) {
          loc <- sp::bbox(loc)
          if (length(loc)==6)
             loc <- loc[c(1,2,4,5)]
@@ -287,8 +289,8 @@
       if (inherits(loc,"sf"))
          loc <- sf::st_bbox(loc)
       proj4 <- attr(loc,"crs")$proj4string
-     # if (proj4!="+proj=longlat +datum=WGS84 +no_defs")
-      if (!.lgrep("\\+proj=longlat",proj4))
+     # if (proj4!=.crsWGS84())
+      if (!.isLongLat(proj4))
          loc <- c(.project(matrix(loc,ncol=2,byrow=TRUE),proj4
                           ,inv=TRUE))[c(1,3,2,4)]
    }
@@ -298,8 +300,11 @@
    if ((TRUE)||(isWMS)) {
       if (is.null(loc)) {
          border <- 0
-         g3 <- g0 <- getOption("ursaSessionGrid")#session_grid()
+         g0 <- getOption("ursaPngPanelGrid")
+         if (is.null(g0)) ## not after 'panel_new()'
+            g0 <- getOption("ursaSessionGrid")#session_grid()
          notYetGrid <- is.null(g0)
+         g3 <- g0
          if (notYetGrid)
             loc <- c(-179,-82,179,82)
          else {
@@ -347,8 +352,8 @@
          x[1] <- x[1]-2*B
          lon_0 <- round(180*mean(x)/B,6)
       }
-      else if ((TRUE)&&(!is.null(g3))&&(.lgrep("\\+proj=(merc|laea)",g0$crs))) ## ++20180325
-         lon_0 <- as.numeric(.gsub(".*\\+lon_0=(\\S+)\\s.*","\\1",g0$crs))
+      else if ((TRUE)&&(!is.null(g3))&&(.lgrep("^(merc|laea)$",.crsProj(g0$crs)))) ## ++20180325
+         lon_0 <- .crsLon0(g0$crs) # as.numeric(.gsub(".*\\+lon_0=(\\S+)\\s.*","\\1",g0$crs))
       else
          lon_0 <- round(180*mean(x)/B,6)
       if (isPolar) {
@@ -443,9 +448,14 @@
          else if ((g0$columns<=size[1])&&(g0$rows<=size[2]))
             break
       }
+      if ((!notYetGrid)&&(!fixRes)&&(i==1)) {
+         spatialize(polygonize(ursa_bbox(g3)),style="web")
+         g0 <- session_grid()
+         i <- which.min(abs(s-ursa(g0,"cellsize")))
+      }
       if ((isPolar)&&(!notYetGrid)) { ## more accurate checking is required
-         m1 <- gsub(".*\\+proj=laea\\s.+\\+lon_0=(\\S+)\\s.*","\\1",g0$crs)
-         m2 <- gsub(".*\\+proj=laea\\s.+\\+lon_0=(\\S+)\\s.*","\\1",g3$crs)
+         m1 <- .crsLon0(g0$crs) # gsub(".*\\+proj=laea\\s.+\\+lon_0=(\\S+)\\s.*","\\1",g0$crs)
+         m2 <- .crsLon0(g3$crs) # gsub(".*\\+proj=laea\\s.+\\+lon_0=(\\S+)\\s.*","\\1",g3$crs)
          m3 <- !is.na(.is.near(g0$resx,g3$resx))
          m4 <- !is.na(.is.near(g0$resy,g3$resy))
          m <- m1==m2 & m3 & m4
@@ -592,8 +602,8 @@
          B0 <- 6378137
          B <- B0*pi
          dz <- 2^zoom
-         res <- 2*pi*B0/dz
-         dx0 <- lon_0*pi/180*B0
+         res <- 2*B/dz
+         dx0 <- lon_0*B/180 # lon_0*pi/180*B0
          minx <- g0$minx+dx0
          maxx <- g0$maxx+dx0
          if (isWGS84)
@@ -613,7 +623,7 @@
          }
          else {
             g1 <- regrid(g0,setbound=c(minx,g0$miny,maxx,g0$maxy),proj=epsgWeb)
-            g1 <- regrid(g1,res=2*pi*B0/dz)
+            g1 <- regrid(g1,res=2*B/dz)
             g1 <- regrid(g1,res=c(g0$resx,g0$resy),crs=g0$crs)
             g1$minx <- g1$minx-dx0
             g1$maxx <- g1$maxx-dx0
@@ -622,51 +632,56 @@
                      ,seq(-B*3,+B*3,by=2*B)))
          sx <- sx[sx>=minx & sx<=maxx]
          dx <- diff(sx)
-         dr <- 3+2*zoom
-         yr <- with(g0,seq(maxy,miny,len=dr))
-         t0 <- NULL
-         h <- NULL
-         for (j in seq_along(dx)) {
-            tX <- NULL
-            xr <- seq(sx[j]+1e-6,sx[j+1]-1e-6,len=dr)
-            gr <- .project(as.matrix(expand.grid(x=xr,y=yr)),g0$crs,inv=TRUE)
-            gr[,1] <- gr[,1]-lon_0
-           # print(unique(gr[,1]))
-           # print(unique(gr[,2]))
-            if (isWGS84) {
-               for (i in seq(nrow(gr))) {
-                  tX <- rbind(tX,.deg2numYa(lon=gr[i,1],lat=gr[i,2],zoom=zoom))
+         for (expandZoom in seq(1,9,by=1)) {
+            dr <- 3+expandZoom*zoom
+            yr <- with(g0,seq(maxy,miny,len=dr))
+            t0 <- NULL
+            h <- NULL
+            for (j in seq_along(dx)) {
+               tX <- NULL
+               xr <- seq(sx[j]+1e-6,sx[j+1]-1e-6,len=dr)
+               gr <- .project(as.matrix(expand.grid(x=xr,y=yr)),g0$crs,inv=TRUE)
+               gr[,1] <- gr[,1]-lon_0
+              # print(unique(gr[,1]))
+              # print(unique(gr[,2]))
+               if (isWGS84) {
+                  for (i in seq(nrow(gr))) {
+                     tX <- rbind(tX,.deg2numYa(lon=gr[i,1],lat=gr[i,2],zoom=zoom))
+                  }
                }
-            }
-            else {
-               for (i in seq(nrow(gr))) {
-                  tX <- rbind(tX,.deg2num(lon=gr[i,1],lat=gr[i,2],zoom=zoom))
+               else {
+                  for (i in seq(nrow(gr))) {
+                     tX <- rbind(tX,.deg2num(lon=gr[i,1],lat=gr[i,2],zoom=zoom))
+                  }
                }
+               ind <- which(tX[,1]<0)
+               if (length(ind))
+                  tX[ind,1] <- dz+tX[ind,1]
+               ind <- which(tX[,1]>=dz)
+               if (length(ind))
+                  tX[ind,1] <- tX[ind,1]-dz
+               tX <- unique(tX)
+               hX <- unique(tX[,1])
+              # str(tX)
+               lon <- (c(head(hX,1),tail(hX,1))+c(0,1))/dz*360-180
+              # print(lon)
+               t0 <- rbind(t0,tX)
+               h <- c(h,hX)
+               if (j==1)
+                  v <- unique(tX[,2])
             }
-            ind <- which(tX[,1]<0)
-            if (length(ind))
-               tX[ind,1] <- dz+tX[ind,1]
-            ind <- which(tX[,1]>=dz)
-            if (length(ind))
-               tX[ind,1] <- tX[ind,1]-dz
-            tX <- unique(tX)
-            hX <- unique(tX[,1])
-           # str(tX)
-            lon <- (c(head(hX,1),tail(hX,1))+c(0,1))/dz*360-180
-           # print(lon)
-            t0 <- rbind(t0,tX)
-            h <- c(h,hX)
-            if (j==1)
-               v <- unique(tX[,2])
+            dim1 <- unname(dim(g1)/256L)
+            dim2 <- c(length(v),length(h))
+            changeH <- !.is.eq(dim1[2],dim2[2]) # dim1[2]!=dim2[2]
+            changeV <- !.is.eq(dim1[1],dim2[1]) # dim1[1]!=dim2[1]
+            if (verbose) {
+               str(dim1)
+               str(dim2)
+               print(data.frame(expandZoom=expandZoom,changeV=changeV,changeH=changeH))
+            }
+            if (all(c(!changeV,!changeH)))
+               break
          }
-         dim1 <- unname(dim(g1)/256L)
-         dim2 <- c(length(v),length(h))
-         if (verbose) {
-            str(dim1)
-            str(dim2)
-         }
-         changeH <- !.is.eq(dim1[2],dim2[2]) # dim1[2]!=dim2[2]
-         changeV <- !.is.eq(dim1[1],dim2[1]) # dim1[1]!=dim2[1]
         # changeDim <- !all(dim1==dim2)
          tgr <- expand.grid(z=zoom,y=v,x=h)
          n <- 2^zoom
@@ -733,6 +748,10 @@
          }
       }
       igr <- expand.grid(y=seq_along(v)-1,x=seq_along(h)-1)
+      if ((isUrl)&&(length(ind <- grep("\\{-y\\}",style))==1)) {
+         tgr[["y"]] <- as.integer(2^tgr[["z"]]-tgr[["y"]]-1)
+         style[ind] <- gsub("\\{-y\\}","{y}",style[ind])
+      }
       if (verbose) {
          print(tgr)
       }
@@ -944,7 +963,7 @@
                                        ,quiet=!verbose
                                        )
             j <- if (i==1) 0 else sum(col2[seq(i-1)])
-            img[,j+seq(col2[i]),] <- png::readPNG(fname)
+            img[,j+seq(col2[i]),] <- .readPNG(fname)
            # file.remove(fname)
          }
          basemap <- as.integer(255*as.ursa(img,aperm=TRUE,flip=TRUE))
@@ -982,7 +1001,7 @@
             download.file(src,fname,mode="wb"
                          ,quiet=!verbose)
          }
-         basemap <- as.integer(255L*as.ursa(png::readPNG(fname)
+         basemap <- as.integer(255L*as.ursa(.readPNG(fname)
                                            ,aperm=TRUE,flip=TRUE))
          if (!cache)
             file.remove(fname)

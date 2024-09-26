@@ -9,6 +9,9 @@
 #else
    #define fileseek fseeko
 #endif
+#ifndef URSA_PI
+   #define URSA_PI           3.14159265358979323846
+#endif
 
 int progressBar(int cur,int max,char *text)
 {
@@ -2695,9 +2698,9 @@ int focalSobelG(double *x,int *dim,double *bg
             if (X!=0)
                res[adr1]=atan(Y/X);
             else if (Y>=0)
-               res[adr1]=PI/2.0;
+               res[adr1]=URSA_PI/2.0;
             else
-               res[adr1]=-PI/2.0;
+               res[adr1]=-URSA_PI/2.0;
            // res[adr1]=sqrt(X*X+Y*Y);
          }
       }
@@ -2711,7 +2714,7 @@ void focalLoG(double *x,int *dim,double *bg,double *sz,double *S,double *A
    double sigma=*S;
    double sigma2=sigma*sigma;
   // double PIsigma4=sigma2*sigma2*PI;
-   double twoPIsigma6=sigma2*sigma2*sigma2*2*PI;
+   double twoPIsigma6=sigma2*sigma2*sigma2*2*URSA_PI;
    double twoSigma2=2*sigma2;
    int size=(short)ceil(*sz);
    if (!(size%2))
@@ -3425,6 +3428,59 @@ void internalMargin(double *x,int *dim,int *indr,int *indc)
    free(res);
    return;
 }
+void internalMarginWithBackground(double *x,double *bg,int *dim,int *indr,int *indc)
+{
+   int lines=dim[0];
+   int samples=dim[1];
+   int bands=dim[2];
+   int c,r,s,t;
+   double S;
+   int cumdim=lines*samples;
+   double *res=(double *)malloc(cumdim*sizeof(double));
+  // Rprintf("dim=c(%d,%d,%d)\n",samples,lines,bands);
+   for (s=0;s<cumdim;s++)
+   {
+      if (bands==4)
+         res[s]=(1-x[s+3*cumdim]);
+      else {
+         for (S=0.0,t=0;t<bands;t++) {
+           // Rprintf(" cell=%d band=%d value=%.1f bg=%.1f\n",s,t,x[s+t*cumdim],bg[t]);
+            S+=fabs(x[s+t*cumdim]-bg[t]);
+         }
+        // S=S/(double)bands;
+         res[s]=S;
+      }
+     // Rprintf(" %.1f",res[s]);
+     // Rprintf("\n");exit(0);
+   }
+  // Rprintf("\n");
+   for (c=0;c<samples;c++)
+   {
+      for (S=0.0,r=0;r<lines;r++)
+         S+=res[c*lines+r];
+      S=S/(double)lines;
+      if (S>1e-6)
+         indc[c]=0;
+      else
+         indc[c]=1;
+     // Rprintf(" %d",indc[c]);
+   }
+  // Rprintf("\n");
+   for (r=0;r<lines;r++)
+   {
+      for (S=0.0,c=0;c<samples;c++)
+         S+=res[c*lines+r];
+      S=S/(double)samples;
+      if (S>1e-6)
+         indr[r]=0;
+      else
+         indr[r]=1;
+     // Rprintf(" %d",indr[r]);
+   }
+  // Rprintf("\n");
+   free(res);
+   return;
+}
 double calcAreaIncrement(double *x,int *dim,double *res,int adr0,int c, int r
                         ,int r1,int c1,int r2,int c2,int r3,int c3,int verbose) {
    int adr1,adr2,adr3;
@@ -3679,15 +3735,15 @@ void dist2dist(double *x1,double *y1,double *x2,double *y2
    if (spherical) {
       k=k+1;
       for (j=0;j<n2;j++) {
-         lon2[j]=x2[j]*PI/180.0;
-         slat2[j]=sin(y2[j]*PI/180.0);
-         clat2[j]=cos(y2[j]*PI/180.0);
+         lon2[j]=x2[j]*URSA_PI/180.0;
+         slat2[j]=sin(y2[j]*URSA_PI/180.0);
+         clat2[j]=cos(y2[j]*URSA_PI/180.0);
         // Rprintf("x2=%.2f cos=%.2f sin=%.2f\n",x2[j],clat2[j],slat2[j]);
       }
       for (i=0;i<n1;i++) {
-         lon1[i]=x1[i]*PI/180.0;
-         slat1[i]=sin(y1[i]*PI/180.0);
-         clat1[i]=cos(y1[i]*PI/180.0);
+         lon1[i]=x1[i]*URSA_PI/180.0;
+         slat1[i]=sin(y1[i]*URSA_PI/180.0);
+         clat1[i]=cos(y1[i]*URSA_PI/180.0);
         // Rprintf("x1=%.2f cos=%.2f sin=%.2f\n",x1[i],clat1[i],slat1[i]);
       }
    }
@@ -3699,7 +3755,7 @@ void dist2dist(double *x1,double *y1,double *x2,double *y2
       {
          if (spherical) {
            // d=0;
-           // Rprintf("k=%d lon1=%.2f (%.2f)\n",k,lon1[i],lon1[i]*180.0/PI);
+           // Rprintf("k=%d lon1=%.2f (%.2f)\n",k,lon1[i],lon1[i]*180.0/URSA_PI);
             d=6371000.0*acos(slat1[i]*slat2[j]+clat1[i]*clat2[j]*cos(fabs(lon1[i]-lon2[j])));
            // d=acos(cos(lat1[i]));
          }

@@ -91,6 +91,9 @@
        (is.null(names(value)))&&
        (!inherits(value,"ursaColorTable")))
       names(value) <- myname
+   if ((inherits(x$value,"ursaSymbol"))&&(length(value)>1)) {
+      x <- reclass(x)
+   }
    class(value) <- "ursaColorTable"
    x$colortable <- value
    if ((inherits(x$con$handle,"connection"))&&(is.null(dim(x$value))))
@@ -138,6 +141,12 @@
 }
 '.be.category' <- function(obj) {
    (.is.colortable(obj))&&(!.is.category(obj))
+}
+'.postponed.category' <- function(obj) {
+  # (.is.colortable(obj))&&(!.is.category(obj)) ## -- 20240213
+   if (!.is.colortable(obj)) 
+      return(FALSE)
+   inherits(obj$value,c("ursaSymbol","ursaCategory","ursaNumeric")[c(1,2)])
 }
 'names.ursaColorTable' <- function(x) NextMethod("names",x)
 'names<-.ursaColorTable' <- function(x,value) {

@@ -75,7 +75,7 @@ Keywords:
 \item{12, "UInt16" = Integer: 16-bit unsigned integer}
 \item{13, "UInt32" = Long: 32-bit unsigned integer}
 }
-Specification \url{https://www.nv5geospatialsoftware.com/docs/ENVIHeaderFiles.html} is used.
+Specification \url{https://envi.geoscene.cn/help/Subsystems/envi/Content/ExploreImagery/ENVIHeaderFiles.htm} is used.
 }
 \item{\code{byteorder} - numeric (integer). Byte order.}
 \item{\code{bands} - numeric( integer). Number of bands/layers}

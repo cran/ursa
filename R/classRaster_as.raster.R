@@ -44,7 +44,7 @@
       a <- ursa_value(obj)
    }
    else if (nb==1)
-      a <- ursa_value(obj[rep(1,3)])
+      a <- ursa_value(obj[c(1,1,1)])
    else if (nb==2)
       a <- ursa_value(obj[c(1,1,1,2)])
    else {

@@ -22,10 +22,17 @@
    byVal <- obj[,by,drop=TRUE]
    isCategory <- is.character(by) && is.character(byVal)
    if (isCategory) {
+      ##~ a <- fasterize::fasterize(sf=obj,raster=as.Raster(),by=by,fun=fun)
+      ##~ str(a)
+      ##~ print(object.size(a))
+      ##~ print(a)
+      ##~ q()
       a <- ursa(fasterize::fasterize(sf=obj
                                     ,raster=as.Raster()
                                     ,by=by,fun=fun))
-      if (identical(gsub("(\\s|\\.)","",names(a))
+      if (length(names(a))==length(unique(byVal)))
+         names(a) <- unique(byVal)
+      else if (identical(gsub("(\\s|\\.)","",names(a))
                    ,gsub("(\\s|\\.)","",unique(byVal))))
          names(a) <- unique(byVal)
       a2 <- sum(a*seq(a),cover=0)

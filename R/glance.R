@@ -50,6 +50,12 @@
          compose_close(...)
          return(invisible(0L))
       }
+      if ((FALSE)&&(isMulti <- all(sapply(arglist[[1]],is_spatial)))) {
+         obj <- arglist[[1]]
+         a <- sapply(obj,spatial_crs)
+         str(a)
+         q()
+      }
    }
    if (!is.character(arglist[[1]])) {
       a <- do.call(".glance",arglist)
@@ -66,7 +72,7 @@
   # }
   # str(arglist)
    if (is.character(arglist[[1]])) {
-      if (.lgrep("\\.(gpkg|tab|kml|json|geojson|mif|sqlite|fgb|shp|osm)(\\.(zip|gz|bz2))*$"
+      if (.lgrep("\\.(gpkg|tab|kml|geojson|mif|sqlite|fgb|shp|shz|osm|gpx)(\\.(zip|gz|bz2))*$"
                      ,arglist[[1]])) {
          ret <- do.call(".glance",arglist)
          if (plotKnitr)
@@ -150,6 +156,9 @@
    }
    invisible(0L)
 }
+'.glance_multi' <- function(dsn) {
+   NULL
+}
 '.glance' <- function(dsn,layer=".*",grid=NULL,field=".+",size=NA,expand=1
                         ,border=27,lat0=NA,lon0=NA,resetProj=FALSE,resetGrid=FALSE
                         ,style="auto"
@@ -186,7 +195,7 @@
   # print(c(dsn=class(dsn)))
   # obj <- spatialize(dsn)
    if (missing(dsn)) {
-      dsn <- if (style!="auto") .geomap(style=style) else .geomap()
+      dsn <- if (style!="auto") .geomap(style=style,verbose=verbose) else .geomap(verbose=verbose)
       return(display(dsn,...)) ## ++20180617
    }
    toUnloadMethods <- !("methods" %in% .loaded())
@@ -194,6 +203,10 @@
    if (S4) {
       .require("methods",quietly=.isPackageInUse())
      # requireNamespace("methods",quietly=.isPackageInUse())
+   }
+   if (!is.null(getOption("ursaSessionGrid"))) {
+      g5 <- session_grid()
+      on.exit(session_grid(g5))
    }
    obj <- spatialize(dsn=dsn,engine=engine,layer=layer,field=field,geocode=geocode
                     ,place=place,area=area,grid=grid,size=size
@@ -203,13 +216,20 @@
                     ,resetProj=resetProj,resetGrid=resetGrid
                     ,style=style#,zoom=NA
                     ,verbose=verbose)
+   isMulti <- ((!is_spatial(obj))&&(!isS4(obj))&&(all(sapply(obj,is_spatial))))
+   if (isMulti) {
+      objExtra <- obj[-1]
+      obj <- spatial_geometry(obj[[1]])
+   }
+   else
+      objExtra <- NULL
    if (inherits(obj,"NULL"))
       return(invisible(NULL))
    isSF <- inherits(obj,c("sfc","sf"))
    isSP <- !isSF
    g0 <- attr(obj,"grid")
    if (is.null(g0))
-      g0 <- session_grid()
+      g0 <- .compose_grid()
   # g1 <- getOption("ursaSessionGrid")
   # if (identical(g0,g1))
   #    border <- 0
@@ -225,7 +245,8 @@
       toUnloadMethods <- FALSE
   # dname <- attr(obj,"colnames")
    dname <- spatial_fields(obj)
-   style <- attr(obj,"style")
+   if (!is.null(attr(obj,"style")))
+      style <- attr(obj,"style")
    geocodeStatus <- attr(obj,"geocodeStatus")
    if (is.null(geocodeStatus))
       geocodeStatus <- FALSE
@@ -263,16 +284,16 @@
             style <- basename(sascache)
       }
    }
-   isUrl <- .lgrep("http(s)*://",style) | canUrl
+   isUrl <- .lgrep("(http(s)*://|file:///)",style) | canUrl
    if (isUrl) {
-      ind <- .grep("http(s)*://",style)
+      ind <- .grep("(http(s)*://|file:///)",style)
       style[ind] <- unlist(strsplit(style[ind],split="\\s+"))[1]
    }
    if (!is.null(style))
       providers <- .tileService(providers=TRUE)
    else
       providers <- ""
-   if (!.lgrep(tilePatt,style)) {
+   if (!.lgrep(tilePatt,style,ignore.case=FALSE)) {
       if (isUrl) {
         # art <- style
          proj <- "merc"
@@ -285,10 +306,15 @@
          art <- "none"
    }
    else {
-      art <- .gsub2(tilePatt,"\\1",style)
+      art <- .gsub2(tilePatt,"\\1",style,ignore.case=FALSE)
       proj <- "merc"
    }
    isWeb <- .lgrep(tilePatt,art)>0 | art %in% providers | isUrl
+   if (F & isWeb) {
+      if (!.isWeb(g0)) {
+         stop("Grid is inconsistent for tiling")
+      }
+   }
    if (verbose)
       str(list(style=style,art=art,proj=proj,isUrl=isUrl,isWeb=isWeb))
   # proj <- match.arg(proj)
@@ -299,7 +325,7 @@
    basemapRetina <- FALSE
    if (isWeb) {
       bbox <- with(g0,c(minx,miny,maxx,maxy))
-      if (grepl("\\+proj=longlat",g0$crs))
+      if (.isLongLat(g0$crs))
          lim <- bbox
       else
          lim <- c(.project(matrix(bbox,ncol=2,byrow=TRUE),g0$crs
@@ -406,8 +432,8 @@
    if ((is.null(basemap))&&(border>0)) {
       g0 <- regrid(g0,border=border)
    }
-   attr(obj,"grid") <- g0
-   session_grid(g0)
+   .compose_grid(g0)
+  # session_grid(g0)
   # str(g0)
   # xy <- with(g0,.project(rbind(c(minx,miny),c(maxx,maxy)),crs,inv=TRUE))
   # display(blank="white",col="black");q()
@@ -529,8 +555,9 @@
          retina <- ifelse(is.na(retina2),retina3,retina2)
          compose_open(res,scale=1,retina=retina,...)
       }
-      else
+      else {
          compose_open(res,...)
+      }
       gline <- compose_graticule(...)
       if (toCoast)
          cline <- compose_coastline(...)
@@ -613,6 +640,11 @@
                }
                panel_plot(obj,lwd=lwd[1],col=bg.line)
                panel_plot(obj,lwd=lwd[2],col=col)
+            }
+            if (isMulti) {
+               for (k in tail(seq_along(objExtra),9999)) {
+                  panel_plot(objExtra[[k]])
+               }
             }
          }
          if (after) {

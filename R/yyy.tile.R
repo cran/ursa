@@ -42,6 +42,15 @@
        return(s)
    s[zoom]
 }
+'.toZoom' <- function(grid,level) {
+   if (missing(grid))
+      grid <- session_grid()
+   else if (is.numeric(grid)) {
+      level <- grid
+      grid <- session_grid()
+   }
+   ursa(grid,"cellsize")/.webResolution(level)
+} 
 # https://leaflet-extras.github.io/leaflet-providers/preview/
 # https://leaflet-extras.github.io/leaflet-providers/leaflet-providers.js
 '.tileService' <- function(server="",providers=FALSE) {
@@ -53,6 +62,7 @@
    BingKey <- getOption("BingMapsKey")
    StadiaKey <- getOption("stadiamaps_api_key")
    mapsurferKey <- getOption("openrouteserviceToken")
+   MapTilesAPI <- getOption("rapidapi-key-MapTiles")
    googleCr <- "Google: TERMS OF USE ARE VIOLATED"
    yandexCr <- "Yandex: TERMS OF USE ARE VIOLATED"
    StadiaCr <- paste0("\uA9 Stadia Maps, \uA9 OpenMapTiles ",osmCr)
@@ -174,7 +184,7 @@
                                  ,"&x={x}&y={y}&z={z}&hl=",language),googleCr)
    s$google.p <- c(paste0("https://mt{0123}.google.com/vt/lyrs=p" ## terrain
                                  ,"&x={x}&y={y}&z={z}&hl=",language),googleCr)
-   s$'Yandex' <- c(paste0("https://vec0{1234}.maps.yandex.net/tiles?l=map" 
+   s$'Yandex' <- c(paste0("https://core-renderer-tiles.maps.yandex.net/tiles?l=map" 
                                  ,"&x={x}&y={y}&z={z}&scale={r}&lang="
                                  ,switch(language,ru="ru_RU","en_US")),yandexCr)
    s$'Yandex.Map' <- c(paste0("https://vec0{1234}.maps.yandex.net/tiles?l=map" 
@@ -193,7 +203,7 @@
    s$'internal.Stadia.AlidateSmoothDark' <- c(paste0("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark"
                                            ,"/{z}/{x}/{y}{r}.png","?api_key=",StadiaKey)
                                 ,StadiaCr)
-   s$'internal.zzzStadia.OSMBright' <- c(paste0("https://tiles.stadiamaps.com/tiles/osm_bright"
+   s$'internal.Stadia.OSMBright' <- c(paste0("https://tiles.stadiamaps.com/tiles/osm_bright"
                                    ,"/{z}/{x}/{y}{r}.png","?api_key=",StadiaKey)
                             ,StadiaCr)
    s$'internal.Stadia.Outdoors' <- c(paste0("https://tiles.stadiamaps.com/tiles/outdoors"
@@ -209,7 +219,12 @@
                  ,"\u0420\u435\u043b\u044c\u0435\u0444 \u0420\u0443\u043c\u0430\u043f Scanex")
    s$'wikimapia' <- c("https://{s}.wikimapia.org/?x={x}&y={y}&zoom={z}&type=map&lng=1"
                  ,"Wikimapia CC-BY-SA")
+   s$'windy' <- c("https://tiles.windy.com/tiles/v10.0/darkmap-retina/{z}/{x}/{y}.png"
+                 ,paste(osmCr,"(Infringing of windy.com copyrights)"))
   # http://a.maps.owm.io/map/precipitation_new/6/37/19?appid=b1b15e88fa797225412429c1c50c122a1   
+  # s$'MapTilesAPI' <- c(paste0("https://maptiles.p.rapidapi.com/en/map/v1/{z}/{x}/{y}.png"
+  #                            ,"?rapidapi-key=",MapTilesAPI)
+  #                     ,paste(osmCr,"Map Tiles API"))
    if (!sum(nchar(server))) {
       val1 <- .grep(".*zzz(google|yandex).*",names(s),value=TRUE,invert=TRUE)
       if ((providers)&&(requireNamespace("leaflet",quietly=.isPackageInUse()))&&
@@ -221,7 +236,7 @@
                saveRDS(val2,cname)
          }
          if (file.exists(cname)) {
-            val2 <- readRDS(cname)$providers
+            val2 <- unlist(readRDS(cname)$providers)
             val1 <- unique(c(val1,val2))
          }
       }
@@ -261,12 +276,19 @@
       message("'options(openrouteserviceToken=<api_key>)' is required")
    if ((.lgrep("^Stadia\\.",server))&&(is.null(StadiaKey)))
       message("'options(Stadiamaps_api_key=<api_key>)' is required")
+   if (any(grepl("MapTiles API",server))) {
+      if (is.null(MapTilesAPI))
+         message("options('rapidapi-key-MapTiles'=\"<rapidapi-key>\")' is required")
+      else {
+        ## next management is in cache 
+      }
+   }
   # if (length(server)==1)
   #    style <- unlist(strsplit(server,split="\\s+"))
    tile <- list(name="custom",url="",copyright="   ",fileext="___")
    if (server[1] %in% names(s))
       tile$name <- server
-   indUrl <- .grep("^http(s)*://",style)
+   indUrl <- .grep("^(http(s)*://|file:///)",style)
    if (!length(indUrl)) {
       patt <- dirname(style)
       indUrl <- which(patt!=".")
@@ -356,7 +378,7 @@
       s <- paste0("i",(x %% 4)+(y %% 4)*4L)
       tile <- gsub("\\{s\\}",s,tile)
    }
-   if ((!FALSE)&&(.lgrep("\\{..+}",tile))) {
+   if ((FALSE)&&(.lgrep("\\{..+}",tile))) {
       dom <- unlist(strsplit(.gsub2("\\{(.+)\\}","\\1",gsub("\\{.\\}","",tile)),""))
       ##~ print(tile)
       ##~ print(dom)
@@ -397,8 +419,9 @@
    else if (file.exists(tile)) {
       fname <- tile
    }
-   else
+   else {
       fname <- .ursaCacheDownload(tile,mode="wb",cache=cache,quiet=!verbose)
+   }
    if (inherits(fname,"try-error")) {
       return(fname)
      # message(a)
@@ -410,17 +433,19 @@
    isPNG <- FALSE
    isJPEG <- FALSE
    isGIF <- FALSE
-   if (isPNG <- fileext %in% c("png"))
-      a <- try(255*png::readPNG(fname),silent=!verbose)
+   isGDAL <- FALSE
+   if (isPNG <- fileext %in% c("png")) {
+      a <- try(255*.readPNG(fname),silent=!verbose)
+   }
    else if (isJPEG <- fileext %in% c("jpg","jpeg")) {
-      if (!requireNamespace("jpeg",quietly=.isPackageInUse()))
-         stop("Suggested package 'jpeg' missed, but is required here.")
-      a <- try(255*jpeg::readJPEG(fname),silent=!verbose)
+     # if (!requireNamespace("jpeg",quietly=.isPackageInUse()))
+     #    stop("Suggested package 'jpeg' missed, but is required here.")
+      a <- try(255*.readJPEG(fname),silent=!verbose)
    }
    else {
-      a <- try(255*png::readPNG(fname),silent=!verbose)
+      a <- try(255*.readPNG(fname),silent=!verbose)
       if (inherits(a,"try-error")) {
-         a <- try(255*jpeg::readJPEG(fname),silent=!verbose)
+         a <- try(255*.readJPEG(fname),silent=!verbose)
          isJPEG <- !inherits(a,"try-error")
          if (inherits(a,"try-error")) {
             print("Cannot read either 'png' or 'jpg/jpeg' file.")
@@ -433,34 +458,24 @@
       if (!FALSE) { ## erroneous file extension
          isPNG <- FALSE
          isJPEG <- FALSE
-         a <- try(255*png::readPNG(fname),silent=!verbose)
+         a <- try(255*.readPNG(fname),silent=!verbose)
          if (inherits(a,"try-error"))
-            a <- try(255*jpeg::readJPEG(fname),silent=!verbose)
+            a <- try(255*.readJPEG(fname),silent=!verbose)
          if (inherits(a,"try-error")) {
-           # if (requireNamespace("miss_caTools",quietly=.isPackageInUse())) {
-           #    stop("caTools")
-           # }
-            g0 <- session_grid()
-            a <- read_gdal(fname)
-            session_grid(g0)
-            if (inherits(a,"try-error"))
-               cat(geterrmessage())
-            if (ursa_blank(a,NA))
-               ursa_value(a) <- 0
-            a <- as.array(a)
+            a <- 255*.readGRAPHICS(fname) ## -- .readPNG
          }
       }
       else
          cat(geterrmessage())
-      return(a)
+     # return(a)
    }
   # file.remove(fname)
    dima <- dim(a)
    dimb <- c(h,w)*ifelse(isRetina,2,1)
    reduce <- (TRUE)&&((dima[1]!=dimb[1])||(dima[2]!=dimb[2]))
-  # print(dima)
-  # print(dimb)
    if (reduce) {
+     # print(dima)
+     # print(dimb)
       mul <- mean(dima[1:2]/dimb[1:2])
      # print(mul)
      # .elapsedTime("firstrun 0205a")
@@ -468,13 +483,18 @@
             ,res=c(dima[1]/dimb[1],dima[2]/dimb[2])
             ,resample=ifelse(mul>1,1,0.75)
             ,cover=1e-6,verbose=0L))
+      str(a)
       dima <- dim(a)
+     # print(dima)
+     # print(data.frame(png=isPNG,jpg=isJPEG,fname=fname))
       if (isPNG)
-         png::writePNG(a/256,fname)
+         .writePNG(a/255,fname)
       else if (isJPEG)
-         jpeg::writeJPEG(a/256,fname)
-      else
-         stop("unable to update file")
+         .writeJPEG(a/255,fname)
+      else {
+         .writePNG(a/255,fname) ## ++ 20240714
+        # stop("unable to update file") ## -- 20240714
+      }
       a <- .round(a)
      # .elapsedTime("firstrun 0205b")
    }
@@ -498,4 +518,71 @@
   # session_grid(b)
   # display(b,scale=1,coast=FALSE)
    b
+}
+'.readPNG' <- function(fname,...) {
+   if (requireNamespace("png",quietly=T | .isPackageInUse())) {
+      ret <- png::readPNG(fname,...)
+      if (length(dim(ret))==2)
+         dim(ret) <- c(dim(ret),1)
+      return(ret)
+   }
+   .readGRAPHICS(fname,...)
+}
+'.readJPEG' <- function(fname,...) {
+   if (requireNamespace("jpeg",quietly=T | .isPackageInUse())) {
+      ret <- jpeg::readJPEG(fname,...)
+      if (length(dim(ret))==2)
+         dim(ret) <- c(dim(ret),1)
+      return(ret)
+   }
+   .readGRAPHICS(fname,...)
+}
+'.writePNG' <- function(obj,fileout,...) {
+   if (requireNamespace("png",quietly=T | .isPackageInUse()))
+      return(png::writePNG(obj,fileout,...))
+   .writeGRAPHICS(obj,fileout,...)
+}
+'.writeJPEG' <- function(obj,fileout,...) {
+   if (requireNamespace("jpeg",quietly=T | .isPackageInUse()))
+      return(jpeg::writeJPEG(obj,fileout,...))
+   .writeGRAPHICS(obj,fileout,...)
+}
+'.readGRAPHICS' <- function(fname,...) {
+  # g0 <- options()[c("ursaSessionGrid","ursaSessionGrid_prev")]
+   g0 <- session_grid()
+   session_grid(NULL)
+   b <- read_gdal(fname,engine="sf")
+   if (ursa_blank(b,NA))
+      a <- ursa(0L)
+   if (!is.na(nodata <- ignorevalue(b)))
+      b[is.na(b)] <- nodata
+  # if (inherits(b,"try-error"))
+  #    cat(geterrmessage())
+   if (nband(b)<3) {
+      ct <- ursa_colortable(b)
+      lut <- col2rgb(ct,alpha=any(nchar(substr(ct,8,9))>0))
+      ind <- match(ursa_value(b),as.integer(colnames(lut)))
+      a <- ursa(nband=nrow(lut))
+      for (i in seq(a)) {
+         ursa_value(a)[,i] <- lut[i,ind] 
+      }
+   } else {
+      a <- b
+   }
+   a <- as.array(a,aperm=TRUE)
+   session_grid(g0)
+  # options(g0)
+   a/255
+}
+'.writeGRAPHICS' <- function(obj,fileout,...) {
+   g0 <- session_grid()
+   a <- as.ursa(obj*255,aperm=TRUE,flip=TRUE)
+  # write_gdal(a,fileout)
+  # q()
+   ret <- ursa_write(a,fileout)
+   auxfile <- paste0(fileout,".aux.xml")
+   if (file.exists(auxfile))
+      file.remove(auxfile)
+   session_grid(g0)
+   ret
 }

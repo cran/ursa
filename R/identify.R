@@ -106,6 +106,7 @@
    {
       row <- (ind-1L)%/%n+1L
       col <- (ind-1L)%%n+1L
+     # str(list(col=col,row=row))
    }
    else {
       if (length(col)!=length(row))
@@ -121,6 +122,8 @@
    nc <- length(col)
    res <- matrix(NA,ncol=nc,nrow=nband(obj),dimnames=list(bandname(obj),ind))
    for (i in seq(nc)) {
+      if ((is.na(col[i]))||(is.na(row[i])))
+         next
       val <- obj[,row[i]]$value[col[i],]
       if (isCT)
          res[,i] <- cl[val+1L]
@@ -158,6 +161,11 @@
          y <- x[,2]
          x <- x[,1]
       }
+      else if (is_spatial(x)) {
+         x <- spatial_coordinates(x)
+         y <- x[,2]
+         x <- x[,1]
+      }
       else
          stop("specify 'y'")
    }
@@ -181,8 +189,12 @@
    {
       x2 <- with(grid,(seq(minx,maxx,resx)-0.5*resx)[-1])
       whichx <- numeric(nx)
-      for (i in seq(nx))
-         whichx[i] <- which.min(abs(x2-x[i]))
+      insidex <- rep(FALSE,length(whichx))
+      for (i in seq(nx)) {
+         dx <- abs(x2-x[i])
+         whichx[i] <- which.min(dx)
+         insidex[i] <- min(dx)<sqrt(2)*grid$resx
+      }
    }
    else
       stop("TODO#1-X")
@@ -190,11 +202,17 @@
    {
       y2 <- with(grid,(seq(miny,maxy,resy)-0.5*resy)[-1])
       whichy <- numeric(ny)
-      for (i in seq(ny))
-         whichy[i] <- rows-which.min(abs(y2-y[i]))+1
+      insidey <- rep(FALSE,length(whichy))
+      for (i in seq(ny)) {
+         dy <- abs(y2-y[i])
+         whichy[i] <- rows-which.min(dy)+1
+         insidey[i] <- min(dy)<sqrt(2)*grid$resy
+      }
    }
    else
       stop("TODO#1-Y")
+   inside <- insidex & insidey
    ind <- as.integer((whichy-1)*columns+(whichx-1)+1)
+   ind[!inside] <- NA
    ind
 }

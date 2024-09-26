@@ -138,7 +138,7 @@
          }
          if (!length(obj))
             return(ret2)
-         if (length(grep("\\.(png|gif)$",basename(obj))))
+         if (length(grep("\\.(png|gif|jpg|webp)$",basename(obj))))
             cmd <- c(paste0("```{r",reflab[k]
                            ,", echo=F"
                            ,if (!is.null(oname)) paste0(", fig.cap=",dQuote(oname[k]))
@@ -191,15 +191,22 @@
          }
          if (!dir.exists(output))
             dir.create(output,recursive=TRUE)
+         named <- FALSE
          if (!.isKnitr()) {
             libdir <- file.path(output,"site_libs")
             fname <- file.path(output,paste0("htmlwidget_",unname(md5),".html"))
          }
          else {
             libdir <- file.path("libs")
+            middle <- knitr::opts_current$get("label")
+            if (isTRUE(grepl("unnamed-chunk",middle)))
+               middle <- paste0(middle,"_",unname(md5))
+            else
+               named <- TRUE
             fname <- file.path(output,paste0("widget_"
-                                            ,knitr::opts_current$get("label")
-                                            ,"_",unname(md5)
+                                            ,middle
+                                           # ,knitr::opts_current$get("label")
+                                           # ,"_",unname(md5)
                                             ,".html"))
             caption <- knitr::opts_current$get("fig.cap")
             if ((is.null(oname))&&(!is.null(caption)))
@@ -219,7 +226,7 @@
             if (!.isPackageInUse())
                options(opW)
          }
-         if (T | !.isKnitr()) {
+         if (!named & (T | !.isKnitr())) {
             a <- readLines(fname,encoding="UTF-8")
             a <- grep("application/json.+data-for=\\\"htmlwidget",a,value=TRUE)
             id <- gsub("^.+visdat\\W+([0-9a-f]+)\\W+.+$","\\1",a)

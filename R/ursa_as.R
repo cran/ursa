@@ -2,10 +2,14 @@
 'as.ursa' <- function(obj,...) {
    if (missing(obj))
       return(ursa_new(...))
-   if (is.ursa(obj))
-      return(obj)
-   if (.is.ursa_stack(obj))
+   if (is.ursa(obj)) {
+      if (length(as.list(match.call()))==2)
+         return(obj)
+      return(ursa_new(obj,...))
+   }
+   if (.is.ursa_stack(obj)) {
       return(ursa_brick(obj)) ## 20170122 removed 'return(obj)'
+   }
    if (is.data.frame(obj)) {
       return(allocate(obj,...))
    }
@@ -77,7 +81,10 @@
       g1$maxy <- e@ymax
       g1$columns <- raster::ncol(obj)
       g1$rows <- raster::nrow(obj)
-      g1$crs <- raster::projection(obj)
+      if (.crsForceWKT())
+         g1$crs <- .ursaCRS(raster::wkt(obj))
+      else
+         g1$crs <- .ursaCRS(raster::projection(obj))
       if (is.na(g1$crs))
          g1$crs <- ""
       g1$resx <- with(g1,(maxx-minx)/columns)
@@ -155,7 +162,6 @@
    if ((is.list(obj))&&(!anyNA(match(c("filename","cols","rows","bands","driver"
                                       ,"geotransform","datatype","meta")
                                     ,names(obj))))) { ## from 'sf::gdal_read'
-     # .elapsedTime("A")
       columns <- obj$cols[2]
       rows <- obj$rows[2]
       bands <- obj$bands[2]
@@ -165,8 +171,10 @@
      #    crs <- crs$proj4string
       if (is.character(crs))
          crs <- sf::st_crs(crs)$proj4string
-      else if (inherits(crs,"crs"))
-         crs <- crs$proj4string
+      else if (inherits(crs,"crs")) {
+         crs <- .WKT(crs)
+        # crs <- .proj4string(crs)
+      }
       if (is.na(crs))
          crs <- ""
      # patt <- "^Band_(\\d+)=\\t*(.+)$"
@@ -180,7 +188,8 @@
       maxy <- obj$geotransform[4]
       maxx <- minx+columns*resx
       miny <- maxy-rows*resy
-      if (miny>maxy) {
+     # print(c(minx=minx,miny=miny,maxx=maxx,maxy=maxy))
+      if (dontFlip <- ((miny>maxy))&&(nchar(crs)>0)) {
          interim <- maxy
          maxy <- miny
          miny <- interim
@@ -207,8 +216,10 @@
       }
       if (is.na(g1$crs))
          g1$crs <- ""
+      g1$crs <- .ursaCRS(g1$crs)
      # .elapsedTime("J")
       session_grid(g1)
+      md <- .gdal_sfinfo(obj$filename)
      # hasData <- inherits("NULL",class(attr(obj,"data")))
       hasData <- !inherits(attr(obj,"data"),"NULL")
      # .elapsedTime("sf::gdal_read -- start")
@@ -223,11 +234,10 @@
          attr(v,"units") <- NULL
          dimv <- dim(v)
          if (R.Version()$arch %in% c("i386","x86_64","dummy")[1:2]) {
-           # print("U")
             if (devel2 <- TRUE) {
                if (length(dimv)==2)
                   dimv <- c(dimv,band=1L)
-               dimv <- unname(c(prod(dimv[1:2]),dimv[3]))
+              # dimv <- unname(c(prod(dimv[1:2]),dimv[3]))
                dim(v) <- dimv
                isClass <- length(obj$attribute_tables[[1]])>0
                isColor <- length(obj$color_tables[[1]])>0
@@ -265,16 +275,25 @@
                   }
                }
                if ((isCat)||((T & !.lgrep("float",obj$datatype)))) {
-                 # .elapsedTime("F")
-                 # v <- as.integer(v)
-                 # dim(v) <- dimv
-                 # storage.mode(v) <- "integer"
-                  mode(v) <- "integer"
+                  if ((is.na(md$scale))||(is.na(md$offset))) {
+                    # .elapsedTime("F")
+                    # v <- as.integer(v)
+                    # dim(v) <- dimv
+                    # storage.mode(v) <- "integer"
+                     mode(v) <- "integer"
+                  }
                  # .elapsedTime("G")
                }
               # .elapsedTime("as.ursa -- before")
               # res <- as.ursa(v) ## RECURSIVE
-               res <- ursa_new(v)
+               names(attr(v,"dim")) <- NULL
+               res <- ursa_new(v,flip=!dontFlip)
+               if (!is.na(md$nodata[1])) {
+                  vmode <- mode(v)
+                  if (vmode!=mode(md$nodata))
+                     mode(md$nodata) <- vmode
+                  ignorevalue(res) <- unique(md$nodata)
+               }
               # .elapsedTime("as.ursa -- after")
                if (isCat) {
                   ursa_colortable(res) <- ct
@@ -413,6 +432,7 @@
       return(res)
    }
    if (inherits(obj,"SpatRaster")) { ## package `terra`
+      g0 <- getOption("ursaSessionGrid")
       if (devel <- FALSE) {
         # a1 <- obj@ptr$getCategories()
         # a1 <- obj@ptr$getCatIndex()
@@ -431,20 +451,21 @@
      # crs <- obj@ptr$get_crs("proj4")
      # aname <- obj@ptr$names
       bbox <- as.vector(terra::ext(obj))[c(1,3,2,4)]
-      res <- terra::res(obj)
+      cell <- terra::res(obj)
       crs <- terra::crs(obj,proj=TRUE)
      # sn <- methods::slotNames(obj)
      # aname <- methods::slot(obj,sn)$names
       aname <- names(obj) ## wrong, TODO
-      g1 <- regrid(bbox=bbox,res=res,crs=crs)
+      g1 <- regrid(bbox=bbox,res=cell,crs=crs)
       if (identical(bbox,c(0,0,1,1)))
          g1 <- regrid(bbox=c(0,0,rev(dim(g1))),res=1,crs=crs)
-     # g0 <- getOption("ursaSessionGrid")
      # session_grid(g1)
       if (approved <- TRUE) {
-         opW <- options(warn=-1)
+         session_grid(g1)
+        # opW <- options(warn=-1)
          res <- ursa(obj[]) ## as.matrix()
-         options(opW)
+        # options(opW) 
+         session_grid(g0)
       }
       else {
          .elapsedTime("rast -- 1")
@@ -616,7 +637,7 @@
                g1$crs <- p
             }
             else if (.lgrep("(lon|lat)",aname)==2)
-               g1$crs <- "+proj=longlat +datum=WGS84 +no_defs"
+               g1$crs <- .crsWGS84()
             session_grid(g1)
          }
          if (length(indz)==1)

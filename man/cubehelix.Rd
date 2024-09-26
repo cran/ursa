@@ -65,9 +65,9 @@ If \code{dark} and \code{lihgt} are unspecified, the color contrast bewteen \cod
 Vector of RGB color specification.
 }
 \references{
-\href{https://www.mrao.cam.ac.uk/~dag/CUBEHELIX/}{Dave Green's `cubehelix' colour scheme.}
+\href{https://people.phy.cam.ac.uk/dag9/CUBEHELIX/}{Dave Green's `cubehelix' colour scheme.}
 
-Green, D. A., 2011, `A colour scheme for the display of astronomical intensity images', Bulletin of the Astronomical Society of India, 39, 289. http://astron-soc.in/bulletin/11June/289392011.pdf \href{https://arxiv.org/pdf/1108.5083.pdf}{(pre-print at 'arxiv.org')}
+Green, D. A., 2011, `A colour scheme for the display of astronomical intensity images', Bulletin of the Astronomical Society of India, 39, 289. http://astron-soc.in/bulletin/11June/289392011.pdf \href{https://arxiv.org/pdf/1108.5083}{(pre-print at 'arxiv.org')}
 
 \code{rje::cubeHelix()}; \pkg{rje} at CRAN: \url{https://CRAN.R-project.org/package=rje}
 }

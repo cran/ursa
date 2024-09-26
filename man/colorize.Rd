@@ -15,8 +15,8 @@ colorize(obj, value = NULL, breakvalue = NULL, name = NULL, pal = NULL, inv = NA
                      "slope", "conc", "sd", "significance", "bathy",
                      "grayscale", "greyscale", ".onetoone"),
          minvalue = NA, maxvalue = NA, byvalue = NA, ltail = NA, rtail = NA, tail = NA,
-         ncolor = NA, nbreak = NA, interval = 0L, ramp = TRUE, byte = FALSE,
-         lazyload = FALSE, reset = FALSE, origin = "1970-01-01" ,format = "",
+         ncolor = NA, nbreak = NA, interval = NA_integer_, ramp = TRUE, byte = FALSE,
+         lazyload = TRUE, reset = FALSE, origin = "1970-01-01" ,format = "",
          alpha = "", colortable = NULL, verbose = FALSE, ...)
                           
 palettize(...) ## wrapper for non-spatial vectors
@@ -69,7 +69,7 @@ palettize(...) ## wrapper for non-spatial vectors
       Numeric. Partition of omitted values at both tail. If length of \code{tail} is 2 then left and right tails may differ.
    }
    \item{ncolor}{
-      Numeric or interer. Number of desired colors (or categories)
+      Numeric or interer. Number of desired colors (or categories).
    }
    \item{nbreak}{
       Numeric or interer. Number of desired separators between colors.
@@ -78,7 +78,7 @@ palettize(...) ## wrapper for non-spatial vectors
    %~ Numeric or interer. Number of desired color breaks for intervals.
    %~ }
    \item{interval}{
-      Integer. How to underwrite categories? Use direct
+      Integer or logical. Logical is coerced to integer. How to underwrite categories? Value \code{0L} means that for numeric data each color gradation corresponds to intervals but named as a single value (e.g., middle between low and high values). Value \code{1L} means that values correspond to separators of color gradation. Value \code{2L} is experimental for scales with zero. Default is \code{NA}: \code{interval=0L} for \code{ramp=TRUE} and \code{interval=1L} for \code{ramp=FALSE}.
    }
    \item{ramp}{
       Logical. Is color ramp required?
@@ -87,7 +87,7 @@ palettize(...) ## wrapper for non-spatial vectors
       Logical. Forcing to produce color table for storage in byte format (not more than 255 colors). Default is \code{FALSE}.
    }
    \item{lazyload}{
-      Logical. If \code{FALSE} then raster is reclassified to categories. If \code{TRUE} then color table is created without any change to source raster. Default is \code{FALSE}.
+      Logical. If \code{FALSE} then raster is reclassified to categories. If \code{TRUE} then color table is created without any change to source raster and raster value just postponed for change. Default is \code{TRUE}.
    }
    \item{reset}{
       Logical. If \code{TRUE} and source raster has color table, then this color table is destroyed, and new one is created. Default is \code{FALSE}.

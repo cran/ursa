@@ -69,7 +69,7 @@ session_grid(NULL)
 session_grid(regrid(mul=1/2))
 a <- pixelsize()
 val <- c(normal=a,half=a/2)
-gr <- c(group=colorize(a,nbreak=1))#+0
+gr <- c(group=colorize(a,nbreak=1,lazyload=FALSE))#+0
 print(as.table(gr))
 ##~ display(gr)
 ra <- round(aggregate(val,gr,mean),4)
@@ -79,7 +79,7 @@ print(as.table(ra[2]))
 da <- aggregate(val,gr,table=TRUE,mean)
 n <- aggregate(a,gr,table=TRUE,length)[,2,drop=FALSE]
 da <- cbind(da,n=unname(n))
-gr2 <- c(group2=colorize(a,nbreak=6))#+0
+gr2 <- c(group2=colorize(a,nbreak=6,lazyload=FALSE))#+0
 mgr <- list(gr,gr2)
 da2 <- aggregate(val[1],mgr,table=TRUE,mean)
 print(da2)

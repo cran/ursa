@@ -148,7 +148,7 @@ Command line usage implies external software for PNG view \code{\link[ursa:sessi
 Nikita Platonov \email{platonov@sevin.ru}
 }
 \note{
-Package \pkg{sf} is 'Suggested' for package \pkg{ursa}.
+Package \pkg{sp} is 'Suggested' for package \pkg{ursa}.
 }
 
 %% ~Make other sections like Warning with \section{Warning }{....} ~
@@ -159,37 +159,37 @@ Package \pkg{sf} is 'Suggested' for package \pkg{ursa}.
 \examples{
 session_grid(NULL)
 f <- system.file("shape/nc.shp",package="sf")
+%%~ \donttest{ ## next line is a reason to skip test because of large 'elapsed.time'
 glance(f,style="merc",field="(NAME|AREA|COUNT)")
+%%~ }
 cmd <- paste("Rscript --vanilla -e ursa::glance()",paste0("\"",f,"\"")
-            ,"style=\"merc\"","field=\"(lon|lat)\"")
+            ,"style=\"merc\"","field=\"74$\"")
 cat(" --------- Try in command line: -----------\n")
 message(cmd)
 cat(" ----------- end of quoting ---------------\n")
-\donttest{ ## windows: figure will be opened using *.png file association 
+\donttest{
+## windows: figure will be opened using *.png file association 
 try(system(cmd,wait=FALSE))
 }
 
-if (isSP <- require(sp)) {
-   a <- data.frame(lat=c(70.734,71.657),lon=c(178.577,-177.38),place="Wrangel Island")
-   coordinates(a) <- ~lon+lat
-   proj4string(a) <- "EPSG:4326"
+a <- data.frame(lat=c(70.734,71.657),lon=c(178.577,-177.38),place="Wrangel Island")
+if (requireNamespace("sp")) {
+   sp::coordinates(a) <- ~lon+lat
+   sp::proj4string(a) <- "EPSG:4326"
+} else {
+   a <- sf::st_as_sf(a,coords=c("lon","lat"),crs=4326)
 }
-
-\donttest{ ## internet connection is required
-if (isSP)
-   glance(a,style="google color maptype=terrain")
+\donttest{
+## internet connection is required
+glance(a,style="Esri.Satellite",border=0)
 }
-\donttest{ ## internet connection is required
-if (isSP)
-   glance(a,style="Positron",border=0)
+\donttest{
+## internet connection is required
+glance(a,style="opentopomap grey",border=0)
 }
-\donttest{ ## internet connection is required
-if (isSP)
-   glance(a,style="mapnik color tile",border=0)
-}
-\donttest{ ## internet connection is required
-if (isSP)
-   glance("Svalbard",resetGrid=TRUE)
+\donttest{
+## internet connection is required
+glance("Svalbard 9170",resetGrid=TRUE)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

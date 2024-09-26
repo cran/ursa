@@ -156,7 +156,7 @@
    }
    if (verbose)
       print(data.frame(sc=sc,before=before))
-   '.smooth' <- function(obj,sc) {  
+   '.smooth' <- function(obj,sc) {
       proposed <- FALSE ## added 20170608 (TRUE) removed 20180218 (FALSE)
       if (sc<=1)
          return(obj)

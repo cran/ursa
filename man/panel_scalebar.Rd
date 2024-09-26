@@ -99,9 +99,10 @@ session_grid(NULL)
               ,scalebar=TRUE,scalebar.col="white",scalebar.fill="black")
 
 # example no.3 -- for paper copy
-   a <- colorize(pixelsize(),breakvalue=seq(400,650,by=50),pal="Greys",inv=FALSE)
-   compose_open(scale="1:95000000",dpi=150,device="cairo",family="Times")
-   compose_plot(a,graticule=TRUE,coastline=FALSE,scalebar=TRUE,scalebar.x=1,units=expression(km^2))
+   a <- colorize(pixelsize(),breakvalue=seq(400,650,by=50),pal=c("gray90","gray30"))
+   compose_open(scale="1:95000000",dpi=150,device="cairo",family="serif")
+   compose_plot(a,units=expression(km^2)
+               ,graticule=TRUE,coastline=FALSE,scalebar=TRUE,scalebar.pos=c(1,1))
    compose_close(bpp=8)
 
 # example no.4 -- length distortion in the Transverse Mercator projection
@@ -115,7 +116,7 @@ session_grid(NULL)
    panel_coastline(fill="#00000010",detail="l")
   # panel_graticule()
    for (p in c("bottom","center","top"))
-      panel_scalebar(pos=p,w=200)
+      panel_scalebar(pos=p,w=500)
    compose_close()
 }
 }

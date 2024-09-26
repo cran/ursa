@@ -4,8 +4,8 @@
    isSVG <- .lgrep("(svg)",gsub(".*\\.(.+$)","\\1",fileout))>0
    isPNG <- .lgrep("(png)",gsub(".*\\.(.+$)","\\1",fileout))>0
    frame <- as.integer(round(border))
-   if (!isSVG)
-      requireNamespace("png",quietly=.isPackageInUse())
+  # if (!isSVG)
+  #    isPNG <- requireNamespace("png",quietly=.isPackageInUse())
    if (isPNG)
       NULL
    else if (isJPEG) {
@@ -34,16 +34,25 @@
       x <- aperm(x,c(3,2,1))
       rm(a)
    }
-   if (!isSVG)
-      x <- png::readPNG(fileout,native=FALSE,info=TRUE)
+   if (!isSVG) {
+      x <- .readPNG(fileout,native=FALSE,info=TRUE)
+   }
    dimx <- dim(x)
-   isBlack <- isTRUE(getOption("ursaPngBackground") %in% (c("black","#000000")))
-   if (isBlack)
-      b <- .Cursa(C_internalMargin,x=1-as.numeric(x),dim=as.integer(dimx)
-             ,indr=integer(dimx[1]),indc=integer(dimx[2]),NAOK=TRUE)
-   else
-      b <- .Cursa(C_internalMargin,x=as.numeric(x),dim=as.integer(dimx)
-             ,indr=integer(dimx[1]),indc=integer(dimx[2]),NAOK=TRUE)
+   if (FALSE) { ## retired
+      isBlack <- isTRUE(getOption("ursaPngBackground") %in% (c("black","#000000")))
+      if (isBlack)
+         b <- .Cursa(C_internalMargin,x=1-as.numeric(x),dim=as.integer(dimx)
+                ,indr=integer(dimx[1]),indc=integer(dimx[2]),NAOK=TRUE)
+      else
+         b <- .Cursa(C_internalMargin,x=as.numeric(x),dim=as.integer(dimx)
+                ,indr=integer(dimx[1]),indc=integer(dimx[2]),NAOK=TRUE)
+   }
+   else {
+      bg <- col2rgb(getOption("ursaPngBackground"))/255
+      b <- .Cursa(C_internalMarginWithBackground,x=as.numeric(x),bg=as.numeric(bg)
+                 ,dim=as.integer(dimx),indr=integer(dimx[1]),indc=integer(dimx[2])
+                 ,NAOK=TRUE)
+   }
    indentc <- rep(which(b$indc==1)[1],frame)
    d <- diff(b$indc)
    s1 <- which(d==-1)+1L
@@ -99,11 +108,12 @@
       }
    }
    else if (isJPEG)
-      jpeg::writeJPEG(x[indr,indc,],fileout)
+      .writeJPEG(x[indr,indc,],fileout)
    else if (isWEBP)
       webp::write_webp(x[indr,indc,],fileout)
-   else
-      png::writePNG(x[indr,indc,],fileout,dpi=att$dpi,text=c(source=R.version.string))
+   else if (isPNG) {
+      .writePNG(x[indr,indc,],fileout,dpi=att$dpi,text=c(source=R.version.string))
+   }
    0L
 }
 '.crop2' <- function(fileout,border=5,verbose=FALSE) {
@@ -117,7 +127,7 @@
       isJPEG <- requireNamespace("jpeg",quietly=.isPackageInUse())
    if (isWEBP)
       isWEBP <- requireNamespace("webp",quietly=.isPackageInUse())
-   x <- png::readPNG(fileout,native=FALSE,info=TRUE)
+   x <- .readPNG(fileout,native=FALSE,info=TRUE)
    dimx <- dim(x)
    b <- .Cursa(C_internalMargin,x=as.numeric(x),dim=as.integer(dimx)
           ,indr=integer(dimx[1]),indc=integer(dimx[2]),NAOK=TRUE)
@@ -157,7 +167,7 @@
    else if (isWEBP)
       webp::write_webp(x[indr,indc,],fileout)
    else
-      png::writePNG(x[indr,indc,],fileout,dpi=att$dpi,text=c(source=R.version.string))
+      .writePNG(x[indr,indc,],fileout,dpi=att$dpi,text=c(source=R.version.string))
    if (verbose)
       .elapsedTime("crop2:finish")
    0L
@@ -170,6 +180,6 @@
    if (!isJPEG)
       return(NULL)
    requireNamespace("png",quietly=.isPackageInUse())
-   jpeg::writeJPEG(png::readPNG(fileout,native=FALSE,info=TRUE),fileout)
+   jpeg::writeJPEG(.readPNG(fileout,native=FALSE,info=TRUE),fileout)
    NULL
 }

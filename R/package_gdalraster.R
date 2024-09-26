@@ -23,6 +23,7 @@
                 ,md0=ds$getMetadata(band=0,domain="")
                # ,md1=ds$getMetadata(band=1,domain="")
                # ,mdi0=ds$getMetadataItem(band=0,domain="",mdi_name="")
+                ,desc=ds$getDescription(band=1)
                 ,ct=ds$getColorTable(band=1) ## ver 1.4.1
                 )
       str(md)
@@ -35,8 +36,8 @@
    res <- ds$res()
    if (TRUE) {
       g1 <- regrid(bbox=bbox,res=res
-                  ,crs=sf::st_crs(ds$getProjectionRef())$proj4string
-                 # ,crs=ds$getProjectionRef()
+                 # ,crs=sf::st_crs(ds$getProjectionRef())$proj4string
+                  ,crs=.ursaCRS(ds$getProjectionRef())
                   )
    }
    else {
@@ -52,6 +53,7 @@
      # g1$crs=sf::st_crs(ds$getProjectionRef())$proj4string
       g1$crs=ds$getProjectionRef()
    }
+   ds$close()
   # session_grid(g1)
    res <- .raster.skeleton()
    res$dim <- c(prod(dima[1:2]),dima[3])
@@ -101,7 +103,7 @@
    requireNamespace("gdalraster",quietly=.isPackageInUse())
    a <- .open_gdalraster(fname,engine=engine,verbose=verbose)
    ds <- methods::new(gdalraster::GDALRaster,filename=fname,read_only=TRUE)
-   if (verbose) {
+   if (F & verbose) { ## repeatition of `open_gdalraster`
       md <- list(ncols=ds$getRasterXSize()
                 ,nrows=ds$getRasterYSize()
                 ,bbox=ds$bbox()
@@ -124,16 +126,18 @@
    nodata <- ds$getNoDataValue(band=1)
    md0 <- ds$getMetadata(band=0,domain="")
    g1 <- regrid(bbox=ds$bbox(),res=ds$res()
-               ,crs=sf::st_crs(ds$getProjectionRef())$proj4string
-              # ,crs=ds$getProjectionRef()
+              # ,crs=sf::st_crs(ds$getProjectionRef())$proj4string
+               ,crs=.ursaCRS(ds$getProjectionRef())
                )
    session_grid(g1)
    patt <- "^Band_(\\d+)=(.+)$"
-   j <- grep(patt,md0)
-   bname <- gsub(patt,"\\2",md0[j])
+   bname <- NULL
+   if (length(j <- grep(patt,md0))>0)
+      bname <- gsub(patt,"\\2",md0[j])
   # bname <- gsub("^Band_\\d+=","",grep("^Band",md$md0,value=TRUE))
-   if (!length(bname))
-      bname <- paste("Band",seq_along(dima[3]))
+   if (!length(bname)) {
+      bname <- paste("Band",seq_len(dima[3]))
+   }
    else {
       ind <- as.integer(gsub(patt,"\\1",md0[j]))
       bname[ind] <- bname
@@ -155,5 +159,13 @@
    }
    if (verbose)
       cat(" done!\n")
+   ctval <- data.frame(ds$getColorTable(band=1))
+   if (nrow(ctval)) {
+      ct <- with(ctval,rgb(red,green,blue,alpha,names=value,maxColorValue=255))
+      class(ct) <- "ursaColorTable"
+      ursa_colortable(out) <- ct
+      class(out$value) <- "ursaCategory"
+   }
+   ds$close()
    out
 }

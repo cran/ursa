@@ -6,12 +6,23 @@
    ##~ method <- c('1'="ward.D",'2'="ward.D2",'3'="single",'4'="complete"
               ##~ ,'5'="average",'6'="mcquitty",'7'="median"
               ##~ ,'8'="centroid")[4] ## 3 4! 8 
+   if (.skipPlot(TRUE))
+      return(NULL)
    method <- match.arg(method)
    fun <- match.arg(fun)
+   arglist <- list(...)
    cutted <- 1.05
+   bbox <- polygonize(ursa_bbox(getOption("ursaPngPanelGrid")))
+   if (.isSF(obj)) {
+      sf::st_agr(obj) <- "constant"
+      obj <- sf::st_crop(spatial_transform(obj,spatial_crs(bbox)),bbox)
+      if (!spatial_count(obj))
+         return(NULL)
+   }
    da <- spatial_data(obj)
   # str(colnames(da))
   # str(da[,colnames(da),drop=TRUE])
+   indNum <- integer()
    if (!is.null(da)) {
       indCat <- which(sapply(colnames(da),function(x)
                                      inherits(da[,x,drop=TRUE],c("character","factor"))))[1]
@@ -47,7 +58,7 @@
       print(c('Category'=indCat))
       print(c('Count'=indNum))
    }
-   g1 <- getOption("ursaPngPanelGrid")
+   g1 <- .panel_grid()
    xy <- spatial_coordinates(spatial_transform(spatial_geometry(obj),ursa_crs(g1)))
    xy <- cbind(xy,da)
    n <- if (!isNum) rep(1L,spatial_count(obj)) else obj[[indNum]]
@@ -99,13 +110,17 @@
      # print(ngroup)
    }
   # print(ngroup)
-   print(series(xy4))
-   str(bname)
+   if (verbose) {
+      print(series(xy4))
+      str(bname)
+   }
    if ((!fun %in% c("mean","sum"))&&(ncol(xy4)>3))
       bname <- bname[bname %in% xy4[[4]]]
    lutSep <- if (separate | length(bname)>1e6) sample(bname) else ".+"
-   str(bname)
-   print(lutSep)
+   if (verbose) {
+      str(bname)
+      print(lutSep)
+   }
    lutList <- lapply(lutSep,function(sep) {
       if (verbose)
          message(sQuote(sep),":")
@@ -191,7 +206,7 @@
       lut$.r <- log(lut$.n+1)
    else
       lut$.r <- lut$.n^ratio # rowSums(lut[,bname,drop=FALSE])^ratio
-   lut$.r <- lut$.r/min(lut$.r)
+  # lut$.r <- lut$.r/min(lut$.r)
    if (repel) {
       if (isTRUE(repel))
          repel <- 20L
@@ -307,29 +322,32 @@
          ct <- colorize(lut[[bname]],stretch="linear",alpha="A0",pal=col)
       }
       else {
-        # ct <- colorize(lut[[bname]],stretch="linear",alpha="A0") ## -- 20210909
-         ct <- colorize(bname,stretch="linear",alpha="A0") ## ++ 20210909
+         if (fun %in% c("label","count"))
+            ct <- colorize(lut[[bname]],stretch="linear",alpha="A0") ## -- 20210909
+         else
+            ct <- colorize(bname,stretch="linear",alpha="A0") ## ++ 20210909
       }
       ctInd <- ursa_colortable(ct)[ursa_colorindex(ct)]
    }
-   bg <- if (separate) "white" else ctInd
-   if (length(bg)==1)
-      bg <- rep(bg,length(ctInd))
-   bg <- col2rgb(bg)/255
-   bg <- rgb(bg[1,],bg[2,],bg[3,],alpha=0.2)
+   bgCol <- if (separate) "white" else ctInd
+   if (length(bgCol)==1)
+      bg <- rep(bgCol,length(ctInd))
+   bgCol <- col2rgb(bgCol)/255
+   bgCol <- rgb(bgCol[1,],bgCol[2,],bgCol[3,],alpha=0.2)
    s2 <- s/ifelse(label,2,1.5)/overlap
+   lwd <- arglist[["pt.lwd"]]
    for (i in seq(nrow(lut))) {
       x <- lut$.x[i] # <- mean(da2$x)
       y <- lut$.y[i] # <- mean(da2$y)
       r <- lut$.r[i]
       if (fun %in% c("count","label")) {
          v <- as.integer(lut[i,bname])
-         .panel_pie(v,x=x,y=y,radius=lut$.r[i]*s2,col=ctInd,bg=bg,ball=!label
-                   ,verbose=verbose) # lwd=0.5
+         .panel_pie(v,x=x,y=y,radius=lut$.r[i]*s2,col=ctInd,bg=bgCol,ball=!label
+                   ,lwd=lwd,verbose=verbose) # lwd=0.5
       }
       else {
          .panel_pie(1,x=x,y=y,radius=lut$.r[i]*s2,col=ctInd[i],ball=!label
-                   ,verbose=verbose)
+                   ,lwd=lwd,verbose=verbose)
       }
       p <- sf::st_as_sf(lut[i,],coords=c(".x",".y"),crs=ursa_crs(g1))
       if (F)
@@ -360,14 +378,38 @@
       }
    }
    if (!is.null(legend)) {
-      legend(legend,legend=bname,title=title
-            ,col=ctInd,cex=c(1,cex)[1]/par("cex")
-            ,pch=21,pt.lwd=ifelse(label,1,0)*2.4/par("cex"),pt.cex=1.8/par("cex")
-            ,box.lwd=0.1,bg="#FFFFFFAF"
-           # ,pt.bg=ursa_colortable(colorize(seq_along(ctInd),pal=ctInd,alpha="30"))
-            ,pt.bg=if (label) bg else ctInd
-            ,...
-            )
+      invert <- sum(c(col2rgb(getOption("ursaPngBackground")))*c(0.30,0.59,0.11))<128
+      if (!"bg" %in% names(arglist))
+         arglist[["bg"]] <- ifelse(invert,"#0000005F","#FFFFFFAF")
+      ##~ legend(legend,legend=bname,title=title
+            ##~ ,col=ctInd,cex=c(1,cex)[1]/par("cex")
+            ##~ ,pch=21,pt.lwd=ifelse(label,1,0)*2.4/par("cex"),pt.cex=1.8/par("cex")
+            ##~ ,box.lwd=0.1#,bg=bgBox
+           ##~ # ,pt.bg=ursa_colortable(colorize(seq_along(ctInd),pal=ctInd,alpha="30"))
+            ##~ ,pt.bg=if (label) bgCol else ctInd
+            ##~ ,...
+            ##~ )
+      if (!"text.col" %in% names(arglist)) {
+         arglist[["text.col"]] <- ifelse(invert,"white","black")
+      }
+      if (!"pt.lwd" %in% names(arglist)) {
+         arglist[["pt.lwd"]] <- ifelse(label,1,0)*2.4/par("cex")
+      }
+      do.call("legend",c(list(legend
+         ,legend=bname
+         ,title=title
+         ,col=ctInd
+         ,cex=c(1,cex)[1]/par("cex")
+         ,pch=21
+        # ,pt.lwd=ifelse(label,1,0)*2.4/par("cex")
+         ,pt.cex=1.8/par("cex")
+         ,box.lwd=0.1
+        # ,text.col="yellow"
+        # ,bg=bgBox
+        # ,pt.bg=ursa_colortable(colorize(seq_along(ctInd),pal=ctInd,alpha="30"))
+         ,pt.bg=if (label) bgCol else ctInd
+         ),arglist)
+      )
      # return(invisible(ct)) ## colortable of obj[[indCat]]
       return(invisible(ursa_colortable(ct)))
    }
@@ -399,17 +441,17 @@
 }
 '.panel_pie' <- function(z,x=0,y=0,radius=1,edges=200,clockwise=TRUE,init.angle=90
                         ,col=NULL,bg="white"
-                        ,border="white",lty=NULL,lwd=NULL,ball=FALSE
+                        ,border="white",lty=NULL,lwd=2,ball=FALSE
                         ,verbose=FALSE) {
    if (!is.numeric(z) || any(is.na(z) | z < 0)) 
        stop("'z' values must be positive.")
    if (verbose)
       cat("--------\nPIE\n----------\n")
-   g0 <- getOption("ursaPngPanelGrid")
+   g0 <- .panel_grid()
    if (verbose) {
       print(session_grid())
       print(g0)
-      print(getOption("ursaPngComposeGrid"))
+      print(.compose_grid())
       print(getOption("ursaSessionGrid"))
    }
    cell <- ursa(g0,"cellsize")

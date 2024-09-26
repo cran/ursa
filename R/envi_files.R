@@ -142,8 +142,8 @@
          if (!(grepl("(^\\^|\\$$|\\\\[dDwWsS](\\{|\\+|\\*))",pattern)))
             pattern <- gsub("\\\\","/",pattern) ## failed for sia\\d{4}
    }
-   if (.lgrep("(/|\\\\)",pattern))
-   {
+  # print(c(path=path,pattern=pattern))
+   if (.lgrep("(/|\\\\)",pattern)) {
       isDir <- file.info(pattern)$isdir
       if ((!is.na(isDir))&&(isDir)) {
          path <- pattern
@@ -156,10 +156,29 @@
          }
          else if (file.exists(dirname(pattern))) {
             path <- dirname(pattern)
-            pattern <- gsub(paste0(path,"(/+|\\\\)"),"",pattern)
+           # pattern <- gsub(paste0(path,"(/+|\\\\)"),"",pattern)
+            pattern <- gsub(paste0(path,c("/+","(/+|\\\\)")[1]),"",pattern)
            # pattern <- basename(pattern)
             recursive <- FALSE
             full.names <- TRUE
+         }
+         else if (path==".") { ## ++ 20240303
+            if (F)
+               path <- dirname(pattern)
+            else {
+               p <- strsplit(pattern,split="/")[[1]]
+               if (length(p)>1) {
+                  path <- head(p,-1)
+                 # print(c(path=path,pattern=pattern))
+                  if (!dir.exists(path)) {
+                     return(character())
+                  }
+                  if (F)
+                     patterm <- basename(pattern)
+                  else
+                     pattern <- tail(p,1)
+               }
+            }
          }
       }
      # print(c(path=path,pattern=pattern))
@@ -193,7 +212,7 @@
       ind <- integer()
    if (length(ind))
       return(.noESRI(list2[ind]))
-   if (.lgrep("\\.(tif|tiff|png|bmp|shp|sqlite|geojson|json|gpkg|kml|mif|fgb)$",patt2)) {
+   if (.lgrep("\\.(tif|tiff|png|bmp|shp|shz|sqlite|geojson|gpkg|kml|mif|fgb)$",patt2)) {
       return(character()) ## if exist TIF and HDR, then HDR is not associated with TIF
    }
    patt2a <- .gsub("(\\..+)$","",patt2)
@@ -222,6 +241,8 @@
    character()
 }
 'ursa_exists' <- function(fname) {
+   if (length(fname)>1)
+      return(unname(sapply(fname,ursa_exists)))
    list1 <- envi_list(fname)
    if (length(list1)>1) {
       print(list1)

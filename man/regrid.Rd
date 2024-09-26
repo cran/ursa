@@ -16,7 +16,7 @@ regrid(x, ...)
         columns = NA, rows = NA, dim = NA, bbox = NA, expand = NA,
         minx = NA, miny = NA, maxx = NA, maxy = NA, cut = NA, proj4 = NA, crs = NA,
         border = 0, zero = c("keep", "node", "center"), raster = FALSE, tolerance = NA,
-        zoom = NA, verbose = FALSE, ...)
+        zoom = NA, adjust = c(0.5, 0.5), verbose = FALSE, ...)
 
 }
 %- maybe also 'usage' for other objects documented here.
@@ -105,6 +105,9 @@ Positive \code{integer} of length 2. Dimenstion of raster image in the notation 
 }
   \item{zoom}{
 \code{numeric}. Tweak for simultaneous change of \code{expand} and \code{mul}: \code{expand=zoom}, \code{mul=1/zoom}. Default is \code{NA}.
+}
+  \item{adjust}{
+\code{numeric} of length 2. Dragging horizontal and vertical expansion for argument \code{expand}. Value \code{0.0} means expansion to the left or to the bottom. Value \code{1.0} means expansion to the right or to the top. Value \code{0.5} means equal horizontal or vertical expansion. Default is \code{c(0.5,0.5)}.
 }
   \item{verbose}{
 Reporting via \code{message} about violation and restoration of coordinate grid regilarity after non-consistence usage of parameters.

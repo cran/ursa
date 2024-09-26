@@ -85,12 +85,12 @@
          onlyGrid <- TRUE
       }
       else {
-        # z <- vec[,-ind,drop=FALSE] ## remove 20160505
-        # z <- subset(vec,select=lname) ## add 20150505
+        # z <- vec[,-ind,drop=FALSE] ## -- 20160505
+        # z <- subset(vec,select=lname) ## ++ 20150505
          if (inherits(vec,"data.table"))
-            z <- vec[,lname,with=FALSE]
+            z <- vec[,lname,with=FALSE] ## try vec[,-ind,drop=FALSE][,lname,with=FALSE]
          else {
-            z <- vec[,lname,drop=FALSE] ## modified 20170128
+            z <- vec[,-ind,drop=FALSE][,lname,drop=FALSE] ## modified 20170128
             if (inherits(z,"data.frame"))
                z <- as.data.frame(lapply(z,c))
          }
@@ -102,7 +102,7 @@
       colnames(vec) <- c("x","y")
       ind <- .grep("^(lon|lat)",mname)
       if ((length(ind)==2)&&(is.null(proj4)))
-         proj4 <- paste("+proj=longlat +datum=WGS84 +no_defs")
+         proj4 <- paste(.crsWGS84())
    }
    if (is.null(proj4))
       proj4 <- ""
@@ -121,8 +121,6 @@
          z[,i] <- as.numeric(val)-1
       }
    }
-   if (is.na(nodata))
-      nodata <- .optimal.nodata(z)
    if (!.is.grid((getOption("ursaSessionGrid")))) {
       x <- sort(unique(vec$x))
       y <- sort(unique(vec$y))
@@ -203,8 +201,10 @@
    }
    if (onlyGrid)
       return(session_grid())
-   res <- ursa_new(bandname=lname,ignorevalue=nodata)
+   res <- ursa_new(bandname=lname) ## --20240217, remove 'ignorevalue=nodata'
    z <- as.matrix(z)
+   if (is.na(nodata))
+      nodata <- .optimal.nodata(z)
    z[is.na(z)] <- nodata
    g1 <- res$grid
    nb <- length(lname)

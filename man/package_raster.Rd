@@ -66,10 +66,12 @@ Package \pkg{raster} is marked as "Suggested".
 \donttest{ ## test is skipped: raster's loading time is close to CRAN allowable test time
 session_grid(NULL)
 if (requireNamespace("raster")) {
+   usedCRS <- ursa:::.crsForceProj4()
+   ursa:::.crsForceProj4(TRUE) ## required for CRS comparison
    session_grid(regrid(mul=1/4))
    msk <- ursa_dummy(1,min=0,max=100)>40
    a1 <- ursa_dummy(1,min=200,max=500)[msk]
-   a2 <- colorize(a1,ramp=FALSE)
+   a2 <- colorize(a1,ramp=FALSE,interval=FALSE,lazyload=FALSE)
    a3 <- as.integer(ursa_dummy(3,min=0,max=255.99))
    a4 <- ursa_stack(a3[msk])
    if (isLayer <- TRUE) {
@@ -81,7 +83,7 @@ if (requireNamespace("raster")) {
       b1 <- as.ursa(r1)
       print(c(exported=a1,imported=b1,failed=b1-a1))
       print(c(theSameValue=identical(ursa_value(a1),ursa_value(b1))
-             ,rheSameGrid=identical(ursa_grid(a1),ursa_grid(b1))))
+             ,theSameGrid=identical(ursa_grid(a1),ursa_grid(b1))))
    }
    if (isLayerColortable <- TRUE) {
       r2 <- as.Raster(a2)
@@ -90,7 +92,7 @@ if (requireNamespace("raster")) {
       print(raster::spplot(r2))
       b2 <- as.ursa(r2)
       print(c(theSameValue=identical(ursa_value(a2),ursa_value(b2))
-             ,rheSameGrid=identical(ursa_grid(a2),ursa_grid(b2))))
+             ,theSameGrid=identical(ursa_grid(a2),ursa_grid(b2))))
    }
    if (isBrickOrRGB <- TRUE) {
       r3 <- as.Raster(a3)
@@ -100,7 +102,7 @@ if (requireNamespace("raster")) {
       raster::plotRGB(r3)
       b3 <- as.ursa(r3)
       print(c(theSameValue=identical(ursa_value(a3),ursa_value(b3))
-             ,rheSameGrid=identical(ursa_grid(a3),ursa_grid(b3))))
+             ,theSameGrid=identical(ursa_grid(a3),ursa_grid(b3))))
    }
    if (isStack <- TRUE) {
       r4 <- as.Raster(a4)
@@ -111,6 +113,7 @@ if (requireNamespace("raster")) {
       print(c(theSameValue=identical(ursa_value(a4),ursa_value(b4))
              ,theSameGrid=identical(ursa_grid(a4),ursa_grid(b4))))
    }
+   ursa:::.crsForceProj4(usedCRS)
 }
 }
 }

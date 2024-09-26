@@ -136,6 +136,9 @@
       else
          rotate <- NA
    }
+   if ((is.numeric(rotate))&&(abs(rotate)<=1)) {
+      rotate <- rotate*360
+   }
    if ((!is.na(rich))&&(!is.na(weak))) {
       rotate <- rich-weak
    }

@@ -41,6 +41,11 @@
   # if (!.lgrep("tail",names(rel)))
   #    rel$tail <- 0.001
   # p <- colorize(obj)
+   ind <- which(!is.na(pmatch(names(rel),c("lazyload"))))
+   if ((length(ind)==1)&&(isTRUE(rel[[ind]])))
+      rel[[ind]] <- FALSE
+   else
+      rel[["lazyload"]] <- FALSE
    p <- do.call("colorize",rel[-1],quote=TRUE)
   # print(ursa(p,"table"))
    ct <- p$colortable

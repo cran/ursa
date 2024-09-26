@@ -2,8 +2,10 @@
    arglist <- list(...)
   # str(lapply(arglist,function(x) list(class=class(x),names=names(x))))
    obj <- .getPrm(arglist,name="^$",default=NULL
-                 ,class=list(c("list","ursaRaster"),"ursaRaster","integer"))
-   layout <- .getPrm(arglist,name="layout",default=NA_integer_)
+                 ,class=list(c("list","ursaRaster"),"ursaRaster","integer","matrix"))
+  # layout <- .getPrm(arglist,name="layout",default=NA_integer_)
+   layout <- .getPrm(arglist,name="layout",class=list(c("matrix","integer"),"integer")
+                    ,default=NA_integer_)
   # if (identical(obj,layout))
   #    obj <- NULL
    byrow <- .getPrm(arglist,name="byrow",default=TRUE)
@@ -12,19 +14,24 @@
    side <- .getPrm(arglist,name="side",default=NA_integer_,valid=1L:4L)
    ratio <- .getPrm(arglist,name="ratio",default=(16+0.05)/(9+0.05))
    fixed <- .getPrm(arglist,name="fixed",default=FALSE)
+   dim <- .getPrm(arglist,name="^dim",default=NA_real_)
    verbose <- .getPrm(arglist,name="verb(ose)*",default=FALSE)
    .compose_design(obj=obj,layout=layout,byrow=byrow,skip=skip,legend=legend
-                  ,side=side,ratio=ratio,fixed=fixed,verbose=verbose)
+                  ,side=side,ratio=ratio,fixed=fixed,dim=dim,verbose=verbose)
 }
 '.compose_design' <- function(obj=NULL,layout=NA,byrow=TRUE,skip=NULL,legend=NA
-                             ,side=NA,ratio=(16+1)/(9+1),fixed=fixed,verbose=FALSE) {
+                             ,side=NA,ratio=(16+1)/(9+1),fixed=FALSE,dim=NA,verbose=FALSE) {
    if (is.na(ratio))
       ratio <- (16+1)/(9+1)
    if (verbose)
       str(list(obj=if (is.list(obj)) sapply(obj,class) else class(obj)
               ,layout=layout,byrow=byrow,skip=skip,legend=legend
-              ,side=side,ratio=ratio,fixed=fixed))
-   if (is.null(legend)) {
+              ,side=side,ratio=ratio,fixed=fixed,dim=dim))
+   if ((is.matrix(layout))&&(is.na(legend))) {
+      forcedLegend <- FALSE
+      legend <- NA
+   }
+   else if (is.null(legend)) {
       forcedLegend <- FALSE
       legend <- NA
    }
@@ -48,15 +55,25 @@
      # stop("NULL")
       if (any(is.na(layout)))
          layout <- c(1L,1L)
-      panelr <- layout[1]
-      panelc <- layout[2]
+      if (is.matrix(layout)) {
+         dima <- dim(layout)
+         panelr <- dima[1]
+         panelc <- dima[2]
+      }
+      else {
+         panelr <- layout[1]
+         panelc <- layout[2]
+      }
       isList <- FALSE
    }
    else
    {
      # session_grid(obj) ## added 2015-12-02 # removed 20161226
-      if (is.null(g0 <- getOption("ursaSessionGrid"))) ## added 20161226
-         session_grid(obj)
+      if (is.null(g0 <- getOption("ursaPngComposeGrid")))
+         if (is.null(g0 <- getOption("ursaSessionGrid"))) { ## added 20161226
+            session_grid(obj)
+            g0 <- session_grid()
+         }
       isList <- .is.ursa_stack(obj)
       if (isList)
       {
@@ -91,7 +108,7 @@
          else
             fld <- rep(1L,nband(obj))
       }
-      g1 <- session_grid()
+      g1 <- g0 # session_grid()
       if (is.null(skip))
          skip <- which(!fld)
       else {
@@ -187,10 +204,10 @@
          }
       }
    }
-   mosaic <- matrix(0,ncol=panelc*2+3,nrow=panelr*2+3)
+   mosaic <- matrix(0L,ncol=panelc*2+3,nrow=panelr*2+3)
    k <- 0L
    m <- k
-   if (byrow)
+   if ((byrow)&&(!is.matrix(layout)))
    {
       for (ir in 1:panelr)
       {
@@ -218,7 +235,11 @@
          }
       }
    }
-   k <- m+1
+   if (is.matrix(layout)) {
+      m <- length(unique(c(layout)))
+      mosaic[mosaic>0] <- layout
+   }
+   k <- m+1L
    if (length(legend)==1) {
       if ((isList)&&(forcedLegend)&&((panelc>1)||(panelr>1))) { ## 20160112 added &&(forcedLegend)
          nl <- length(unique(fld[fld>0]))
@@ -372,7 +393,7 @@
       else if ((length(leg2)>1)&&((length(leg1)==1)))
          posc <- posc[posc>1 & posc<ncol(mosaic)]
       mosaic[posr,posc] <- k
-      k <- k+1
+      k <- k+1L
    }
    if (FALSE)
    {

@@ -11,8 +11,8 @@
                                     ,"slope","conc","sd","significance"
                                     ,"bathy","grayscale","greyscale",".onetoone")
                           ,minvalue=NA,maxvalue=NA,byvalue=NA,ltail=NA,rtail=NA
-                          ,tail=NA,ncolor=NA,nbreak=NA,interval=0L,ramp=TRUE
-                          ,byte=FALSE,lazyload=FALSE,reset=FALSE
+                          ,tail=NA,ncolor=NA,nbreak=NA,interval=NA_integer_,ramp=TRUE
+                          ,byte=FALSE,lazyload=TRUE,reset=FALSE
                           ,origin="1970-01-01",format="",alpha=""
                           ,colortable=NULL
                           ,verbose=FALSE,...)
@@ -171,7 +171,7 @@
          if (length(ind <- .grep("lazy",names(rel))))
             rel[[ind]] <- FALSE
          else
-            rel[["lazy"]] <- FALSE
+            rel[["lazyload"]] <- FALSE
          if (isTime)
             s <- "time"
          else if (isDate)
@@ -239,8 +239,9 @@
    if (.is.colortable(obj$colortable)) {
       ct <- obj$colortable
       if (all(!is.na(ct))) {
-         if (.is.category(obj)) ## attr(obj$value,"category")
+         if (.is.category(obj)) {## attr(obj$value,"category")
             return(obj)
+         }
          else {
             rel$pal <- unclass(unname(ct))
          }
@@ -254,18 +255,21 @@
         # rel$obj <- if (TRUE) quote(obj) else obj
       }
       else {
-         if (length(cname)==length(ct)) { ## categoral
+         if (length(cname)==length(ct)) {
+           # print("categoral")
            # m1: OK for 'obj <- colorize(x,lazy=TRUE);reclass(obj)'
            # m2: WANTED TEST!
             rel$value <- as.numeric(cname) ## m1, 20170401 removed
            # rel$value <- seq_along(as.numeric(cname))-1L ## m2, 20170401 added
             rel$breakvalue <- NULL
          }
-         else { ## interval
-           # rel$breakvalue <- as.numeric(cname) ## 20170401 removed
+         else { 
+           # print("interval")
+            rel$breakvalue <- as.numeric(cname) ## 20170401 removed
             rel$value <- seq_along(as.numeric(cname))-1L ## 20170401 added
             rel$value <- NULL
          }
+        # str(rel)
         # rel$obj <- if (TRUE) quote(reclass(obj)) else reclass(obj)
       }
       ursa_colortable(obj) <- character(0)
@@ -323,7 +327,9 @@
       }
       return(res)
    }
-   stretch <- match.arg(stretch)
+   stretchList <- as.character(as.list(match.fun("colorize"))[["stretch"]])[-1]
+   stretchList <- c(stretchList,".onetoone")
+   stretch <- match.arg(stretch[1],stretchList)
    if (length(name)) {
       ncolor <- length(name)
       ramp <- FALSE
@@ -334,10 +340,16 @@
       uniqval <- unique(c(obj$value))
       nuniqval <- length(uniqval)
    }
+   if ((is.na(interval))&&(is.na(ncolor))) {
+      interval <- ifelse(ramp,0L,1L)
+   }
    if ((is.null(value))&&(!is.null(breakvalue))) {
       value <- breakvalue
       if (!interval)
          interval <- 1L
+   }
+   if ((stretch %in% c("julian"))&&(lazyload)) {
+      lazyload <- FALSE ## in colortable: '10Jan' is 10L or 375L?
    }
    if (stretch=="default")
    {
@@ -379,6 +391,9 @@
             }
          }
       }
+   }
+   if (is.na(interval)) {
+      interval <- 0L
    }
    if ((is.na(ncolor))&&(!is.na(nbreak))) { ## added 2015-11-18
       ncolor <- nbreak+1L
@@ -1302,7 +1317,7 @@
          col <- rev(col)
    }
    obj <- .as.colortable(obj,col=col,name=name,alpha=alpha)
-   class(obj$value) <- ifelse(lazyload,"ursaNumeric","ursaCategory")
+   class(obj$value) <- ifelse(lazyload,c("ursaNumeric","ursaSymbol")[2],"ursaCategory")
    if (!lazyload)
       ignorevalue(obj) <- n
    else if (is.na(ignorevalue(obj)))

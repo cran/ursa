@@ -68,14 +68,19 @@
       if (x$con$bands!=x$dim[2])
          x$con$bands <- x$dim[2]
    }
-   if ((TRUE)&&(!is.na(x$name[1]))&&(!is.na(x$con$posZ[1]))) ## FALSE before 29may2010
+   if ((TRUE)&&(!is.na(x$name[1]))&&(!is.na(x$con$posZ[1]))) {## FALSE before 29may2010
       NULL # x$name <- x$name #[x$con$posZ]
+   }
    else if ((is.na(x$name[1]))||(length(x$name)!=x$dim[2])) {
+     ## if ((!is.na(x$name[1]))&&(!is.na(x$con$posZ[1]))) ...
       x$name <- sprintf(sprintf("%s%%0%dd"
                                ,ifelse(is.na(x$name[1]),"Band ",x$name[1])
                                ,nchar(length(1:x$con$bands))),1:x$con$bands)
      # x$name <- character()
    }
+  # if (!is.na(x$con$posZ[1])) {
+  # }
+  # str(x,con=TRUE,grid=TRUE)
    if (x$con$driver %in% c("ENVI","EGDAL"))
       .write.hdr(x)
    else if (x$con$driver=="RGDAL") {
@@ -145,6 +150,10 @@
       }
    }
    con <- .make.con(obj,arglist)
+   if ((FALSE)&&(!is.na(con$posZ[1]))) {
+      if (length(con$posZ)==obj$dim[2])
+         con$posZ <- NA_integer_
+   }
    con
 }
 '.make.con' <- function(obj,arglist)
@@ -529,7 +538,7 @@
       {
          nb <- ifelse(is.na(con$posZ[1]),con$bands,length(con$posZ))
          seek(con,origin="start"
-             ,where=with(con,(lines*samples*nb-1)*sizeof+offset),rw="w")
+             ,where=with(con,(lines*samples*as.numeric(nb)-1)*sizeof+offset),rw="w")
          val <- 0L
          storage.mode(val) <- con$mode
          with(con,writeBin(val,size=sizeof,endian=endian,handle))
@@ -670,8 +679,8 @@
    projection_info <- ""
    proj4 <- grid$crs[1]
    p <- NULL
-   if (nchar(proj4))
-   {
+   isWKT <- .isWKT(proj4)
+   if ((FALSE)&&(!isWKT)&&(nchar(proj4))) {
       pr <- unlist(strsplit(proj4,"\\s+"))
       projection_ellipse <- "unknown"
       projection_units <- "units=meters"
@@ -859,7 +868,13 @@
      # print(.epsg)
       rm(.epsg)
    }
-   if ((is.null(wkt))&&(projection_info=="")&&(nchar(proj4)))
+   if (isWKT) {
+      if (.isWKT2(proj4))
+         wkt <- gsub("\\n\\s+","",.WKT(proj4,WKT2=FALSE))
+      else
+         wkt <- gsub("\\n\\s+","",proj4)
+   }
+   else if ((is.null(wkt))&&(projection_info=="")&&(nchar(proj4)))
    {
       lverbose <- FALSE
       if (lverbose)
@@ -904,7 +919,7 @@
                if (utils::packageVersion("sf")<"0.9")
                   ret <- sf::st_as_text(sf::st_crs(proj4),EWKT=TRUE)
                else
-                  ret <- sf::st_crs(proj4)$Wkt
+                  ret <- sf::st_crs(proj4)$Wkt ## don't use `.WKT(proj4)`
                ret
             }))
            # if (!.try(wkt <- sf::st_as_text(sf::st_crs(proj4),EWKT=TRUE)))

@@ -4,8 +4,12 @@
    arglist <- list(...)
    kind <- .getPrm(arglist,name="(^$|crop|kind)",valid=c("crop","crop2","nocrop"))
    border <- .getPrm(arglist,name="(border|frame)",default=5L)
-   bpp <- .getPrm(arglist,name="bpp",valid=c(8L,24L)
-              ,default=switch(getOption("ursaPngDevice"),windows=8L,cairo=24L,24L))
+   if (.lgrep("bpp",names(arglist)))
+      bpp <- .getPrm(arglist,name="bpp",valid=c(8L,24L)
+                    ,default=switch(getOption("ursaPngDevice")
+                    ,windows=8L,cairo=24L,24L))
+   else
+      bpp <- getOption("ursaPngBpp",default=24L)
    execute <- .getPrm(arglist,name="(execute|view|open|render)",default=!.isShiny())
   # if (isTRUE(Sys.getenv("_R_CHECK_PACKAGE_NAME_")=="ursa"))
   #    execute <- FALSE
@@ -105,11 +109,17 @@
          if (execute) {
             if (!toOpen) {
                op <- par(mar=c(0,0,0,0))
-               plot(grDevices::as.raster(png::readPNG(fileout)))
+               a <- .readPNG(fileout,native=FALSE)
+               dima <- dim(a)
+               if (dima[3]==1)
+                  a <- a[,,c(1,1,1)]
+               else if (dima[3]==2)
+                  a <- a[,,c(1,1,1,2)]
+               plot(grDevices::as.raster(a))
                if (TRUE) {
                   fann <- .dir(path=system.file("optional/sponsorship",package="ursa")
                               ,pattern="\\.png$",full.names=TRUE)
-                  ann <- png::readPNG(sample(fann,1))
+                  ann <- .readPNG(sample(fann,1))
                   plot(grDevices::as.raster(ann),add=TRUE)
                }
                par(op)
@@ -165,7 +175,7 @@
    n <- 999L
    if (!(bpp %in% c(8,24))) {
       requireNamespace("png",quietly=.isPackageInUse())
-      x <- png::readPNG(fileout,native=TRUE,info=FALSE)
+      x <- .readPNG(fileout,native=TRUE,info=FALSE)
       if (verbose)
          .elapsedTime("uniqueColor:start")
       n <- length(unique(c(x)))
@@ -259,10 +269,18 @@
    {
       if (!toOpen) {
          op <- par(mar=c(0,0,0,0))
-         if (TRUE)
-            plot(grDevices::as.raster(png::readPNG(fileout)))
+         if (TRUE) {
+           # plot(grDevices::as.raster(.readPNG(fileout)))
+            img <- .readPNG(fileout,native=FALSE)
+            dima <- dim(img)
+            if (dima[3]==1)
+               img <- img[,,c(1,1,1)]
+            else if (dima[3]==2)
+               img <- img[,,c(1,1,1,2)]
+            plot(grDevices::as.raster(img))
+        }
          else { ## failed asp=1
-            img <- png::readPNG(fileout,native=TRUE)
+            img <- .readPNG(fileout,native=TRUE)
             dima <- dim(img)
             plot(0,0,type="n",axes=FALSE,xlim=c(0,dima[1]),ylim=c(0,dima[2]),asp=1,xlab="",ylab="")
             rasterImage(img,0,0,dima[1],dima[2])

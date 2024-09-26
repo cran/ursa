@@ -59,6 +59,14 @@
             obj[4] <- round(obj[4]*alpha)
          }
       }
+      if (!.identicalCRS(ursa_crs(obj),.panel_crs())) {
+         attr(obj,"copyright") <- NULL
+         ursa_write(obj,"C:/tmp/ex8a.tif")
+         obj <- .gdalwarp(obj,grid=.panel_grid(),resample="bilinear",verbose=verbose)
+         ursa_write(obj,"C:/tmp/ex8b.tif")
+         str(obj)
+        # q()
+      }
       a <- with(ursa_grid(obj),rasterImage(as.raster(obj),minx,miny,maxx,maxy
                                       ,interpolate=interpolate))
       ann <- attr(obj,"copyright")
@@ -82,16 +90,24 @@
   #    panel_new()
   # print(obj)
   # q()
-  # print(c(isCT=.is.colortable(obj),isC=obj$category))
-   isCT <-  .is.colortable(obj) & .is.category(obj) # & attr(obj$value,"category")
+  # print(c(isCT=.is.colortable(obj),isC=.is.category(obj)))
+  # isCT <-  .is.colortable(obj) & .is.category(obj) # & attr(obj$value,"category")
+   isCT <- .postponed.category(obj) ## ++ 20240213
    if (isCT)
       ct <- ursa_colortable(obj)
    scale <- getOption("ursaPngScale")
    e <- band_nNA(obj)
    isRGB <- nband(obj) %in% c(2,3,4) & all(band_nNA(obj)>=0) # '==0' is NA used for RGB?
-   g1 <- getOption("ursaPngPanelGrid")
-   if (ursa_crs(g1)!=ursa_crs(obj))
+   g1 <- .panel_grid()
+   if (!.identicalCRS(ursa_crs(g1),ursa_crs(obj))) { ## if (ursa_crs(g1)!=ursa_crs(obj)) {
+     # print(ursa_crs(g1) |> unclass())
+     # print(ursa_crs(obj) |> unclass())
+      if (!.isPackageInUse()) {
+         str(ursa_crs(g1))
+         str(ursa_crs(obj))
+      }
       obj <- .gdalwarp(obj,grid=g1)
+   }
    toResample <- floor(1/scale)>1 & !isRGB
    if (is.na(useRaster)) {
       cond1 <- getOption("ursaPngDevice")!="windows"
@@ -100,8 +116,7 @@
       useRaster <- cond1 && cond2
    }
    if (verbose)
-      str(list(isRGB=isRGB,isCT=isCT,toResample=toResample,isColorTable=isCT
-              ,useRasrer=useRaster))
+      str(list(isRGB=isRGB,isCT=isCT,toResample=toResample,useRasrer=useRaster))
    if (toResample)
    {
      # obj <- contract(obj,size=sc,verbose=TRUE)
@@ -127,6 +142,8 @@
    if (!isCT) {
       if (!.is.colortable(obj)) {
          arglist[[1]] <- quote(obj)
+        # if (!length(grep("^lazy(load)*",names(arglist))))
+        #    arglist$lazyload <- FALSE
          obj <- do.call("colorize",arglist)
       }
       else if (!.is.category(obj)) { # attr(obj$value,"category")
@@ -172,19 +189,23 @@
          names(obj$colortable) <- ctname
      }
    }
+   if (inherits(obj$value,"ursaSymbol"))
+      obj <- reclass(obj)
    img <- as.matrix(obj,coords=TRUE)
    g1 <- ursa_grid(obj) #session_grid()
-   xo <- with(g1,seq(minx,maxx,len=columns+1L))
-   yo <- with(g1,seq(miny,maxy,len=rows+1L))
-   if (!FALSE)
-   {
-      xo <- xo[-1]-g1$resx/2
-      yo <- yo[-1]-g1$resy/2
-   }
-   if ((FALSE)&&(useRaster))
-   {
-      xo <- xo-0.5*g1$resx/scale
-      yo <- yo+0.5*g1$resy/scale
+   if (F) {
+      xo <- with(g1,seq(minx,maxx,len=columns+1L))
+      yo <- with(g1,seq(miny,maxy,len=rows+1L))
+      if (!FALSE)
+      {
+         xo <- xo[-1]-g1$resx/2
+         yo <- yo[-1]-g1$resy/2
+      }
+      if ((FALSE)&&(useRaster))
+      {
+         xo <- xo-0.5*g1$resx/scale
+         yo <- yo+0.5*g1$resy/scale
+      }
    }
    if (.is.colortable(attr(img,"colortable")))
    {
@@ -204,7 +225,7 @@
   # require(grid)
   # a <- grDevices::as.raster(t(img$z)/max(img$z,na.rm=TRUE))
   # grid.raster(a,x=unit(0.5,"npc"),y=unit(0.5,"npc"),interpolate=FALSE)
-   image(x=xo,y=yo,z=img$z,col=col,asp=NA,zlim=zlim,useRaster=useRaster,add=TRUE)
+   image(x=img$x,y=img$y,z=img$z,col=col,asp=NA,zlim=zlim,useRaster=useRaster,add=TRUE)
   ##### rasterImage(img$z,min(xo),min(yo),max(xo),max(yo),)
    if ((verbose)&&(!useRaster))
       .elapsedTime(paste0("useRaster=",useRaster,"--finish"))

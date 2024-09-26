@@ -208,6 +208,7 @@
             dim(res$value) <- with(con,c(samples,lines,bands))
          }
          else {
+            seek(con,where=0L,origin="start",rw="r")
             res$value <- with(con,.readline(handle,datatype,n,endian))
             if (con$interleave=="bil") ##bil[col,band,row] -> R[col,row,band]
             {
@@ -373,10 +374,11 @@
                if (con$seek)
                   seek(con,where=0L,origin="start",rw="r")
                xdim <- with(con,c(lines,samples,bands))
-               if (con$mode=="integer")
+               if (con$mode=="integer") {
                   val <- .Cursa(C_readBilBandInteger,con$fname[indF],dim=xdim,index=i
                            ,n=nb,datatype=con$datatype,swap=con$swap
                            ,res=integer(with(con,nb*samples*lines)))$res
+               }
                else {
                   val <- .Cursa(C_readBilBandDouble,con$fname[indF],dim=xdim,index=i
                            ,n=nb,datatype=con$datatype,swap=con$swap
