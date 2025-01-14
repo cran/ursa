@@ -57,18 +57,27 @@
    if (is.character(obj)) {
      # print(obj)
      # print(spatial_dir(pattern=obj,recursive=FALSE))
-      opW <- options(warn=2)
-      a <- try(open_envi(obj,resetGrid=TRUE,decompress=FALSE))
-      if ((is.null(a))||(inherits(a,"try-error"))) {
-         if (file.exists(obj)) {
-            a <- open_gdal(obj)
-         }
-         else {
-            list1 <- dir(path=dirname(obj)
-                        ,pattern=paste0(basename(obj),"\\.(tif|tiff|hfa)$")
-                        ,full.names=TRUE)
-            if (length(list1)==1)
-               a <- open_gdal(list1)
+      if (FALSE & grepl("\\.(tif|tiff|hfa)$",basename(obj))) {
+         a <- open_gdal(obj)
+      }
+      else {
+         opW <- options(warn=2)
+         if (envi_exists(obj,exact=TRUE)==1)
+            a <- try(open_envi(obj,resetGrid=TRUE,decompress=FALSE))
+         else
+            a <- NULL
+         options(opW)
+         if ((is.null(a))||(inherits(a,"try-error"))) {
+            if (file.exists(obj)) {
+               a <- open_gdal(obj)
+            }
+            else {
+               list1 <- dir(path=dirname(obj)
+                           ,pattern=paste0(basename(obj),"\\.(tif|tiff|hfa)$")
+                           ,full.names=TRUE)
+               if (length(list1)==1)
+                  a <- open_gdal(list1)
+            }
          }
       }
       if (!inherits(a,"try-error")) {

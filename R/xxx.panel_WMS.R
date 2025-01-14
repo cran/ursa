@@ -394,6 +394,7 @@
                val <- unlist(strsplit(md[ind1[i]+1L],split=","))
             else
                val <- character()
+            val <- gsub("(^\\s*|\\s*$)","",val)
            # val <- c(head(val,3),tail(val,3))
             varname <- res[,"name"]
             ind3a <- .lgrep(paste0("&",varname,"="),src)>0
@@ -410,6 +411,25 @@
                   message(paste("Values:",paste(val,collapse=" ")))
                if (nrow(res)==1)
                   message(paste0(colnames(res)[2],": ",res[2]))
+            }
+            else {
+               if (.is.integer(arglist[[varname]])) {
+                  ind <- arglist[[varname]]
+                  if (ind==0)
+                     arglist[[varname]]
+                  else if (abs(ind)<=length(val)) {
+                     if (ind>0)
+                        arglist[[varname]] <- val[ind]
+                     else
+                        arglist[[varname]] <- val[length(val)+1+ind]
+                  }
+               }
+               if (arglist[[varname]] %in% c("last","tail"))
+                  arglist[[varname]] <- tail(val,1)
+               else if (arglist[[varname]] %in% c("first","head"))
+                  arglist[[varname]] <- head(val,1)
+               else if (arglist[[varname]] %in% c("random","sample"))
+                  arglist[[varname]] <- .sample(val,1)
             }
             toStop <- toStop+0L
          }
@@ -610,6 +630,7 @@
             stop(paste("Unable to define grid for layer",.dQuote(layer)))
          }
          res <- max(c(b[3]-b[1],b[4]-b[2])/size)
+        # str(list(b=b,res=res,p4s=p4s,session=session_grid()))
          g0 <- regrid(setbound=b,res=res,proj=p4s)
         # print(g0);q()
          if (defineGrid)
@@ -708,7 +729,7 @@
   # proj4s <- unlist(strsplit(g0$crs,split="\\s+"))
   # ind <- .grep("\\+(proj=merc|[ab]=6378137|[xy]_0=0|k=1|units=m|lat_ts=0)",proj4s)
   # isMerc <- ((length(ind)==8)&&(!gdalwarp))
-   isMerc <- (.isMerc(g0$crs))&&(.crsSemiMajor==6378137)
+   isMerc <- (.isMerc(g0$crs))&&(.crsSemiMajor()==6378137)
    isLonLat <- .isLongLat(g0$crs) # .lgrep("\\+proj=longlat",g0$crs)>0
    sc <- getOption("ursaPngScale")
    g3 <- g0
@@ -743,7 +764,7 @@
          print(g3,digits=15)
       g2 <- g3
      # .elapsedTime("a")
-      requireNamespace(c("sp","rgdal")[2],quietly=.isPackageInUse())
+     # requireNamespace(c("sp","rgdal")[2],quietly=.isPackageInUse())
       dg <- 16
       xy <- with(g3,expand.grid(x=seq(minx,maxx,len=dg),y=seq(miny,maxy,len=dg)))
       ll <- .project(xy,g3$crs,inv=TRUE)

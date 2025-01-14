@@ -96,7 +96,8 @@
      #    sc <- 1
       g2 <- regrid(grid,mul=sc/8,resetGrid=!TRUE,tolerance=0.999) ## let rough grid
       dima <- dim(g2)
-      if (isTRUE(getOption("ursaPngBackground") %in% c("black","#000000"))) {
+      bg <- sum(c(col2rgb(getOption("ursaPngBackground","white")))*c(0.30,0.59,0.11))
+      if (bg<96) {
          minc <- 21/255
          maxc <- 0.000
       }

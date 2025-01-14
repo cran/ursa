@@ -74,7 +74,7 @@
    ret <- prm[["output"]]
    if (!wbt) {
       names(prm) <- paste0("--",names(prm))
-      prm <- paste0(names(prm),"=",sapply(prm,\(x) x))
+      prm <- paste0(names(prm),"=",sapply(prm,function(x) x))
       prm <- gsub("=TRUE","",prm)
       prm <- gsub("--.+=FALSE","",prm)
       prm <- paste(prm[nchar(prm)>0],collapse=" ")

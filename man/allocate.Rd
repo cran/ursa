@@ -8,8 +8,9 @@ Rasterization of point data into grid cells
 \code{allocate} takes \code{x} and \code{y} coordinates and values from data frame, which is describing point spatial data, and puts them into cells of raster. The certain function (either mean value, sum of values, number of points) is applied for >0 points inside of the exact cell borders.
 }
 \usage{
-allocate(vec, coords = c("x", "y"), nodata = NA, attr = ".+", fun = c("mean", "sum", "n"),
-         cellsize = NA, resetGrid = FALSE, verbose = FALSE)
+allocate(vec, coords = c("x", "y"), nodata = NA, attr = ".+",
+         fun = c("mean", "sum", "sd", "n"), cellsize = NA, resetGrid = FALSE,
+         verbose = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -20,7 +21,7 @@ allocate(vec, coords = c("x", "y"), nodata = NA, attr = ".+", fun = c("mean", "s
 Character of length 2. Colums names, which contain coordinates of data points. Raster bands are not produced for specified columns. For misreference of coordinate columns, the attempt to find more appropriate coordinate columns is taken.
 }
   \item{fun}{
-Character keyword of function, which is applied to value of points, which are dropped into the same cell. Valid values are \code{"mean"} (mean value), \code{"sum"} (sum of values), \code{"n"} (number of points)
+Character keyword of function, which is applied to value of points, which are dropped into the same cell. Valid values are \code{"mean"} (mean value), \code{"sum"} (sum of values), \code{"sd"} (standard deviation), \code{"n"} (number of points).
 }
   \item{nodata}{
 Numeric of length 1. This value used to mark \code{NA} values in the writing to file.

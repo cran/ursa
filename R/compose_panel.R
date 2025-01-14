@@ -51,7 +51,7 @@
       }
       return(invisible(ret))
    }
-   annotation <- .getPrm(arglist,name="annotation",default=NA_character_)
+   annotation <- .getPrm(arglist,name="annotation$",default=NA_character_)
   # decor <- .getPrm(arglist,name="decor",default=TRUE)
   # scalebar <- .getPrm(arglist,name="scalebar",default=FALSE)
    verbose <- .getPrm(arglist,name="verb",kwd="plot",default=NA) ## FALSE?

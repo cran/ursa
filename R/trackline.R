@@ -19,7 +19,7 @@
    }
    if ((TRUE)&&(T & is.null(by))&&(spatial_geotype(obj) %in% c("MULTIPOINT"))&&
        (spatial_count(obj)>1)) {
-      ret <- lapply(seq_len(spatial_count(obj)),\(j) {
+      ret <- lapply(seq_len(spatial_count(obj)),function(j) {
          res <- trackline(obj[j,],by=spatial_data(obj[j,]),connect=connect,gentle=gentle) ## RECURSIVE
       })
       ret <- do.call(spatial_bind,ret)
@@ -38,14 +38,17 @@
          if (is.null(x))
             return(NULL)
          ind <- match(x,rownames(spatial_data(obj)))
-         xy <- do.call(rbind,spatial_coordinates(obj[ind,]))
-         colnames(xy) <- crd
+         xy <- spatial_coordinates(obj[ind,])
+        # xy <- do.call(rbind,xy)
+        # colnames(xy) <- crd
          if (!conseq) {
+            xy <- do.call(rbind,xy)
+            colnames(xy) <- crd
             return(cbind(xy,da[rep(ind,nrow(xy)),,drop=FALSE]))
          }
-         ind2 <- c(1L,which(seq_len(nrow(xy)) %% 2 ==0))
         # ind2 <- which(!duplicated(xy))
-         da <- spatial_data(obj[c(ind[1L],ind),])
+         da <- spatial_data(obj[ind,])
+         da <- rbind(da[1L,],da)
          cname <- colnames(da)
          if (length(ind3 <- grep("\\.1$",cname))>0) {
             for (i in ind3) {
@@ -53,7 +56,25 @@
             }
             da[,ind3] <- NULL
          }
-         cbind(xy[ind2,],da)
+         nxy <- unname(sapply(xy,nrow))
+         if (nrow(da[-1,])==sum(nxy)) {
+            xy <- do.call(rbind,xy)
+            colnames(xy) <- crd
+            ind2 <- c(1L,which(seq_len(nrow(xy)) %% 2 ==0))
+            ret <- cbind(xy[ind2,],da)
+            return(ret)
+         }
+         da <- da[-1,]
+         ret <- vector("list",nrow(da))
+         for (i in seq_along(ret)) {
+            if (i<length(ret))
+               ret[[i]] <- cbind(head(xy[[i]],-1L),da[rep(i,nxy[i]-1L),])
+            else
+               ret[[i]] <- cbind(xy[[i]],da[rep(i,nxy[i]),])
+         }
+         ret <- do.call(rbind,ret)
+         colnames(ret)[c(1,2)] <- crd
+         return(ret)
       })
       ret <- spatialize(do.call(rbind,a),coords=crd
                      ,crs=spatial_crs(obj),engine=ifelse(.isSF(obj),"sf","sp"))
@@ -133,6 +154,10 @@
             res <- sf::st_sfc(sf::st_linestring(xy[integer(),]),crs=spatial_crs(obj))
          else
             res <- sf::st_sfc(sf::st_linestring(xy),crs=spatial_crs(obj))
+         if (develNullInput <- TRUE) {
+            attr(res,"crs")["input"] <- if (.isLongLat(spatial_crs(res))) "WGS 84"
+                                        else list(NULL)
+         }
       }
       else if (.isSP(obj)) {
          res <- sp::Lines(sp::Line(xy),1L)

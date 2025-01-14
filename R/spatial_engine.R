@@ -78,6 +78,17 @@
    if (isSF) {
       sf::st_crs(obj) <- sf::NA_crs_ ## ??? comment it?
       sf::st_crs(obj) <- .p4s2epsg(value)
+      if (develNullInput <- TRUE) {
+         crs <- spatial_crs(obj)
+         input <- .proj4string(crs) # if (.isLongLat(crs)) "WGS 84" else list(NULL)
+         if (inherits(obj,"sf")) {
+           # crs <- attr(obj[[attr(obj,"sf_column")]],"crs")["wkt"]
+            attr(obj[[attr(obj,"sf_column")]],"crs")["input"] <- input
+         }
+         else if (inherits(obj,"sfc"))
+            attr(obj,"crs")["input"] <- input
+      }
+
    }
    if (isSP) {
       if (is.numeric(value))

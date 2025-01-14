@@ -232,40 +232,66 @@
             coords <- c("x_","y_")
          else if (!all(coords %in% colnames(dsn))) {
             mname <- colnames(dsn)
+            modeX <- modeY <- 0L
             indX <- .grep("^coords.x1$",mname)
-            if (!length(indX))
+            if (!length(indX)) {
                indX <- .grep("^x$",mname)
-            if (!length(indX))
-               indX <- .grep("^(lng$|lon)",mname)
-            if (!length(indX))
-               indX <- .grep("^east",mname)
-            if (!length(indX))
-               indX <- .grep("^x1$",mname)
+               if (!length(indX)) {
+                  indX <- .grep("^(lng$|lon)",mname)
+                  if (!length(indX)) {
+                     indX <- .grep("^east",mname)
+                     if (!length(indX))
+                        indX <- .grep("^x1$",mname)
+                     else
+                        modeX <- 4L
+                  }
+                  else
+                     modeX <- 3L
+               }
+               else
+                  modeX <- 2L
+            }
+            else
+               modeX <- 1L
             indY <- .grep("^coords.x2$",mname)
-            if (!length(indY))
+            if (!length(indY)) {
                indY <- .grep("^y$",mname)
-            if (!length(indY))
-               indY <- .grep("^lat",mname)
-            if (!length(indY))
-               indY <- .grep("^north",mname)
-            if (!length(indY))
-               indY <- .grep("^x2$",mname)
+               if (!length(indY)) {
+                  indY <- .grep("^lat",mname)
+                  if (!length(indY)) {
+                     indY <- .grep("^north",mname)
+                     if (!length(indY))
+                        indY <- .grep("^x2$",mname)
+                     else
+                        modeY <- 4L
+                  }
+                  else
+                     modeY <- 3L
+               }
+               else
+                  modeY <- 2L
+            }
+            else
+               modeY <- 1L
             if ((!length(indX))&&(!length(indY))) {
                indX <- .grep("^000x1$",mname)
                indY <- .grep("^000x2$",mname)
+               modeX <- modeY <- 5L
             }
             if ((!length(indX))&&(!length(indY))) {
                indX <- .grep("^x_$",mname)
                indY <- .grep("^y_$",mname)
+               modeX <- modeY <- 6L
             }
             if ((!length(indX))&&(!length(indY))) {
                indX <- .grep(paste0("^",coords[1],"$"),mname)
                indY <- .grep(paste0("^",coords[2],"$"),mname)
+               modeX <- modeY <- 7L
             }
-            ind <- c(indX[1],indY[1])
-            if ((any(is.na(ind)))||(length(ind)!=2)) {
+            if (modeX!=modeY) { ## ((any(is.na(ind)))||(length(ind)!=2)) {
                stop("unable to detect 'x' and 'y' coordinates")
             }
+            ind <- c(indX[1],indY[1])
             coords <- mname[ind]
          }
          #isCRS <- ((!is.na(crsNow))&&(nchar(crsNow)))
@@ -360,13 +386,17 @@
                if (limLonLat)
                   sf::st_crs(obj) <- 4326
                else if (!is.null(proj4)) {
-                  sf::st_crs(obj) <- proj4
+                 # sf::st_crs(obj) <- proj4
+                  spatial_crs(obj) <- proj4
+                 # attr(obj,"crs")["input"] <- if (T) .proj4string(proj4) else list(NULL)
                   style <- proj4
                  # grid <- session_grid() ## ++ 20220702
                  # session_grid(NULL) ## -- 20220702 ??
                }
-               else
-                  sf::st_crs(obj) <- session_crs()
+               else {
+                 # sf::st_crs(obj) <- session_crs()
+                  spatial_crs(obj) <- session_crs()
+               }
             }
             else
                rm(obj)
@@ -736,7 +766,7 @@
                obj <- try(geojsonsf::geojson_sf(a))
             }
             if (inherits(obj,"try-error")) {
-               obj <- sf::st_read(dsn,quiet=TRUE)
+               obj <- sf::st_read(dsn,quiet=TRUE,optional=TRUE)
                if (!spatial_count(obj))
                   return(obj)
             }
@@ -835,7 +865,7 @@
             }
             if (isSF) {
               # opW2 <- options(warn=0)
-               obj <- sf::st_read(dsn,layer=layer,quiet=TRUE)
+               obj <- sf::st_read(dsn,layer=layer,quiet=TRUE,optional=TRUE)
               # options(opW2)
                if (!spatial_count(obj)) {
                   if (isTRUE(getOption("ursaNoticeMatchCall")))

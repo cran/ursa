@@ -10,6 +10,9 @@
    .legend_mtext(text=text,cex=cex)
 }
 '.legend_mtext' <- function(text="Annotation",cex=1) {
+   col <- getOption("ursaPngBackground")
+   a <- sum(col2rgb(col,alpha=TRUE)[1:3]*c(0.30,0.59,0.11))/255
+   col <- ifelse(a<0.4,"white","black")
    '.mtext' <- function(text,...) {
       if (is.character(text)) {
          if (getOption("ursaPngDevice") %in% c("windows","agg"))
@@ -42,19 +45,19 @@
    plot(0,0,type="n",xlim=c(-1,1),ylim=c(-1,1),axes=FALSE,xlab="",ylab="")
   # text(0.5,0.5,labels=text,las=3,xpd=FALSE,cex=cex,xpd=TRUE,col="red")
    if (side==1)
-      ret <- .mtext(text,side=3,cex=cex,line=-0.25,adj=0.5,padj=1.1,xpd=TRUE)
+      ret <- .mtext(text,side=3,cex=cex,line=-0.25,adj=0.5,padj=1.1,xpd=TRUE,col=col)
    else if (side==3)
-      ret <- .mtext(text,side=1,cex=cex,line=-0.85-0.10,adj=0.5,padj=0,xpd=TRUE)
+      ret <- .mtext(text,side=1,cex=cex,line=-0.85-0.10,adj=0.5,padj=0,xpd=TRUE,col=col)
    else if (side==2)
-      ret <- .mtext(text,side=4,cex=cex,line=-1,adj=0.5,padj=0,xpd=TRUE)
+      ret <- .mtext(text,side=4,cex=cex,line=-1,adj=0.5,padj=0,xpd=TRUE,col=col)
    else if (side==4) {
      # sink(.maketmp(ext="par"))
      # str(par())
      # sink()
       ret <- .mtext(text,side=2,cex=cex,line=c(-1.4,0)[1],adj=0.5
-                   ,padj=c(0,1.1)[1],xpd=TRUE)
+                   ,padj=c(0,1.1)[1],xpd=TRUE,col=col)
    }
    else
-      ret <- .mtext(text,side=side,cex=cex,padj=0.75,xpd=TRUE)
+      ret <- .mtext(text,side=side,cex=cex,padj=0.75,xpd=TRUE,col=col)
    invisible(ret)
 }

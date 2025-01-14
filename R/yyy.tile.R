@@ -149,7 +149,7 @@
                    ,paste0("Wikimedia | ",osmCr))
    s$ArcticConnect <- c("https://{abc}.tiles.arcticconnect.ca/osm_{l}/{z}/{x}/{y}.png"
                   ,paste0("Map \uA9 ArcticConnect. Data ",osmCr))
-   s$ArcticSDI <- c(paste0("http://basemap.arctic-sdi.org/mapcache?"
+   s$ArcticSDI <- c(paste0("https://basemap.arctic-sdi.org/mapcache?"
                    ,"&service=WMS"
                    ,"&request=GetMap"
                    ,"&layers=arctic_cascading"
@@ -221,6 +221,10 @@
                  ,"Wikimapia CC-BY-SA")
    s$'windy' <- c("https://tiles.windy.com/tiles/v10.0/darkmap-retina/{z}/{x}/{y}.png"
                  ,paste(osmCr,"(Infringing of windy.com copyrights)"))
+                 
+  # s$'soviet' <- c(paste0("https://proxy.nakarte.me/http/88.99.52.155/tmg/5/18/4"),"Soviet military maps")
+   s$'soviet' <- c(paste0("http://88.99.52.155/tmg/{z}/{x}/{y}"),"Soviet military maps")
+   
   # http://a.maps.owm.io/map/precipitation_new/6/37/19?appid=b1b15e88fa797225412429c1c50c122a1   
   # s$'MapTilesAPI' <- c(paste0("https://maptiles.p.rapidapi.com/en/map/v1/{z}/{x}/{y}.png"
   #                            ,"?rapidapi-key=",MapTilesAPI)
@@ -407,7 +411,7 @@
       if (!nrow(a))
          return("missed in cache")
       fname <- a$b[[1]]
-      d <- rawToChar(fname[1:8],multiple=TRUE) |> paste(collapse="")# |> as.character()
+      d <- paste(rawToChar(fname[1:8],multiple=TRUE),collapse="")# |> as.character()
       Encoding(d) <- "latin1" # |> print()
       if (grepl("PNG",d))
          fileext <- "png"
@@ -420,7 +424,7 @@
       fname <- tile
    }
    else {
-      fname <- .ursaCacheDownload(tile,mode="wb",cache=cache,quiet=!verbose)
+      fname <- .ursaCacheDownload(tile,method="curl",mode="wb",cache=cache,quiet=!verbose)
    }
    if (inherits(fname,"try-error")) {
       return(fname)

@@ -1,12 +1,13 @@
 # for interpoaltion: packages 'interp', 'MBA'. 'akima' is under ACM license
 # D:\ongoing\CloudMailRu\pdf\R\akima_ACM--alternatives_GPL.pdf 
-'allocate' <- function(vec,coords=c("x","y"),nodata=NA,attr=".+",fun=c("mean","sum","n")
+'allocate' <- function(vec,coords=c("x","y"),nodata=NA,attr=".+"
+                      ,fun=c("mean","sum","sd","n")
                       ,cellsize=NA,resetGrid=FALSE,verbose=FALSE)
 {
    class(vec) ## initizize evaluation 'vec' before
   # vec <- list(x=vec$x,y=vec$y,conc=vec$conc,speed=vec$speed)
    fun <- match.arg(fun)
-   kind <- switch(fun,mean=1L,sum=2L,n=4L,0L)
+   kind <- switch(fun,mean=1L,sum=2L,sd=8L,n=4L,0L)
    onlyGrid <- FALSE
    if (resetGrid)
       session_grid(NULL)
@@ -70,7 +71,7 @@
          indX <- .grep("^000x1$",mname)
          indY <- .grep("^000x2$",mname)
       }
-      if ((!length(indX))&&(!length(indY))) {
+      if ((!length(indX))||(!length(indY))) {
          indX <- .grep(paste0("^",coords[1],"$"),mname)
          indY <- .grep(paste0("^",coords[2],"$"),mname)
       }

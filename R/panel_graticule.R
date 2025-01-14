@@ -567,7 +567,7 @@
          }
          if (isProj & !isLonLat) {
             xy <- do.call("rbind",gridline)
-            ind <- do.call(c,lapply(seq_along(gridline),\(i) rep(i,length(gridline[[i]])/2)))
+            ind <- do.call(c,lapply(seq_along(gridline),function(i) rep(i,length(gridline[[i]])/2)))
             xy <- .project(xy,proj4,verbose=FALSE)
             xy <- by(data.frame(xy),ind,function(x) x)
             for (i in seq_along(xy)) {

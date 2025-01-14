@@ -72,7 +72,7 @@
   # }
   # str(arglist)
    if (is.character(arglist[[1]])) {
-      if (.lgrep("\\.(gpkg|tab|kml|geojson|mif|sqlite|fgb|shp|shz|osm|gpx)(\\.(zip|gz|bz2))*$"
+      if (.lgrep("\\.(gpkg|tab|kml|geojson|mif|sqlite|fgb|shp|shz|osm|gpx|gdb)(\\.(zip|gz|bz2))*$"
                      ,arglist[[1]])) {
          ret <- do.call(".glance",arglist)
          if (plotKnitr)

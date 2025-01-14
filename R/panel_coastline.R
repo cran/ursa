@@ -664,7 +664,7 @@
    src <- "https://osmdata.openstreetmap.de/download/simplified-land-polygons-complete-3857.zip"
    dst <- .ursaCacheDownload(src,mode="wb",quiet=FALSE)
    list1 <- unzip(dst,exdir=tempdir())
-   a <- sf::st_read(list1[.grep("\\.shp$",basename(list1))],quiet=TRUE)
+   a <- sf::st_read(list1[.grep("\\.shp$",basename(list1))],quiet=TRUE,optional=TRUE)
    file.remove(list1)
    if (verbose)
       n <- nrow(a)
@@ -720,7 +720,7 @@
          if (FALSE) {
             a180 <- subset(a180,FID %in% c180$FID[abs(c180$lat)<=20])
             if (FALSE)
-            spatial_write(sf::st_transform(a180,prj2),"cross180.sqlite")
+               spatial_write(sf::st_transform(a180,prj2),"cross180.sqlite")
          }
       }
       if ((!.isPackageInUse())&&(devel <- F)) {

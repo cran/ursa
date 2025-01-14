@@ -78,6 +78,7 @@
    if (!nchar(proj4)) {
       opt <- c(opt,to="SRC_METHOD=NO_GEOTRANSFORM",to="DST_METHOD=NO_GEOTRANSFORM")
    }
+   a <- ursa_read(src)
    if (!("co" %in% names(opt))) {
       if (driver=="GTiff") {
          pr <- ifelse(((removeSrc)&&(inherits(.src$value,"ursaNumeric"))),c(3,1)[2],c(2,1)[2])
@@ -94,7 +95,7 @@
    }
    else if (!is.null(names(opt))) {
       if (T) ## 20230228++
-         optF <- paste(lapply(names(opt),\(x) {
+         optF <- paste(lapply(names(opt),function(x) {
             val <- opt[[x]]
             res <- paste0("-",x)
             if (is.character(val)) {
@@ -163,6 +164,7 @@
          close(a)
       }
       cmd <- gsub("(^\"|\"$)","",cmd)
+      cmd <- cmd[nchar(cmd)>0]
       sf::gdal_utils("warp",src,dst,options=cmd,quiet=verbose==0L)
    }
    session_grid(NULL)

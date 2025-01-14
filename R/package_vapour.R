@@ -26,7 +26,7 @@
   # session_grid(g1)
    res <- .raster.skeleton()
   # res$dim <- as.integer(c(prod(a$dimension),a$bands))
-   res$dim <- c(prod(a$dimension),a$bands) |> as.integer()
+   res$dim <- as.integer(c(prod(a$dimension),a$bands))
    con <- .con.skeleton()
    con$driver <- "VAPOUR"
    con$samples <- g1$columns
@@ -131,7 +131,7 @@
         # .elapsedTime("vapour -- step5")
       }
       else
-         ursa_value(a) <- vapour::gdal_raster_data(fname,bands=seq(a)) |> do.call(cbind,args=_)
+         ursa_value(a) <- do.call(cbind,args=vapour::gdal_raster_data(fname,bands=seq(a)))
       if (resetGrid)
          session_grid(a)
       return(a)

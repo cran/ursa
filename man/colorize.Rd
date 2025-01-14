@@ -11,11 +11,11 @@ Create color table
 \usage{
 colorize(obj, value = NULL, breakvalue = NULL, name = NULL, pal = NULL, inv = NA,
          stretch = c("default", "linear", "equal", "mean", "positive",
-                     "negative", "diff", "category", "julian", "date", "time",
-                     "slope", "conc", "sd", "significance", "bathy",
-                     "grayscale", "greyscale", ".onetoone"),
+                     "negative", "zero", "diff", "category", "julian",
+                     "date", "time", "slope", "conc", "sd", "significance",
+                     "bathy", "grayscale", "greyscale"),
          minvalue = NA, maxvalue = NA, byvalue = NA, ltail = NA, rtail = NA, tail = NA,
-         ncolor = NA, nbreak = NA, interval = NA_integer_, ramp = TRUE, byte = FALSE,
+         ncolor = NA, nbreak = NA, interval = NA_integer_, ramp = FALSE, byte = FALSE,
          lazyload = TRUE, reset = FALSE, origin = "1970-01-01" ,format = "",
          alpha = "", colortable = NULL, verbose = FALSE, ...)
                           

@@ -84,9 +84,12 @@
       bname <- names(b)
      # indL <- .grep("^(lon|lat|x$|y$|west|east|south|north|time|proj4)"
      #              ,bname[-c(1,2)],inv=TRUE)
-      indL <- which(is.na(match(seq_along(bname),c(indS,indT))))
+      if ((!length(indS))&&(!length(indS)))
+         indL <- integer()
+      else
+         indL <- which(is.na(match(seq_along(bname),c(indS,indT))))
       if (length(indL)>1)
-         stop("extra dimenstion?")
+         stop("extra dimension?")
       ##~ str(b)
       ##~ str(indT)
       ##~ q()
@@ -210,7 +213,7 @@
    }
    if (length(varName)!=1) {
       if (!grid)
-         stop(paste("","-----","Please specify variable (argument 'var='):"
+         stop(paste("","-----","Please specify only one variable (argument 'var='):"
                    ,paste(paste(seq(along=varList),". ",varList,sep=""),collapse="\n")
                    ,"-----",sep="\n"))
       else
@@ -264,6 +267,8 @@
       if (verbose)
          message("one-dimensional variable")
       val3 <- ncdf4::ncvar_get(nc,varName)
+      if ((length(b)==1)&&(length(b[[1]])==length(val3)))
+         names(val3) <- as.character(b[[1]])
      # attr(val3,"metadata") <- md
      # ncdf4::nc_close(nc)
      # print(val3)

@@ -135,7 +135,7 @@
             op2 <- paste0(oname,"=",opts)
       }
       else if (is.list(opts))
-         op2 <- paste0(names(opts),"=",sapply(opts,\(x) x))
+         op2 <- paste0(names(opts),"=",sapply(opts,function(x) x))
       else
          op2 <- character()
       op <- c(op,do.call("c",lapply(op2,function(x) c("-co",x))))
@@ -242,7 +242,7 @@
             opt <- paste0(oname,"=",options)
       }
       else if (is.list(options))
-         opt <- paste0(names(options),"=",sapply(options,\(x) x))
+         opt <- paste0(names(options),"=",sapply(options,function(x) x))
       else
          opt <- character()
      # opt <- paste(opt,collapse=" ")

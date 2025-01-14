@@ -762,9 +762,19 @@
    }
    con$driver <- "ENVI"
    grid$crs <- .ursaCRS(grid$crs)
+   arglist <- list(...)
+   compress <- .getPrm(arglist,name="^compress$",default=NA,verbose=FALSE)
+   if (isTRUE(compress)) {
+      if (con$compress==0L)
+         con$compress <- -2L
+   }
+   else if (isFALSE(compress)) {
+      if (con$compress==-1L) {
+         con$compress <- -3L
+      }
+   }
    obj$grid <- grid
    obj$con <- con
-   arglist <- list(...)
    nodata <- .getPrm(arglist,name="^(nodata|ignore(value)*|bg)$"
                     ,class=c("integer","numeric"),default=NA,verbose=FALSE)
    if (!is.na(nodata))

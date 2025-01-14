@@ -298,7 +298,10 @@
                      height <- knitr::opts_current$get("out.height")
                   if (is.null(width))
                      width <- "100%"
-                  suffix <- paste0(" style=\"height:",height,"px; width=",width,"\"")
+                  h <- height
+                  if (.is.numeric(h))
+                     h <- paste0(h,"px")
+                  suffix <- paste0(" style=\"height:",h,"; width=",width,"\"")
                }
                else
                   suffix <- ""

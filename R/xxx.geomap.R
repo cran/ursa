@@ -15,6 +15,8 @@
    isWGS84 <- .lgrep("(maps\\.yandex|^(Yandex|\u042f\u043d\u0434\u0435\u043a\u0441)$)"
                        ,style,ignore.case=TRUE)
    staticMap <- c("openstreetmap","google$","sputnikmap")
+   if (F) ## 2024-12-10
+      tileList <- paste0("^",tileList,"$")
    tilePatt <- paste0("(",paste0(unique(c(staticMap,tileList))
                                 ,collapse="|"),")")
    tilePatt <- .gsub("\\.","\\\\.",tilePatt)
@@ -28,11 +30,16 @@
          art <- style
       else if ((artStyle <- gsub("\\s(color|gr[ae](scale)*)","",style)) %in% tileList)
          art <- artStyle
-      else
+      else {
          art <- .gsub2(tilePatt,"\\1",style,ignore.case=FALSE)
+        # print(tilePatt)
+        # print(art)
+        # q()
+      }
      # print(art);q()
      # proj <- "merc"
    }
+  # art <- "none"
    canUrl <- length(unlist(regmatches(style,gregexpr("(\\{z\\}|\\{x\\}|\\{(-)*y\\})",style))))==3
    isSAScache <- FALSE
    if (!canUrl) {

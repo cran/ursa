@@ -23,6 +23,14 @@
          }
          if (con$compress==-1L)
             file.remove(con$fname)
+         else if (con$compress==-3L) {
+            extra <- attr(con$fname,"source")
+            dst <- file.path(dirname(extra)
+                            ,.gsub("\\.unpacked(.*)~$",".envi",basename(con$fname)))
+           # print(c(src=con$fname,dst=dst,extra=extra))
+            file.remove(extra)
+            file.rename(con$fname,dst)
+         }
          else if (con$compress==-2L)
          {
             if (is.null(fname <- attr(con$fname,"source")))

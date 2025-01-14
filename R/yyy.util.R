@@ -209,8 +209,11 @@
    hasNA <- anyNA(x)
    if (hasNA)
       x <- x[!is.na(x)]
-   if (is.ursa(x))
+   if (is.ursa(x)) {
       x <- c(x$value)
+      if (anyNA(x))
+         x <- x[!is.na(x)]
+   }
    else if (inherits(x,"units"))
       x <- unclass(x)
    else if ((is.character(x))||(is.factor(x))) {

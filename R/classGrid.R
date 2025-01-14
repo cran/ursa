@@ -47,12 +47,22 @@
 '.grid.equal' <- function(g1,g2) {
    (g1$columns==g2$columns)&&
    (g1$rows==g2$rows)&&
-   (g1$minx==g2$minx)&&
-   (g1$maxx==g2$maxx)&&
-   (g1$miny==g2$miny)&&
-   (g1$maxy==g2$maxy)&&
+   (.is.eq(g1$minx,g2$minx))&&
+   (.is.eq(g1$maxx,g2$maxx))&&
+   (.is.eq(g1$miny,g2$miny))&&
+   (.is.eq(g1$maxy,g2$maxy))&&
    1L
 }
 'as.data.frame.ursaGrid' <- function(x,row.names=NULL,optional=FALSE,...) {
    expand.grid(x=seq(x,"x"),y=seq(x,"y"),KEEP.OUT.ATTRS=FALSE)
+}
+'.identicalGrid' <- function(src,dst) {
+   if ((!.is.grid(src))||(!.is.grid(dst)))
+      return(NULL)
+   cond1 <- .identicalCRS(src$crs,dst$crs)
+   src$crs <- character()
+   dst$crs <- character()
+  # cond2 <- identical(src,dst)
+   cond2 <- .grid.equal(src,dst)
+   cond1 & cond2
 }

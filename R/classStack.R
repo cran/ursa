@@ -31,14 +31,23 @@
    if (!isList)
       return(NULL)
    n <- sapply(obj,nband)
+  # obj <- obj[n>0]
    nodata <- unique(sapply(obj,ignorevalue))
-   rname <- unname(unlist(lapply(obj,bandname)))
+  # rname <- unname(unlist(lapply(obj,bandname)))
+   rname <- unname(unlist(lapply(obj,\(x) {
+      if (!length(x))
+         return(character(0))
+      bandname(x)
+   })))
    res <- ursa_new(nband=sum(n))#,bandname=rname)
    oname <- names(obj)
    k <- 0L
+   valid <- rep(TRUE,length(obj))
    for (i in seq_along(obj)) {
-      if (!n[i])
+      if (!n[i]) {
+         valid[i] <- FALSE
          next
+      }
       img <- .extract(obj[[i]])
       ##~ if (.is.colortable(img)) {
          ##~ print(img)
@@ -55,11 +64,16 @@
       }
       k <- k+nl
    }
-   if (all(tail(duplicated(lapply(obj,ursa_colortable)),-1)))
+  # if (all(tail(duplicated(lapply(obj,ursa_colortable)),-1))) ## -- 20241028
    if (length(nodata)==1)
       ignorevalue(res) <- nodata
    bandname(res) <- rname
-   if (all(tail(duplicated(lapply(obj,ursa_colortable)),-1))) {
+   ctList <- lapply(obj,\(x) {
+      if (!nband(x))
+         return(NULL)
+      ursa_colortable(x)
+   })
+   if (all(tail(duplicated(ctList),-1))) {
       ct <- ursa_colortable(obj[[1]])
       if (length(ct)) {
          ursa_colortable(res) <- ct

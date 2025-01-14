@@ -2175,14 +2175,17 @@ void rasterize(double *img,int *dim,double *bbox
    int n=*len;
    int kind=*_kind;
    int adr1,adr2,t,i,c,r;
-   int debug=0;
+   int debug=1;
    double bg=*nodata;
    int *valid=(int *)malloc(n*sizeof(int));
    double *S=(double *)malloc(samples*lines*sizeof(double));
+   double *V;
+  // if (kind==8)
+      V=(double *)malloc(samples*lines*sizeof(double));
    int *N=(int *)malloc(samples*lines*sizeof(int));
    if (debug)
-      Rprintf("minx=%f miny=%f maxx=%f maxy=%f columns=%d rows=%d\n"
-             ,minx,miny,maxx,maxy,samples,lines);
+      Rprintf("kind=%d minx=%f miny=%f maxx=%f maxy=%f columns=%d rows=%d n=%d\n"
+             ,kind,minx,miny,maxx,maxy,samples,lines,n);
    for (i=0;i<n;i++)
    {
       valid[i]=-1;
@@ -2202,6 +2205,8 @@ void rasterize(double *img,int *dim,double *bbox
       adr1=t*lines*samples;
       memset(N,0,samples*lines*sizeof(int));
       memset(S,0,samples*lines*sizeof(double));
+      if (kind==8)
+         memset(V,0,samples*lines*sizeof(double));
       for (i=0;i<n;i++)
       {
          adr2=valid[i];
@@ -2223,8 +2228,34 @@ void rasterize(double *img,int *dim,double *bbox
             img[i+adr1]=S[i];
          else if (kind==4) // n
             img[i+adr1]=N[i];
+        // else if (kind==8) // var
+        //    img[i+adr1]=N[i];
+      }
+      if (kind==8) { // var
+         for (i=0;i<lines*samples;i++) {
+            if (!N[i]) {
+               continue;
+            }
+            S[i]=S[i]/(double)N[i];
+         }
+         for (i=0;i<n;i++) {
+            adr2=valid[i];
+            if (adr2<0)
+               continue;
+            V[adr2]+=(value[i+t*n]-S[adr2])*(value[i+t*n]-S[adr2]);
+         }
+         for (i=0;i<lines*samples;i++) {
+            if (!N[i]) {
+               continue;
+            }
+            img[i+adr1]=sqrt(V[i]/(double)N[i]);
+         }
       }
    }
+  // if (kind==8) {
+      free(V);
+      V=NULL;
+  // }
    free(valid);
    free(S);
    free(N);

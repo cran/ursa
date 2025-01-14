@@ -378,7 +378,9 @@
       }
    }
    if (!is.null(legend)) {
-      invert <- sum(c(col2rgb(getOption("ursaPngBackground")))*c(0.30,0.59,0.11))<128
+      invert <- sum(c(col2rgb(getOption("ursaPngBackground")))*c(0.30,0.59,0.11))
+      invert <- getOption("ursaPngBasemapBright",invert)
+      invert <- invert<140
       if (!"bg" %in% names(arglist))
          arglist[["bg"]] <- ifelse(invert,"#0000005F","#FFFFFFAF")
       ##~ legend(legend,legend=bname,title=title

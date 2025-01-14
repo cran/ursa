@@ -21,8 +21,10 @@
    }
    if (is.character(obj)) {
       list1 <- envi_list(obj)
-      if (length(list1)==1)
+      if (isTRUE(length(list1)==1))
          obj <- open_envi(list1)
+      else if (isTRUE(!length(list1)))
+         obj <- open_gdal(obj)
       else
          obj <- open_gdal(list1)
       toClose <- TRUE

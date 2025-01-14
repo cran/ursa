@@ -6,12 +6,12 @@
                           ,pal=NULL,inv=NA
                          # ,palname=NULL ## deprecated
                           ,stretch=c("default","linear","equal","mean"
-                                    ,"positive","negative","diff","category"
+                                    ,"positive","negative","zero","diff","category"
                                     ,"julian","date","time"
                                     ,"slope","conc","sd","significance"
-                                    ,"bathy","grayscale","greyscale",".onetoone")
+                                    ,"bathy","grayscale","greyscale") # ,".onetoone"
                           ,minvalue=NA,maxvalue=NA,byvalue=NA,ltail=NA,rtail=NA
-                          ,tail=NA,ncolor=NA,nbreak=NA,interval=NA_integer_,ramp=TRUE
+                          ,tail=NA,ncolor=NA,nbreak=NA,interval=NA_integer_,ramp=FALSE
                           ,byte=FALSE,lazyload=TRUE,reset=FALSE
                           ,origin="1970-01-01",format="",alpha=""
                           ,colortable=NULL
@@ -340,12 +340,9 @@
       uniqval <- unique(c(obj$value))
       nuniqval <- length(uniqval)
    }
-   if ((is.na(interval))&&(is.na(ncolor))) {
-      interval <- ifelse(ramp,0L,1L)
-   }
    if ((is.null(value))&&(!is.null(breakvalue))) {
       value <- breakvalue
-      if (!interval)
+      if ((is.na(interval))||(interval==0L))
          interval <- 1L
    }
    if ((stretch %in% c("julian"))&&(lazyload)) {
@@ -360,6 +357,7 @@
       {
          ncolor <- nuniqval
          stretch <- "category"
+         interval <- 0L
          if ((is.null(palname))&&(is.null(pal))) {
            # palname <- "Paired" ## "random"
             if (dev <- T) {
@@ -392,6 +390,12 @@
          }
       }
    }
+   if ((is.na(interval))&&(is.na(ncolor))) {
+      if (stretch!=".onetoone")
+         interval <- ifelse(ramp,0L,1L)
+      else
+         interval <- 0L
+   }
    if (is.na(interval)) {
       interval <- 0L
    }
@@ -402,6 +406,10 @@
    }
    if ((is.null(value))&&(!is.na(ncolor))&&(interval %in% c(1L))) 
       ncolor <- ncolor-1L ## added 2015-11-17
+   if ((isTRUE(ncolor==0))&&(interval>0)) {
+      interval <- 0L
+      ncolor <- 1L
+   }
   # print(c(nbreak=nbreak,ncolor=ncolor,keepColors=keepColors))
    if (!is.na(ncolor)) ## added 20170103
       ramp <- FALSE
@@ -460,6 +468,22 @@
             palname <- "cubehelix"
       }
    }
+   if (stretch=="zero") {
+      v <- range(obj$value,na.rm=TRUE)
+     # print(v)
+      if (v[1]>0) {
+         stretch <- "positive"
+         if (is.na(inv))
+            inv <- TRUE
+      }
+      else if (v[2]<0) {
+         stretch <- "negative"
+         if (is.na(inv))
+            inv <- TRUE
+      }
+      else
+         stretch <- c("default","diff")[1]
+   }
    if (stretch=="conc")
    {
       if ((!is.na(ignorevalue(obj)))&&(ignorevalue(obj)==0))
@@ -488,7 +512,7 @@
    }
    else if (stretch=="negative") {
       if (is.na(inv))
-         inv <- TRUE
+         inv <- !TRUE
    }
    else if (stretch=="significance")
    {

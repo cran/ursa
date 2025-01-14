@@ -8,14 +8,14 @@
   # str(match.call())
   # set.seed(as.integer(as.numeric(Sys.time())/10))
   # value <- NULL
-  # verbose <- FALSE
+  # verbose <- TRUE
    bg <- getOption("ursaPngBackground")
    bg <- ifelse(is.null(bg),255,sum(c(col2rgb(bg))*c(0.30,0.59,0.11)))
-   .dark <- 91 # '63' for monitors, '91' for printers
-   .light <- 241
+  # .dark <- 91 # '63' for monitors, '91' for printers
+  # .light <- 241
   # print(getOption("ursaPngBackground"))
-   default.dark <- ifelse(bg>127,.dark,255-.light)
-   default.light <- ifelse(bg>127,.light,255-.dark)
+   default.dark <- ifelse(bg>127,91,47)
+   default.light <- ifelse(bg>127,241,191)
    autobright <- FALSE
    if ((is.na(dark))&&(is.na(light))) {
       if (is.na(bright)) {
@@ -103,7 +103,9 @@
   # k is not optimal for n=2
    dark <- dark+3*k/2
    light <- light-1*k/2
-   lambda <- rev(seq(dark,light,length.out=n))
+   lambda <- seq(dark,light,length.out=n)
+   if (!isFALSE(inv))
+      lambda <- rev(lambda)
    if ((divergent)&&(rest>0)) {
       if (length(indZ)==1) {
          lambda <- c(lambda[rev(1+seq(rest))],lambda)
@@ -171,6 +173,12 @@
       rotate <- sample(rotate,1)
    if (is.na(hue))
       hue <- round(runif(1,min=0.9,max=1.5),2)
+   if (FALSE) {
+      mix <- c(dark,light)
+      dark <- mix[2]
+      light <- mix[1]
+      rm(mix)
+   }
    if ((!FALSE)&&(verbose))
       message(sprintf("cubehelix: br=%d:%d weak=%4.0f rich=%4.0f rotate=%4.0f hue=%4.2f k=%.2f n=%d"
                      ,round(dark*255),round(light*255),weak,rich,rotate,hue,k,n))
@@ -189,7 +197,8 @@
       if (length(toOmit))
          out <- out[,-toOmit]
    }
-   out <- pmin(pmax(out, 0), 1)
+   out <- pmin(pmax(out,0),1)
+  # print(c(t(t(out) %*% matrix(c(0.30,0.59,0.11),ncol=1))),digits=2)
    out <- apply(out,2,function(x) rgb(x[1],x[2],x[3]))
    if ((FALSE)&&((light-dark)/n<0.005))
       out <- sample(out)

@@ -19,10 +19,11 @@
    interpolate <- .getPrm(arglist,name="interp(olate)*",kwd=kwd,default=FALSE)
    alpha <- .getPrm(arglist,name="(alpha|transp(aren(cy)*)*)"
                    ,kwd=kwd,class=list("numeric","character"),default=NA)
-   attribution <- .getPrm(arglist,name="(ann(otat)*|attr)",kwd=kwd,default="bottomright")
+   attribution <- .getPrm(arglist,name="(ann(otat)*|attr(ibution)*)"
+                         ,kwd=kwd,default="bottomright vertical")
    if (verbose)
       str(list(obj=class(obj),useRaster=useRaster,interpolate=interpolate
-              ,alpha=alpha))
+              ,attribution=attribution,alpha=alpha))
    if (.is.ursa_stack(obj)) { ## recursive!!! (20160404 has bugs)
       if (verbose)
          print(match.call())
@@ -61,9 +62,9 @@
       }
       if (!.identicalCRS(ursa_crs(obj),.panel_crs())) {
          attr(obj,"copyright") <- NULL
-         ursa_write(obj,"C:/tmp/ex8a.tif")
+        # ursa_write(obj,"C:/tmp/ex8a.tif")
          obj <- .gdalwarp(obj,grid=.panel_grid(),resample="bilinear",verbose=verbose)
-         ursa_write(obj,"C:/tmp/ex8b.tif")
+        # ursa_write(obj,"C:/tmp/ex8b.tif")
          str(obj)
         # q()
       }
@@ -73,7 +74,9 @@
       if ((is.character(ann))&&(nchar(.gsub("\\s","",ann))>1)) {
          ##~ panel_annotation(ann,pos=attribution,cex=0.7,font="Arial Narrow"
                          ##~ ,fg=sprintf("#000000%s","4F"))
-         options(ursaPngCopyright=c(getOption("ursaPngCopyright"),ann))
+         bg <- unname(band_mean(local_sum(obj*c(0.30,0.59,0.11))))
+         options(ursaPngCopyright=c(getOption("ursaPngCopyright"),ann)
+                ,ursaPngBasemapBright=bg,ursaPngAttribution=attribution)
       }
       return(invisible(NULL))
    }

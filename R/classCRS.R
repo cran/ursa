@@ -101,6 +101,8 @@
 '.isLongLat' <- function(crs) {
    if (missing(crs))
       crs <- session_crs()
+   if (is_spatial(crs))
+      crs <- spatial_crs(crs)
    if (.isWKT(crs)) {
       if (ret <- grepl("^(PROJCS|PROJCRS)\\[",crs,))
          return(!ret)
@@ -284,14 +286,19 @@
    if (missing(crs))
       crs <- session_crs()
    else if (!.isWKT(crs)) {
-      if ((!.isProj4(crs))&&(nchar(crs)>64))
+      if ((!.isProj4(crs))&&(nchar(crs)>64)) {
          return("unknown")
+      }
       crs <- .WKT(crs)
    }
-   a1 <- strsplit(crs,split="(\\n\\s+|,|\\[|\\])")[[1]]
+   a1 <- strsplit(crs,split="(\\n\\s+|zzzz,zzzz|\\[|\\])")[[1]]
+  # a1 <- strsplit(crs,split="(\\n\\s+|\\[|\\])")[[1]]
   # print(head(a1,288))
    if (length(ind <- grep("^(PROJCS|PROJCRS|GEOGCS|GEOGCRS)$",a1))>0) {
       a2 <- a1[ind[1]+1L]
+      a2 <- strsplit(a2,split="(^,|,$)")[[1]]
+      if (grepl("unknown",a2))
+         return("unknown")
       return(gsub("(^\"|\"$)","",a2))
    }
    "notfound"
@@ -375,7 +382,7 @@
    if (missing(crs))
       crs <- session_crs()
    if (inherits(crs,"crs")) {
-      if (.isProj4(crs$input))
+      if (isTRUE(.isProj4(crs$input)))
          return(crs$input)
       crs <- crs$wkt
    }

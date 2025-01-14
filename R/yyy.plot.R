@@ -203,8 +203,9 @@
       stop("cannot identify side")
    side
 }
-'.panel_attribution' <- function(pos=ifelse(vertical,"bottomright","bottomright")
-                                ,vertical=TRUE) {
+'.panel_attribution' <- function(pos,vertical,cex) {
+  # if (.skipPlot(TRUE))
+  #    return(NULL)
    g0 <- .panel_grid() # getOption("ursaSessionGrid_prev")
    g1 <- getOption("ursaSessionGrid")
    prev <- !identical(g0,g1)
@@ -216,14 +217,42 @@
       do.call("grDevices::windowsFonts",list('Arial Narrow'=wf))
    }
    ann <- paste0("",paste(unique(getOption("ursaPngCopyright")),collapse=" | "))
+   if ((missing(pos))&&(missing(vertical))&&(missing(cex))) {
+      pos <- getOption("ursaPngAttribution","bottomright vertical")
+      pos <- strsplit(pos,split="\\s+")[[1]]
+      ind1 <- grep("^[hv]",pos)
+      ind2 <- grep("(^top(left|right)*|^bottom(left|right)*|^(left|right))",pos)
+      ind3 <- grep("\\d+(\\.\\d+)",pos)
+      cex <- 0.7
+      vertical <- TRUE
+      if (length(ind1)) {
+         if (grepl("^h",pos[ind1]))
+            vertical <- FALSE
+         else if (grepl("^v",pos[ind2]))
+            vertical <- TRUE
+      }
+      if (length(ind3)) {
+         cex <- as.numeric(pos[ind3])
+      } 
+      if (length(ind2)) {
+         pos <- pos[ind2]
+      } else {
+         pos <- "bottomright"
+      }
+   }
+  # print(data.frame(pos=pos,vertical=vertical,cex=cex));q()
   # ann <- paste(c(getOption("ursaPngCopyright")),collapse="\n")
-   if (nchar(ann))
-      panel_annotation(ann,pos=pos,cex=0.7
+   if (nchar(ann)) {
+      dark <- getOption("ursaPngBasemapBright",255)<140
+      panel_annotation(ann,pos=pos,cex=cex
                       ,font=ifelse(getOption("ursaPngDevice")=="windows"
                                   ,par("family"),"Arial Narrow")
-                      ,fg=sprintf("#000000%s","4F"),vertical=vertical
+                      ,fg=sprintf(paste0("#",ifelse(dark,"FFFFFF","000000"),"%s"),"4F")
+                      ,fill=ifelse(dark,"#0000001F","#FFFFFF1F")
+                      ,vertical=vertical
                       )
+   }
    if (prev)
       session_grid(g1)
-   options(ursaPngCopyright=NULL)
+   options(ursaPngCopyright=NULL,ursaPngBasemapBright=NULL)
 }

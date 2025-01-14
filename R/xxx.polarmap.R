@@ -143,20 +143,24 @@
                                                            )
                   )
       m <- leaflet::addTiles(m
-                            ,urlTemplate=paste0("https://geoportal.arctic-sdi.org/action?"
-                                               ,"&action_route=GetLayerTile"
-                                               ,"&id=1"
-                                               ,"&layer=arctic_cascading"
-                                               ,"&style=default"
-                                               ,"&Service=WMTS"
-                                               ,"&Request=GetTile"
-                                               ,"&Version=1.0.0"
-                                               ,"&Format=image/png"
-                                               ,"&tilematrixset={tileMatrix}"
-                                               ,"&TileMatrix={z}"
-                                               ,"&TileCol={x}"
-                                               ,"&TileRow={y}"
+                            ,urlTemplate=paste0("https://basemap.arctic-sdi.org/"
+                                               ,"mapcache/wmts/1.0.0/arctic_cascading/"
+                                               ,"default/{tileMatrix}/{z}/{y}/{x}.png"
                                                )
+                            ##~ ,urlTemplate=paste0("https://geoportal.arctic-sdi.org/action?"
+                                               ##~ ,"&action_route=GetLayerTile"
+                                               ##~ ,"&id=1"
+                                               ##~ ,"&layer=arctic_cascading"
+                                               ##~ ,"&style=default"
+                                               ##~ ,"&Service=WMTS"
+                                               ##~ ,"&Request=GetTile"
+                                               ##~ ,"&Version=1.0.0"
+                                               ##~ ,"&Format=image/png"
+                                               ##~ ,"&tilematrixset={tileMatrix}"
+                                               ##~ ,"&TileMatrix={z}"
+                                               ##~ ,"&TileCol={x}"
+                                               ##~ ,"&TileRow={y}"
+                                               ##~ )
                             ,options=leaflet::tileOptions(tileMatrix=epsg
                                                          ,opacity=opacity
                                                          )

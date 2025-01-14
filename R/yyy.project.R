@@ -432,6 +432,7 @@
             message("Unable to get 'proj4string' from EPSG code")
       }
    }
+   class(p4s) <- "ursaCRS"
    p4s
 }
 '.lonPlus360' <- function(xy) {

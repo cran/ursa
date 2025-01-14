@@ -3,6 +3,19 @@
    if (!is.ursa(obj))
       return(NULL)
    arglist <- list(...)
+   n <- length(arglist)
+   if (n==1) {
+      loc <- arglist[[1]]
+      if (is_spatial_points(loc)) {
+         if (!.identicalCRS(spatial_crs(loc),spatial_crs(obj)))
+            loc <- spatial_transform(loc,obj)
+         xy <- spatial_coordinates(loc)
+         if (is.null(dim(xy)))
+            return(NULL)
+         ret <- .getValue(obj,.getIndex(obj,xy[,1],xy[,2]))
+         return(ret)
+      }
+   }
    lon <- .getPrm(arglist,name="^lon",default=NA_real_)
    lat <- .getPrm(arglist,name="^lat",default=NA_real_)
    stopifnot(length(lon)==length(lat))

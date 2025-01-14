@@ -40,13 +40,14 @@
       return(NULL)
    if ((!is.expression(label))&&(all(is.na(label))))
       return(NULL)
+   bg0 <- sum(c(col2rgb(getOption("ursaPngPanel","white")))*c(0.30,0.59,0.11))
   # label <- .getPrm(arglist,name="label",kwd=kwd,default="May")
   # font <- .getPrm(arglist,name="font",kwd=kwd,default=par("family"))
    position <- .getPrm(arglist,name="pos(ition)*",kwd=kwd
                       ,class=list("character","numeric"),default="topright")
    cex <- .getPrm(arglist,name="cex",kwd=kwd,default=1.2-0.2)
    adjust <- .getPrm(arglist,name="adj(ust)*",kwd=kwd,default=0.5)
-   fg <- .getPrm(arglist,name="fg",kwd=kwd,default="#000000AF")
+   fg <- .getPrm(arglist,name="fg",kwd=kwd,default=ifelse(bg0<96,"#FFFFFFAF","#000000AF"))
    bg <- .getPrm(arglist,name="bg",kwd=kwd,default=NA_character_)
    fill <- .getPrm(arglist,name="fill",kwd=kwd,default=NA_character_)
    buffer <- .getPrm(arglist,name="buf(fer)*",kwd=kwd,default=1)
@@ -147,10 +148,11 @@
       cat("Unable to detect position for annotation\n")
       return(invisible(NULL))
    }
+   bg0 <- sum(c(col2rgb(getOption("ursaPngPanel","white")))*c(0.30,0.59,0.11))
    if ((isCaption)&&(is.na(fill)))
-      fill <- "#FFFFFF7F"
+      fill <- ifelse(bg0<96,"#0000007F","#FFFFFF7F")
    if ((!isCaption)&&(is.na(bg)))
-      bg <- "#FFFFFF3F"
+      bg <- ifelse(bg0<96,"#0000003F","#FFFFFF3F")
    if (isPicture) {
       sc <- getOption("ursaPngScale")
       g2 <- if (is.numeric(sc)) regrid(g1,mul=sc,resample=resample) else g1
