@@ -11,7 +11,7 @@
 }
 '.legend_mtext' <- function(text="Annotation",cex=1) {
    col <- getOption("ursaPngBackground")
-   a <- sum(col2rgb(col,alpha=TRUE)[1:3]*c(0.30,0.59,0.11))/255
+   a <- sum(col2rgb(col,alpha=TRUE)[1:3]*.greyscale())/255
    col <- ifelse(a<0.4,"white","black")
    '.mtext' <- function(text,...) {
       if (is.character(text)) {

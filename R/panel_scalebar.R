@@ -28,7 +28,7 @@
    w <- .getPrm(arglist,name="w",kwd=kwd,class=list("numeric","character")
                ,default=NA_real_)
    cex <- .getPrm(arglist,name="cex",kwd=kwd,default=0.75)
-   bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*c(0.30,0.59,0.11))
+   bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*.greyscale())
    defcol <- ifelse(bg<128,"#FFFFFF2F","#0000002F") 
    col <- .getPrm(arglist,name="col",kwd=kwd,default=defcol)
    bg <- .getPrm(arglist,name="bg",kwd=kwd,default="transparent")

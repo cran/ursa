@@ -90,7 +90,7 @@ Object of class \code{ursaRaster} with the same number of bands as in input rast
 \emph{TODO(pl): at least reference to 'osisaf'.}
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

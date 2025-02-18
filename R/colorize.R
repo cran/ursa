@@ -327,7 +327,8 @@
       }
       return(res)
    }
-   stretchList <- as.character(as.list(match.fun("colorize"))[["stretch"]])[-1]
+   fun <- if (.isPackageInUse()) match.fun(ursa::colorize) else match.fun("colorize")
+   stretchList <- as.character(as.list(fun)[["stretch"]])[-1]
    stretchList <- c(stretchList,".onetoone")
    stretch <- match.arg(stretch[1],stretchList)
    if (length(name)) {

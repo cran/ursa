@@ -2,7 +2,8 @@
                         ,verbose=NA,...) {
   # class(obj)
    missing(obj) ## keep`session_grid` from reset in `a <- polygonize(envi_read())`
-   engList <- as.character(as.list(match.fun("polygonize"))[["engine"]])[-1]
+   fun <- if (.isPackageInUse()) match.fun(ursa::polygonize) else match.fun("polygonize")
+   engList <- as.character(as.list(fun)[["engine"]])[-1]
    if ((isNamespaceLoaded("sp"))||(nchar(system.file(package="sp"))>0))
       engList <- c(engList,"sp")
    engine <- match.arg(engine[1],engList)

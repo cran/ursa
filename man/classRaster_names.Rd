@@ -39,7 +39,7 @@ For \code{bandname<-} and \code{names<-}, updated object of class \code{ursaRast
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

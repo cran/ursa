@@ -101,7 +101,7 @@
          }
       }
       if (isTRUE(is.logical(col))) {
-         bright <- mean(colSums(col2rgb(res$col)*c(0.30,0.59,0.11)))
+         bright <- mean(colSums(col2rgb(res$col)*.greyscale()))
          bgcol <- ifelse(bright<160,"white","black")
          col <- c(bgcol,res$col,bgcol)
          reps <- round(strwidth(labels,cex=labcex)/strwidth(" ",cex=labcex))

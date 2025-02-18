@@ -67,7 +67,7 @@
       arglist[["cex"]] <- 1
    arglist[["merge"]] <- FALSE ## '$merge : language do.lines && has.pch'
    if (is.language(arglist[["text.col"]])) {
-      bg0 <- sum(c(col2rgb(getOption("ursaPngPanel","white")))*c(0.30,0.59,0.11))
+      bg0 <- sum(c(col2rgb(getOption("ursaPngPanel","white")))*.greyscale())
       arglist[["text.col"]] <- ifelse(bg0<96,"white","black")
    }
    for (a in names(arglist)) {

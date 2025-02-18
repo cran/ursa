@@ -295,7 +295,7 @@
             arglist2$border <- NULL
          if ((TRUE)&&(is_spatial_lines(obj))&&("border" %in% names(arglist2))) {
             if (isTRUE(arglist2$border)) {
-               gscale <- median(colSums(col2rgb(arglist2$col)*c(0.30,0.59,0.11)))
+               gscale <- median(colSums(col2rgb(arglist2$col)*.greyscale()))
                arglist2$border <- ifelse(gscale>160,"#000000A0","#FFFFFFA0")
             }
             arglist3 <- list(lwd=1.25,col=arglist2$border)
@@ -439,7 +439,7 @@
 'panel_box' <- function(...){
    if (.skipPlot(FALSE))
       return(NULL)
-   bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*c(0.30,0.59,0.11))
+   bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*.greyscale())
    if (!length(list(...))) {
       box(lwd=0.5,col=ifelse(bg<128,"#FFFFFF7F","#0000007F"))
    }

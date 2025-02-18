@@ -203,7 +203,7 @@
      # do.call("compose_legend",leg)
    }
    else {
-      bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*c(0.30,0.59,0.11))
+      bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*.greyscale())
       tcol <- ifelse(bg<128,"#FFFFFF","#000000")
       scol <- paste0(tcol,"7F")
       las <- 1

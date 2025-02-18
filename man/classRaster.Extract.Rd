@@ -46,7 +46,7 @@ Operator \verb{\sQuote{[}} is high-level implementation for data reading. If \co
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

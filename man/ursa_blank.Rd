@@ -47,7 +47,7 @@ Function \code{band_blank} returns logical value of length \code{\link[ursa:clas
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

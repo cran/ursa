@@ -2,12 +2,10 @@ Package: ursa
 Type: Package
 Title: Non-Interactive Spatial Tools for Raster Processing and
         Visualization
-Version: 3.11.2
-Authors@R: c(person(given="Nikita",family="Platonov",role="aut",email="platonov@sevin.ru",comment=c(ORCID="0000-0001-7196-7882"))
-            ,person(given="Nikita G.",family="Platonov",role="cre",email="platonov@sev-in.ru"))
-Author: Nikita Platonov [aut] (<https://orcid.org/0000-0001-7196-7882>),
-  Nikita G. Platonov [cre]
-Maintainer: Nikita G. Platonov <platonov@sev-in.ru>
+Version: 3.11.3
+Authors@R: person(given="Nikita",family="Platonov",role=c("aut","cre"),email="platonov@sev-in.ru",comment=c(ORCID="0000-0001-7196-7882"))
+Author: Nikita Platonov [aut, cre] (<https://orcid.org/0000-0001-7196-7882>)
+Maintainer: Nikita Platonov <platonov@sev-in.ru>
 Description: S3 classes and methods for manipulation with georeferenced raster data: reading/writing, processing, multi-panel visualization.
 License: GPL (>= 2)
 URL: https://github.com/nplatonov/ursa
@@ -22,6 +20,6 @@ Suggests: jsonlite, proj4, raster, ncdf4, locfit, knitr, rmarkdown,
         gdalraster, sys, RSQLite, whitebox
 NeedsCompilation: yes
 ByteCompile: no
-Packaged: 2025-01-14 05:40:36 UTC; pl
+Packaged: 2025-02-18 06:31:01 UTC; pl
 Repository: CRAN
-Date/Publication: 2025-01-14 06:10:02 UTC
+Date/Publication: 2025-02-18 10:20:02 UTC

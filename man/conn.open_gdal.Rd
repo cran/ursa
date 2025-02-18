@@ -45,7 +45,7 @@ If argument \code{fname} is \href{https://gdal.org/en/latest/drivers/raster/envi
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 
 %%~ \note{

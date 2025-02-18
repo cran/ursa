@@ -68,7 +68,7 @@ Object of class \code{ursaRaster} with the same number of bands as in input rast
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

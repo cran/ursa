@@ -61,12 +61,13 @@
          }
       }
       if (!.identicalCRS(ursa_crs(obj),.panel_crs())) {
+         cntr <- attr(obj,"copyright")
          attr(obj,"copyright") <- NULL
-        # ursa_write(obj,"C:/tmp/ex8a.tif")
-         obj <- .gdalwarp(obj,grid=.panel_grid(),resample="bilinear",verbose=verbose)
+         ref <- .panel_grid()
         # ursa_write(obj,"C:/tmp/ex8b.tif")
-         str(obj)
-        # q()
+         obj <- .round(.gdalwarp(obj,grid=ref,sf=FALSE,resample="bilinear",verbose=verbose))
+        # ursa_write(obj,"C:/tmp/ex8c.tif")
+         attr(obj,"copyright") <- cntr
       }
       a <- with(ursa_grid(obj),rasterImage(as.raster(obj),minx,miny,maxx,maxy
                                       ,interpolate=interpolate))
@@ -74,7 +75,14 @@
       if ((is.character(ann))&&(nchar(.gsub("\\s","",ann))>1)) {
          ##~ panel_annotation(ann,pos=attribution,cex=0.7,font="Arial Narrow"
                          ##~ ,fg=sprintf("#000000%s","4F"))
-         bg <- unname(band_mean(local_sum(obj*c(0.30,0.59,0.11))))
+         gs <- .greyscale()
+         n <- length(obj)
+         if (n<2)
+            bg <- unname(band_mean(local_sum(obj[1])))
+         else if (n %in% c(3,4))
+            bg <- unname(band_mean(local_sum(obj[seq(3)]*.greyscale())))
+         else
+            bg <- unname(band_mean(local_sum(obj*.greyscale())))
          options(ursaPngCopyright=c(getOption("ursaPngCopyright"),ann)
                 ,ursaPngBasemapBright=bg,ursaPngAttribution=attribution)
       }

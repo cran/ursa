@@ -10,7 +10,7 @@
   # value <- NULL
   # verbose <- TRUE
    bg <- getOption("ursaPngBackground")
-   bg <- ifelse(is.null(bg),255,sum(c(col2rgb(bg))*c(0.30,0.59,0.11)))
+   bg <- ifelse(is.null(bg),255,sum(c(col2rgb(bg))*.greyscale()))
   # .dark <- 91 # '63' for monitors, '91' for printers
   # .light <- 241
   # print(getOption("ursaPngBackground"))
@@ -198,7 +198,7 @@
          out <- out[,-toOmit]
    }
    out <- pmin(pmax(out,0),1)
-  # print(c(t(t(out) %*% matrix(c(0.30,0.59,0.11),ncol=1))),digits=2)
+  # print(c(t(t(out) %*% matrix(.greyscale(),ncol=1))),digits=2)
    out <- apply(out,2,function(x) rgb(x[1],x[2],x[3]))
    if ((FALSE)&&((light-dark)/n<0.005))
       out <- sample(out)

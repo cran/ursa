@@ -399,7 +399,12 @@
                   ,full.names=TRUE)
          file.remove(f)
       }
-      if (driver %in% c("GeoJSON","KML","GPX")) {
+      if (driver %in% c("KML","GPX")) {
+         if (!identical(spatial_crs(obj),spatial_crs(4326)))
+            obj <- sf::st_transform(obj,4326)
+      }
+      else if (driver %in% c("GeoJSON")) {
+         useCRS <- FALSE
          if (!identical(spatial_crs(obj),spatial_crs(4326))) {
             if ((devel <- FALSE)&&(!.isPackageInUse())) {
               ## see ?make_EPSG for 'rgdal'
@@ -412,7 +417,8 @@
                print(sf::st_crs(spatial_crs(obj))$epsg)
                q()
             }
-            obj <- sf::st_transform(obj,4326)
+            if (!(useCRS <- .isEPSG(spatial_crs(obj))))
+               obj <- sf::st_transform(obj,4326)
          }
       }
       opW <- options(warn=1)
@@ -430,11 +436,13 @@
       }
       jsonSF <- (isSF)&&(driver=="GeoJSON")&&(T | !inherits(obj,"sfc"))&&
          (requireNamespace("geojsonsf",quietly=.isPackageInUse()))
-      if (jsonSF) {
+      if ((jsonSF)&&(!useCRS)) {
         # fromList <- length(tail(.parentFunc(),-1))>1
         # enc2native(a);Encoding(a) <- "UTF-8"
          Fout <- file(fname)#,encoding="UTF-8")
          if (inherits(obj,"sfc")) {
+            if (useCRS)
+               obj <- sf::st_transform(obj,4326)
             a <- geojsonsf::sfc_geojson(obj,digits=6)
            # cl <- class(a)
            # a <- c("{\"type\": \"FeatureCollection\",\"features\": [",a,"]}")
@@ -467,7 +475,9 @@
                   obj[,i] <- format(c(obj[,i,drop=TRUE]),tz="UTC","%Y-%m-%dT%H:%M:%SZ")
                }
             }
-            a <- geojsonsf::sf_geojson(obj,atomise=T,simplify=F,digits=6)
+           # print(useCRS)
+           # q()
+            a <- geojsonsf::sf_geojson(obj,atomise=T,simplify=T,digits=6)
            # a <- iconv(a,to="UTF-8")
             writeLines(a,Fout)
          }

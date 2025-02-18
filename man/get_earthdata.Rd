@@ -76,7 +76,7 @@ If \code{display=TRUE} then returned value of \code{\link[ursa:display_brick]{di
 \href{https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+API+for+Developers}{GIBS API for Developers}
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

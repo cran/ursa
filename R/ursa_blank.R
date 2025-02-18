@@ -2,7 +2,7 @@
 {
    if (!is.ursa(obj))
       return(NULL)
-   arglist <- eval(as.list(args("band_blank"))$ref)
+   arglist <- eval(as.list(args(band_blank))$ref)
    ref <- match.arg(as.character(ref),arglist)
   # ref <- match.arg(as.character(ref))
    z <- obj$con$posZ

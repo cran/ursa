@@ -146,7 +146,18 @@
    if (isCMD)
       args <- commandArgs(TRUE)
    else {
-      args <- unlist(strsplit(args,split="\\s+"))
+      if (FALSE) { ## --20250214
+         args <- unlist(strsplit(args,split="\\s+"))
+      }
+      else {
+         args <- strsplit(args,split="\"")[[1]]
+         args <- args[nchar(args)>0]
+         if (length(ind <- grep("(^\\s|\\s$)",args))>0) {
+            args[ind] <- strsplit(unlist(args[ind]),split="\\s+")
+            args <- unlist(args)
+            args <- args[nchar(args)>0]
+         }
+      }
    }
    if (!length(args))
       return(NULL)
@@ -175,8 +186,16 @@
          if (y=="NULL")
             y <- NULL
          else if (.try(z <- eval(parse(text=y)))) {
-            if (!is.null(z))
-               y <- z
+            if (!is.null(z)) {
+               if ((is.language(z))||(is.function(z))) {
+                  NULL
+               }
+               else {
+                  if (.is.integer(z))
+                     z <- as.integer(z)
+                  y <- z
+               }
+            }
          }
          if (n==-variant) {
             if (!length(grep("(\\s|\\.)",y))) {
@@ -566,6 +585,76 @@
       ret <- ret[[1]]
    invisible(ret)
 }
+'.viewer' <- function(url,...) {
+   viewer <- getOption("viewer")
+   if (isTRUE(is.function(viewer)))
+      return(viewer(url))
+   browseURL(url,...)
+ }
+'.browseURL' <- function(url,...) {
+   br <- getOption("ursaOutputBrowser")
+   if (isFALSE(br)) {
+      return(.viewer(url,...))
+   }
+   if (isTRUE(br)) {
+      fname <- normalizePath(url,winslash="/")
+      isTemp <- getOption("ursaCacheDir")==dirname(fname)
+      fname <- paste0("file:///",fname)
+    #  a <- readLines(system.file("template","browseURL.html",package="ursa"))
+      a <- readLines(file.path(getOption("ursaRequisite"),"browseURL.html"))
+      if (length(ind <- grep(patt <- "(^.*)(\\$\\(fullname\\))(.*$)",a))>0)
+         a[ind] <- gsub(patt,paste0("\\1",basename(fname),"\\3"),a[ind])
+      if (length(ind <- grep(patt <- "(^.*)(\\$\\(shortname\\))(.*$)",a))>0)
+         a[ind] <- gsub(patt,paste0("\\1",basename(fname),"\\3"),a[ind])
+      if (!isTemp)
+         fname <- .maketmp(ext="html")
+      else
+         fname <- gsub("\\.\\w+$",".html",fname)
+      writeLines(a,fname)
+      return(.viewer(fname))
+   }
+   if (!is.null(browser <- getOption("browser")))
+      return(.viewer(url,...))
+   if (.Platform$OS.type!="windows")
+      return(.viewer(url,...))
+   if (!tryCatch({utils::readRegistry;TRUE},error=function(e) FALSE))
+      return(.viewer(url,...))
+   mozilla <- "(firefox|librefox)\\.exe"
+   if (is.null(br)) {
+      br <- .httpDefaultApp()
+      if (is.null(br)) {
+         options(ursaOutputBrowser=FALSE)
+         return(.viewer(url,...))
+      }
+      options(ursaOutputBrowser=br)
+   }
+  # isFirefox <- grepl(mozilla,br,ignore.case=TRUE)
+   br <- gsub("%1",normalizePath(url,winslash="/"),br)
+   exe <- strsplit(br,split="\"")[[1]]
+   exe <- gsub("(^\\s+|\\s+$)","",exe[nchar(exe)>0])
+   exe <- basename(exe[1])
+   if (T) { ## if (isFirefox)
+      Rout <- tempfile()
+      if (!.isPackageInUse())
+         .elapsedTime("tasklist -- start")
+     # system2("tasklist",stdout=Rout)
+      system2("tasklist",list("/FI",shQuote(paste("IMAGENAME","eq",exe))),stdout=Rout)
+      if (!.isPackageInUse())
+         .elapsedTime("tasklist -- finish")
+      a <- readLines(Rout)
+      file.remove(Rout)
+      if (!length(.grep(paste0("^",exe),a))) {
+         .viewer("https://")
+         Sys.sleep(3)
+      }
+   }
+  # if (!isFirefox)
+  #    br <- paste("cmd /c start cmd /c ",br)
+   ret <- system(br)
+   if (!inherits(ret,"try-error"))
+      return(ret)
+   return(.viewer(url,...))
+}
 '.isSF' <- function(obj) inherits(obj,c("sf","sfc"))
 '.isSP' <- function(obj) {
    ((inherits(obj,"Spatial"))||
@@ -761,3 +850,4 @@
       requireNamespace("sf",quietly=.isPackageInUse())
    invisible(value)
 }
+'.greyscale' <- function() c(0.30,0.59,0.11)

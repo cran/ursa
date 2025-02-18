@@ -1,13 +1,40 @@
-2024-09-26
+2025-02-17
 
 <!--
++ ongoing...
 + Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to using native pipes `|>` in code
 + Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to changed behaviour in `*apply()` functions with argument `simplify`
 -->
 
+### Version 3.11.3
+
+-   Graphical output (\*.png or other graphical formats) after
+    `display()`, `glance()` and `compose_close()` is wrapped by HTML and
+    is opened in default internet browser.
+    `options(ursaOutputBrowser=NULL)` opens graphical output in default
+    internet browser (for Windows OS only).
+    `options(ursaOutputBrowser=FALSE)` opens graphical output in default
+    app by file type.
+
+-   Fixed vertical flipping of spatial visualization, which was occurred
+    if package **`png`** is missed.
+
+-   Coastline is updated to version 2025-02-14T11:51.
+
 ### Version 3.11.2
 
--   ongoing…
+-   In `colorize()` added new value “zero” for choice in argument `fun`
+    to accentuate importance of low values.
+
+-   In `colorize()` default value of argument `ramp` is changed to
+    `FALSE`.
+
+-   In `allocate()` added new value “sd” for choice in argument `fun`
+    for outputting variance in cell aggregation.
+
+-   Minor fixes in internal functions.
+
+-   Coastline is updated to version 2025-01-13T13:47.
 
 ### Version 3.11.1
 

@@ -40,7 +40,7 @@
       return(NULL)
    if ((!is.expression(label))&&(all(is.na(label))))
       return(NULL)
-   bg0 <- sum(c(col2rgb(getOption("ursaPngPanel","white")))*c(0.30,0.59,0.11))
+   bg0 <- sum(c(col2rgb(getOption("ursaPngPanel","white")))*.greyscale())
   # label <- .getPrm(arglist,name="label",kwd=kwd,default="May")
   # font <- .getPrm(arglist,name="font",kwd=kwd,default=par("family"))
    position <- .getPrm(arglist,name="pos(ition)*",kwd=kwd
@@ -148,7 +148,7 @@
       cat("Unable to detect position for annotation\n")
       return(invisible(NULL))
    }
-   bg0 <- sum(c(col2rgb(getOption("ursaPngPanel","white")))*c(0.30,0.59,0.11))
+   bg0 <- sum(c(col2rgb(getOption("ursaPngPanel","white")))*.greyscale())
    if ((isCaption)&&(is.na(fill)))
       fill <- ifelse(bg0<96,"#0000007F","#FFFFFF7F")
    if ((!isCaption)&&(is.na(bg)))

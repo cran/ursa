@@ -32,7 +32,8 @@
       }
       return(ret)
    }
-   engList <- try(as.character(as.list(match.fun("spatialize"))[["engine"]])[-1]
+   fun <- if (.isPackageInUse()) match.fun(spatialize) else match.fun("spatialize")
+   engList <- try(as.character(as.list(fun)[["engine"]])[-1]
                  ,silent=TRUE)
    if (inherits(engList,"try-error"))
       engList <- c("native","sf")

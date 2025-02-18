@@ -20,11 +20,14 @@
    options(ursaPngFigure=figN)
    arglist <- list(...)
    kwd <- "blank"
-   g1 <- .getPrm(arglist,name="(grid|ref|dim)",kwd=kwd,class="ursaGrid",default=NULL)
+   g1 <- .getPrm(arglist,name="(\\s*|grid|ref|dim)",kwd=kwd
+                ,class=c("ursaRaster","ursaGrid"),default=NULL)
    if (is.null(g1))
       g1 <- .panel_grid()
-   else
+   else {
+      g1 <- ursa_grid(g1)
       .panel_grid(g1)
+   }
    crs <- if (is.null(g1)) "" else g1$crs
    density <- .getPrm(arglist,name="density",kwd=kwd,default=NA_real_)
    angle <- .getPrm(arglist,name="angle",kwd=kwd,default=NA_real_)
@@ -96,7 +99,7 @@
      #    sc <- 1
       g2 <- regrid(grid,mul=sc/8,resetGrid=!TRUE,tolerance=0.999) ## let rough grid
       dima <- dim(g2)
-      bg <- sum(c(col2rgb(getOption("ursaPngBackground","white")))*c(0.30,0.59,0.11))
+      bg <- sum(c(col2rgb(getOption("ursaPngBackground","white")))*.greyscale())
       if (bg<96) {
          minc <- 21/255
          maxc <- 0.000

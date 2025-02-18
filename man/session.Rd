@@ -108,7 +108,7 @@ NULL
 %%~ \references{
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
-\author{Nikita Platonov \email{platonov@sevin.ru}}
+\author{Nikita Platonov \email{platonov@sev-in.ru}}
 %%~ \note{
 %%~ %~ There is a limitai
 %%~ }

@@ -76,7 +76,7 @@ Dave Green
 
 Robin Evans 
 
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

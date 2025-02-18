@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>$(shortname)</title>
+<style type="text/css">
+   body {
+       background-color: #222;
+       padding: 0;
+   }
+   .fit {
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      overflow-x: auto;
+      overflow-y: auto;
+}
+   }
+   .fit img {
+      margin: 0;
+      padding: 0;
+   }
+   img {
+      width: unset;
+      height: auto;
+   }
+</style>
+<script>
+   function imageFit() {
+      const element = document.querySelector('html');
+      const figure = document.querySelector('.fit')
+      const image = document.querySelector('.fit img');
+      if (!image)
+         return;
+      if (false) {   
+         if (image.offsetHeight > element.clientHeight) {
+            image.style.height = `${element.clientHeight - 4}px`;
+           // image.style.maxWidth = '100%';
+           // console.log("vertical",figure.offsetHeight,figure.scrollHeight);
+           // console.log(`{element.clientHeight}px`);
+            return;
+         }
+      }
+      image.style.height = 'unset';
+      image.style.width = 'unset';
+     // console.log("scroll",element.scrollHeight,element.clientHeight,figure.scrollHeight,figure.clientHeight,figure.scrollWidth,figure.clientWidth);
+     // console.log("A",element.scrollHeight,element.clientHeight);
+      function hasScrollbar() {
+         return element.scrollHeight>element.clientHeight || figure.scrollWidth>figure.clientWidth;
+      };
+      if (!hasScrollbar())
+         return;
+      const ratio = image.offsetWidth / image.offsetHeight;
+     // console.log(ratio,element.scrollHeight,element.clientHeight,image.offsetHeight);
+     // while(element.scrollHeight>element.clientHeight || figure.scrollWidth>figure.clientWidth) {
+      while(hasScrollbar()) {
+          image.style.height = `${Math.floor(image.offsetHeight * 0.99)}px`;
+      }
+     // console.log("scroll",element.scrollHeight,element.clientHeight,figure.scrollHeight,figure.clientHeight,figure.scrollWidth,figure.clientWidth);
+     // console.log(element.scrollHeight>element.clientHeight,element.scrollWidth>element.clientWidth);
+      while(!hasScrollbar()) {
+          image.style.height = `${image.offsetHeight+1}px`;
+      }
+      image.style.height = `${image.offsetHeight-1}px`;
+      image.style.width = `${Math.floor(image.offsetHeight * ratio)}px`;
+     // console.log(`${Math.floor(image.offsetHeight * ratio)}px`);
+      return;
+   };
+  // document.addEventListener('DOMContentLoaded', function() {
+  //   // imageFit();
+  // });
+   window.addEventListener('load',imageFit);
+   window.addEventListener('resize',imageFit);
+</script>
+</head>
+<body>
+<div class="fit"><img src="$(fullname)"/></div>
+</body>
+</html>

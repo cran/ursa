@@ -10,10 +10,13 @@ importFrom("graphics", "abline", "axTicks", "axis", "contour",
 importFrom("stats", "aggregate", "density", "loess", "median", "pf",
            "predict", "runif", "sd", "var", "na.omit", 
            "as.dist", "cutree", "dist", "hclust", "quantile")
+importFrom("tools","md5sum")
 importFrom("utils", "str", "download.file", "head", "tail", "methods",
            "object.size", "unzip", "URLencode", "localeToCharset",
            "read.table", "write.table", "browseURL", "data")
-importFrom("tools","md5sum")
+if ((.Platform$OS.type=="windows")||(Sys.getenv("R_OSTYPE")=="windows")) {
+   importFrom("utils", "readRegistry")
+}
 export("allocate")
 export("as.Raster")
 export("as.ursa")

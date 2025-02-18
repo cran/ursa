@@ -127,7 +127,16 @@
 '.isEPSG' <- function(crs) {
    if (missing(crs))
       crs <- session_crs()
-   grepl("EPSG:\\d+",crs)
+   if (.isProj4(crs)) {
+      if (grepl("EPSG:\\d+",crs))
+         return(TRUE)
+      crs <- .WKT(crs,WKT2=TRUE)
+   }
+  # cat(crs,"\n")
+  # crs <- gsub("\\n","",crs)
+   crs <- tail(strsplit(crs,split="\n")[[1]],1)
+   ret <- grepl("ID\\[\\\"EPSG\\\",\\d+\\]\\]$",crs)
+   ret
 }
 '.crsProj' <- function(crs) {
    unknown <- ""
@@ -167,6 +176,10 @@
          res <- "laea"
       else if (.lgrep("Albers.*Equal.*Area",a2))
          res <- "aea"
+      else if (.lgrep("Sinusoidal",a2))
+         res <- "sinu"
+      else if (.lgrep("Mollweide",a2))
+         res <- "moll"
       else {
          if (!.isPackageInUse()) {
             opW <- options(warn=1)
@@ -246,6 +259,46 @@
   #    return(.crsLat0(sf::st_crs(crs)$proj4string)) ## RECURSIVE
    a2
 }
+'.crsX0' <- function(crs) {
+   if (missing(crs))
+      crs <- session_crs()
+   if (!.isWKT(crs))
+      return(as.numeric(.gsub2("\\+x_0=(\\S+)\\s","\\1",crs)))
+   if (.isLongLat(crs))
+      return(NA)
+   a1 <- strsplit(crs,split="(\\n\\s+|,|\\[|\\])")[[1]]
+   patt <- c("False\\seasting")
+   if (length(ind <- grep(paste0("(",paste(patt,collapse="|"),")"),a1))>0) {
+      opW <- options(warn=1)
+      a2 <- as.numeric(a1[ind+1L])
+      options(opW)
+   }
+   else {
+      a2 <- NA
+   }
+   a2
+}
+'.crsY0' <- function(crs) {
+   if (missing(crs))
+      crs <- session_crs()
+   if (!.isWKT(crs))
+      return(as.numeric(.gsub2("\\+y_0=(\\S+)\\s","\\1",crs)))
+   if (.isLongLat(crs))
+      return(NA)
+   a1 <- strsplit(crs,split="(\\n\\s+|,|\\[|\\])")[[1]]
+   patt <- c("False\\snorthing")
+   if (length(ind <- grep(paste0("(",paste(patt,collapse="|"),")"),a1))>0) {
+      opW <- options(warn=1)
+      a2 <- as.numeric(a1[ind+1L])
+      options(opW)
+   }
+   else {
+      a2 <- NA
+   }
+  # if ((is.na(a2))&&(isNamespaceLoaded("sf")))
+  #    return(.crsLon0(sf::st_crs(crs)$proj4string)) ## RECURSIVE
+   a2
+}
 '.crsLatTS' <- function(crs) {
    if (missing(crs))
       crs <- session_crs()
@@ -292,12 +345,13 @@
       crs <- .WKT(crs)
    }
    a1 <- strsplit(crs,split="(\\n\\s+|zzzz,zzzz|\\[|\\])")[[1]]
+  # cat("\n");print(a1);q()
   # a1 <- strsplit(crs,split="(\\n\\s+|\\[|\\])")[[1]]
   # print(head(a1,288))
    if (length(ind <- grep("^(PROJCS|PROJCRS|GEOGCS|GEOGCRS)$",a1))>0) {
       a2 <- a1[ind[1]+1L]
-      a2 <- strsplit(a2,split="(^,|,$)")[[1]]
-      if (grepl("unknown",a2))
+      a2 <- strsplit(a2,split="(^,|,(\\S+|$))")[[1]]
+      if (grepl("(unknown|unnamed)",a2))
          return("unknown")
       return(gsub("(^\"|\"$)","",a2))
    }
@@ -329,7 +383,8 @@
   # if (.isLongLat(crs))
   #    return("WGS 84")
    pname <- .crsName(crs)
-   if ((!extended)&&(pname!="unknown"))
+  # cat("\n");cat(unclass(crs),"\n");print(pname);q()
+   if ((!extended)&&(!pname %in% c("Mollweide","unknown")))
       return(pname)
    a1 <- strsplit(crs,split="(\\n\\s+|,|\\[|\\])")[[1]]
   # print(a1,quote=FALSE)
@@ -365,11 +420,21 @@
          return(ret)
       return(.ursaCRS(ret))
    }
-   ret <- paste(ret,paste0("lon_0=",round(.crsLon0(crs),digits))
-                   ,paste0("lat_0=",round(.crsLat0(crs),digits)))
+   if (!is.na(lon_0 <- .crsLon0(crs)))
+      ret <- paste(ret,paste0("lon_0=",round(lon_0,digits)))
+   if (!is.na(lat_0 <- .crsLat0(crs)))
+      ret <- paste(ret,paste0("lat_0=",round(lat_0,digits)))
+  # ret <- paste(ret,paste0("lon_0=",round(.crsLon0(crs),digits))
+  #                 ,paste0("lat_0=",round(.crsLat0(crs),digits)))
    if (all(!is.na(lat_ts <- .crsLatTS(crs)))) {
       ret <- paste(ret,paste0("lat_ts=",paste(round(lat_ts,digits),collapse=",")))
    }
+   if (!is.na(x_0 <- .crsX0(crs)))
+      if (x_0!=0)
+         ret <- paste(ret,paste0("x_0=",round(x_0,0)))
+   if (!is.na(y_0 <- .crsY0(crs)))
+      if (y_0!=0)
+         ret <- paste(ret,paste0("y_0=",round(y_0,0)))
    if (ellps=="unknown")
       ret <- paste(ret,paste0("a=",.crsSemiMajor(crs),"+",rf))
    else

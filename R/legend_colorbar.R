@@ -510,7 +510,7 @@
       label <- rev(label)
    }
    shadow <- getOption("ursaPngShadow")
-   bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*c(0.30,0.59,0.11))
+   bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*.greyscale())
    tcol <- ifelse(bg<128,"#FFFFFF","#000000")
    scol <- paste0(tcol,"7F")
    if (length(z)>32767)

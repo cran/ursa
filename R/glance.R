@@ -337,7 +337,7 @@
          nextStyle <- .grep(ostyle[1],staticMap
                            ,invert=TRUE,value=TRUE)
       else
-         nextStyle <- .grep(ostyle[1],c("CartoDB","mapnik","opentopomap")
+         nextStyle <- .grep(ostyle[1],c("internal.CartoDB","mapnik","opentopomap")
                            ,invert=TRUE,value=TRUE)[seq(3)]
       nsize <- length(nextStyle)+1
       cache <- .getPrm(arglist,"cache",class=c("logical","character"),default=TRUE)

@@ -20,6 +20,8 @@
       options(ursaProj4Legacy=TRUE)
    if (is.null(getOption("ursaForceWKT")))
       options(ursaForceWKT=FALSE) ## sf_project: proj4 is faster than WKT
+   if (is.null(getOption("ursaOutputBrowser")))
+      options(ursaOutputBrowser=TRUE) ## open PNG in HTML container
   # if (is.null(getOption("ursaTolerance")))
   #    options(ursaTolerance=1e-8)
    if ((FALSE)&&(nchar(system.file(package="proj4"))>0)) {

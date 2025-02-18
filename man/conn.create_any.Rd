@@ -95,7 +95,7 @@ If file name is unknown, then random file name is used with informing via \code{
 %%~ \references{
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
-\author{Nikita Platonov \email{platonov@sevin.ru}}
+\author{Nikita Platonov \email{platonov@sev-in.ru}}
 %%~ \note{
 %%~ %%  ~~further notes~~
 %%~ }

@@ -27,6 +27,8 @@
    fpath <- .ursaCacheDir()
    if (!file.exists(fpath))
       return(invisible(NULL))
+   list1 <- dir(path=fpath,pattern="^___ursa",full.names=TRUE,recursive=FALSE)
+   file.remove(list1[as.numeric(Sys.time()-file.mtime(list1),units="mins")>59])
    if (completely) {
       if (!dir.exists(fpath))
          return(invisible(NULL))

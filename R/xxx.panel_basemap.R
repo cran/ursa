@@ -1,4 +1,4 @@
-'.compose_basemap' <- function(style="CartoDB") {
+'.compose_basemap' <- function(style="internal.CartoDB") {
    if (.skipPlot(TRUE))
       return(NULL)
    sc <- getOption("ursaPngScale")
@@ -7,7 +7,7 @@
    print(sc)
    invisible(NULL)
 }
-'.panel_basemap' <- function(style="CartoDB",...) {
+'.panel_basemap' <- function(style="internal.CartoDB",...) {
    if (.skipPlot(TRUE))
       return(NULL)
    sc <- getOption("ursaPngScale")

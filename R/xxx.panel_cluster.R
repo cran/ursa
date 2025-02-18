@@ -114,8 +114,12 @@
       print(series(xy4))
       str(bname)
    }
-   if ((!fun %in% c("mean","sum"))&&(ncol(xy4)>3))
-      bname <- bname[bname %in% xy4[[4]]]
+   if ((!fun %in% c("mean","sum"))&&(ncol(xy4)>3)) {
+      if (is.character(xy4[[4]]))
+         bname <- bname[bname %in% xy4[[4]]]
+      else if (is.character(xy4[[3]]))
+         bname <- bname[bname %in% xy4[[3]]]
+   }
    lutSep <- if (separate | length(bname)>1e6) sample(bname) else ".+"
    if (verbose) {
       str(bname)
@@ -378,7 +382,7 @@
       }
    }
    if (!is.null(legend)) {
-      invert <- sum(c(col2rgb(getOption("ursaPngBackground")))*c(0.30,0.59,0.11))
+      invert <- sum(c(col2rgb(getOption("ursaPngBackground")))*.greyscale())
       invert <- getOption("ursaPngBasemapBright",invert)
       invert <- invert<140
       if (!"bg" %in% names(arglist))

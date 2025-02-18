@@ -30,6 +30,8 @@
       }
       x1
    })
+   if (!length(arglist))
+      return(NULL)
    ind <- sapply(arglist,is.ursa,"colortable")
    if (length(which(ind))) {
       obj <- vector("list",length(ind))

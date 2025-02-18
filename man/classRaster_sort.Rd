@@ -28,7 +28,7 @@ Function \code{sort()} for \code{ursaRaster} assumes bands reordering based on c
 Object of class \code{ursaRaster}
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \examples{
 a <- ursa_dummy(nband=7L)

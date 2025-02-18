@@ -30,7 +30,7 @@ Object of class \code{ursaRaster}
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 Currently, usage of compressed image matrix is limited. Spatial filtering (e.g. \code{\link[ursa:Ops.focal_mean]{focal_mean}}) does not operate with compressed data.

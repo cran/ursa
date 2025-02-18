@@ -32,7 +32,7 @@ trackline(obj, by=NULL, connect=c("united", "consequent"), gentle=FALSE)
    Simple feature (package \pkg{sf}) or Spatial abstract class (package \pkg{sp}) with LINESTRING spatial geometry.
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \examples{
 session_grid(NULL)

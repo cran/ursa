@@ -128,7 +128,7 @@
                if (isPackageTest)
                   NULL
                else if (TRUE)
-                  browseURL(normalizePath(fileout))
+                  .browseURL(normalizePath(fileout))
                else if (.Platform$OS.type=="unix")
                   system2("xdg-open",c(.dQuote(fileout)),wait=!.isRscript())
                else
@@ -291,7 +291,7 @@
          if (isPackageTest)
             NULL
          else if (TRUE)
-            browseURL(normalizePath(fileout))
+            .browseURL(normalizePath(fileout))
          else if (.Platform$OS.type=="unix")
             system2("xdg-open",c(.dQuote(fileout)),wait=!.isRscript())
          else
@@ -306,6 +306,11 @@
       if ((!sysRemove)&&(delafter))
          Sys.sleep(wait)
    }
+   if (delafter)
+      delafter <- .normalizePath(dirname(fileout))!=.normalizePath(tempdir())
+  # print(c(delafter=delafter))
+  # print(fileout)
+  # print(tempdir())
    if (delafter) {
       if (FALSE) {
          fpath <- dirname(fileout)
@@ -336,6 +341,7 @@
          }
          else {
            # message('Package `sys` is suggested for cleaning spead-up')
+           # cat(cmd,"\n")
             ret <- system2(file.path(R.home("bin"),"Rscript")
                           ,c("-e",dQuote(cmd)),wait=FALSE,stdout=NULL)
          }

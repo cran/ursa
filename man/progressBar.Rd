@@ -92,7 +92,7 @@ Progress bars should be closed by calling of appropriate method of generic funct
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 Function name in style \emph{camelCase} for consistence with other progress bar functions in \R.

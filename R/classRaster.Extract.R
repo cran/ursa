@@ -341,11 +341,22 @@
       dimy <- dim(res$value)
       dim(res$value) <- c(dimy[1]*dimy[2],dimy[3]) ## t()
       res$dim <- dim(res$value)
-      if (!is.na(con$nodata)) {
-         if (abs(con$nodata)<1)
-            res$value[abs(res$value-con$nodata)<1e-27] <- NA
-         else
-            res$value[abs(res$value/con$nodata-1)<1e-6] <- NA
+      if (!all(is.na(con$nodata))) {
+         if (length(con$nodata)>1) {
+            if (length(con$nodata)<dimy[3]) {
+               warning(paste0("Length of nodata values (",length(con$nodata)
+                      ,") is less than number of bands (",dimy[3]
+                      ,"). Nodata is ignored"))
+            }
+           # q()
+         }
+         else {
+            res$value[!.is.eq(res$value,con$nodata)] <- NA
+            ##~ if (abs(con$nodata)<1)
+               ##~ res$value[abs(res$value-con$nodata)<1e-27] <- NA
+            ##~ else
+               ##~ res$value[abs(res$value/con$nodata-1)<1e-6] <- NA
+         }
       }
       class(res$value) <- clValue
       return(res)

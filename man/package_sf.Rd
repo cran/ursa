@@ -24,7 +24,7 @@ Simple coercion to \code{stars} object of package \pkg{stars}. Currently, color 
 Object of class \code{stars} for argument of class \code{ursaRaster}. Otherwise, \code{NULL}.
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 
 \examples{

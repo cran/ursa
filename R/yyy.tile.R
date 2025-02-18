@@ -573,7 +573,7 @@
    } else {
       a <- b
    }
-   a <- as.array(a,aperm=TRUE)
+   a <- as.array(a,aperm=TRUE,flip=TRUE)
    session_grid(g0)
   # options(g0)
    a/255

@@ -9,7 +9,7 @@
    geocode <- match.arg(geocode,geocodeList)
    if (!sum(nchar(style)))
       style <- paste(switch(geocode,nominatim="openstreetmap",pickpoint="openstreetmap"
-                           ,google="google","CartoDB"),"color")
+                           ,google="google","internal.CartoDB"),"color")
    if (is.na(zoom))
       zoom <- "0"
    isWGS84 <- .lgrep("(maps\\.yandex|^(Yandex|\u042f\u043d\u0434\u0435\u043a\u0441)$)"
@@ -311,6 +311,8 @@
          if (is.null(g0)) ## not after 'panel_new()'
             g0 <- getOption("ursaSessionGrid")#session_grid()
          notYetGrid <- is.null(g0)
+         if (!.isWeb(g0))
+            g0 <- regrid(g0,expand=1.5)
          g3 <- g0
          if (notYetGrid)
             loc <- c(-179,-82,179,82)
@@ -359,8 +361,14 @@
          x[1] <- x[1]-2*B
          lon_0 <- round(180*mean(x)/B,6)
       }
-      else if ((TRUE)&&(!is.null(g3))&&(.lgrep("^(merc|laea)$",.crsProj(g0$crs)))) ## ++20180325
+      else if ((TRUE)&&(!is.null(g3))) {## -- 20250212 &&(.lgrep("^(merc|laea)$",.crsProj(g0$crs)))) ## ++20180325
          lon_0 <- .crsLon0(g0$crs) # as.numeric(.gsub(".*\\+lon_0=(\\S+)\\s.*","\\1",g0$crs))
+         if (is.na(lon_0)) {
+            if (!.isPackageInUse())
+               message("Review code: 'lon_0' was not detected correctly")
+            lon_0 <- round(180*mean(x)/B,6)
+         }
+      }
       else
          lon_0 <- round(180*mean(x)/B,6)
       if (isPolar) {
@@ -456,8 +464,7 @@
             break
       }
       if ((!notYetGrid)&&(!fixRes)&&(i==1)) {
-         spatialize(polygonize(ursa_bbox(g3)),style="web")
-         g0 <- session_grid()
+         g0 <- spatial_grid(spatialize(polygonize(ursa_bbox(g3)),style="web"))
          i <- which.min(abs(s-ursa(g0,"cellsize")))
       }
       if ((isPolar)&&(!notYetGrid)) { ## more accurate checking is required
@@ -541,7 +548,6 @@
      # if (border>0)
      #    g0 <- regrid(g0,border=border)
      # print(fixRes)
-     # print(g0)
    }
    else {
       g0 <- session_grid()
@@ -1021,7 +1027,7 @@
       ursa(basemap,"grid") <- g0
    }
    if (isGrey) {
-      basemap <- as.integer(round(sum(basemap*c(0.30,0.59,0.11))))
+      basemap <- as.integer(round(sum(basemap*.greyscale())))
       basemap <- colorize(basemap,minvalue=0,maxvalue=255,pal=c("black","white"))
    }
    if (isTile)

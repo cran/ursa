@@ -27,7 +27,7 @@
    res <- getOption("ursaPngCoastLine")
    if (!is.null(res))
       return(res)
-   bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*c(0.30,0.59,0.11))
+   bg <- sum(c(col2rgb(getOption("ursaPngBackground")))*.greyscale())
    defcol <- ifelse(bg<128,"#FFFFFF3F","#0000003F") # grey60
    col <- .getPrm(arglist,name="(col|line)",kwd=kwd,default=defcol) 
    fill <- .getPrm(arglist,name="fill",kwd=kwd,default=c("#FFFF003F","transparent")[2])

@@ -51,7 +51,7 @@ If package \pkg{raster} is not installed then return value is \code{NULL}
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 Package \pkg{raster} is marked as "Suggested".

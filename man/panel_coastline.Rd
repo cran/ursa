@@ -94,7 +94,7 @@ Source coastline data in EPSG:4326 are transformed to CRS projection, extracted 
 %%~ Wessel, P., and W. H. F. Smith, A Global Self-consistent, Hierarchical, High-resolution Shoreline Database, \emph{J. Geophys. Res.}, \emph{101}, 8741-8743, 1996.
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 In the versions <=3.7-19 package \pkg{ursa} contained land polygons based on union of "GSHHS_l_L1.shp" and "GSHHS_l_L5.shp" data from Self-consistent Hierarchical High-resolution Geography Database (\href{https://www.soest.hawaii.edu/pwessel/gshhg/}{GSHHG}), Version 2.3.3 (01 November 2014), distributed under the Lesser GNU Public License, Version 3 (29 June 2007). 

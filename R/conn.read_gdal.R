@@ -44,7 +44,8 @@
                        ,verbose=FALSE,...) { ## ,...
   # if (resetGrid)
   #    session_grid(NULL)
-   engList <- as.character(as.list(match.fun("read_gdal"))[["engine"]])[-1]
+   fun <- if (.isPackageInUse()) match.fun(ursa::read_gdal) else match.fun("read_gdal")
+   engList <- as.character(as.list(fun)[["engine"]])[-1]
    if (length(engine)<length(engList)) {
       if (nchar(system.file(package="gdalraster"))>0)
          engList <- c(engList,"gdalraster")

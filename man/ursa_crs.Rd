@@ -40,7 +40,7 @@ Boath \emph{Extract} and \emph{Replace} functions \code{ursa_proj()} and \code{u
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

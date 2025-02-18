@@ -1,7 +1,8 @@
 'ursa_open' <- function(fname,verbose=FALSE) open_gdal(fname=fname,verbose=verbose)
 'open_gdal' <- function(fname,engine=c("native","sf","gdalraster","vapour")
                        ,verbose=FALSE) {
-   engList <- as.character(as.list(match.fun("open_gdal"))[["engine"]])[-1]
+   fun <- if (.isPackageInUse()) match.fun(ursa::open_gdal) else match.fun("open_gdal")
+   engList <- as.character(as.list(fun)[["engine"]])[-1]
    if (length(engine)<length(engList)) {
       if (!.isPackageInUse()) {
          engList <- c(engList,"rgdal")
