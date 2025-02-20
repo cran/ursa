@@ -1,6 +1,6 @@
-088794212acb020ad01fde10757572ce *DESCRIPTION
+4b434db0f59acc0b614436a0909b07df *DESCRIPTION
 4a2cf22fa4936b63d59836bc7a8e769c *NAMESPACE
-101102e567ddd78f442f595721cd0a80 *NEWS.md
+74948bd5d66ebdb7d897390d44a2eea6 *NEWS.md
 c121656365d49fb1448bf1cb9154e946 *R/Ops.band_group.R
 a101516b6d05a967ffebde964f4e3452 *R/Ops.band_stat.R
 d183ce4435359380f473548116326fc0 *R/Ops.focal_extrem.R
@@ -17,7 +17,7 @@ b37f92fdd2bbc2c6e37417ff05816890 *R/allocate.R
 435d9524a8e473a3acf1b692a952fb5f *R/classColorTable.R
 b14035193946579b35d9c729e59b9058 *R/classConnection.R
 e787d14e7b56f51479e860060636203e *R/classGrid.R
-7423f0e06219aeb434fc1fe024eabd2c *R/classRaster.Extract.R
+8835e5b80c882a34980433ec7300a351 *R/classRaster.Extract.R
 3a3bec90c4fa18d0002db43ea0fe1b7e *R/classRaster.R
 93ce905255d8c4499273ba5306a0c73c *R/classRaster.Replace.R
 7aec675e2cf98bbab837329522755112 *R/classRaster_GroupGeneric.R
@@ -154,7 +154,7 @@ ca5553790afe4326b5b85b8cd91180cc *README.md
 c3ea23c1f33df33771f1a2956d23f8a2 *inst/optional/sponsorship/pb316.png
 ef8f470156fb551fa0f4802ae00cae0e *inst/optional/sponsorship/sevin.png
 c11868d68e9f120b22b7f18475c4b793 *inst/optional/structure/ursaGeneral.png
-6548f4b4a7f210d3bf8ff1729f985844 *inst/requisite/browseURL.html
+36cf75b7278a947701eceb4c4fa9ce84 *inst/requisite/browseURL.html
 126b7e63a9f189ed8d175b51d83f3133 *inst/requisite/coast-l.rds
 154a5b4208b84e5ec44887efb7dd6276 *inst/requisite/template.hdr
 df16d4880f2084bb887a003444cc8724 *man/00ursa-package.Rd

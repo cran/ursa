@@ -351,7 +351,7 @@
            # q()
          }
          else {
-            res$value[!.is.eq(res$value,con$nodata)] <- NA
+            res$value[.is.eq(res$value,con$nodata)] <- NA
             ##~ if (abs(con$nodata)<1)
                ##~ res$value[abs(res$value-con$nodata)<1e-27] <- NA
             ##~ else

@@ -17,11 +17,12 @@
       text-align: center;
       overflow-x: auto;
       overflow-y: auto;
-}
+      height: 100%;
    }
    .fit img {
       margin: 0;
       padding: 0;
+      vertical-align: middle;
    }
    img {
       width: unset;
@@ -32,7 +33,7 @@
    function imageFit() {
       const element = document.querySelector('html');
       const figure = document.querySelector('.fit')
-      const image = document.querySelector('.fit img');
+      const image = document.querySelector('.fit > img');
       if (!image)
          return;
       if (false) {   
@@ -51,8 +52,10 @@
       function hasScrollbar() {
          return element.scrollHeight>element.clientHeight || figure.scrollWidth>figure.clientWidth;
       };
-      if (!hasScrollbar())
+      if (!hasScrollbar()) {
+        // figure.style.lineHeight = `${element.clientHeight-16}px`;
          return;
+      }
       const ratio = image.offsetWidth / image.offsetHeight;
      // console.log(ratio,element.scrollHeight,element.clientHeight,image.offsetHeight);
      // while(element.scrollHeight>element.clientHeight || figure.scrollWidth>figure.clientWidth) {
@@ -66,6 +69,7 @@
       }
       image.style.height = `${image.offsetHeight-1}px`;
       image.style.width = `${Math.floor(image.offsetHeight * ratio)}px`;
+     // figure.style.lineHeight = `${element.clientHeight-16}px`;
      // console.log(`${Math.floor(image.offsetHeight * ratio)}px`);
       return;
    };

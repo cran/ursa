@@ -1,10 +1,14 @@
-2025-02-17
+2025-02-20
 
 <!--
 + ongoing...
 + Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to using native pipes `|>` in code
 + Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to changed behaviour in `*apply()` functions with argument `simplify`
 -->
+
+### Version 3.11.4
+
+-   Fixing internal handling of raster ignore values.
 
 ### Version 3.11.3
 
