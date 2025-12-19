@@ -2,11 +2,11 @@
   # if (!.crsForceProj4())
   #    cat("'ursaCRS' ")
   # x <- unclass(.crsBeauty(x))
-   class(x) <- "character"
+ #  class(x) <- c("character","EEE")
    if (.crsForceProj4()) {
       x <- .proj4string(x)
    }
-   if (.isWKT(x)) {
+   if (T | .isWKT(x)) {
      # return(cat(x,...,"\n"))
       return(cat(sQuote(.crsBeauty(x)),...,"\n"))
    }
@@ -20,6 +20,8 @@
    str(unclass(.crsBeauty(object))) #.crsBeauty(object,...)
 }
 '.ursaCRS' <- function(crs) {
+   if ((inherits(crs,"crs"))&&("wkt" %in% names(crs)))
+      crs <- crs[["wkt"]]
    if (T & .crsForceProj4()) {
       crs <- .proj4string(crs)
    }
@@ -176,6 +178,8 @@
          res <- "laea"
       else if (.lgrep("Albers.*Equal.*Area",a2))
          res <- "aea"
+      else if (.lgrep("Azimuthal.*Equidistant",a2))
+         res <- "aeqd"
       else if (.lgrep("Sinusoidal",a2))
          res <- "sinu"
       else if (.lgrep("Mollweide",a2))
@@ -196,8 +200,11 @@
 '.crsLon0' <- function(crs) {
    if (missing(crs))
       crs <- session_crs()
-   if (!.isWKT(crs))
+   if (!.isWKT(crs)) {
+      if (!.isProj4(crs))
+         crs <- .proj4string(crs)
       return(as.numeric(.gsub2("\\+lon_0=(\\S+)\\s","\\1",crs)))
+   }
    if (.isLongLat(crs))
       return(NA)
    a1 <- strsplit(crs,split="(\\n\\s+|,|\\[|\\])")[[1]]
@@ -220,6 +227,8 @@
    if (missing(crs))
       crs <- session_crs()
    if (!.isWKT(crs)) {
+      if (!.isProj4(crs))
+         crs <- .proj4string(crs)
       patt <- "\\+lat_0=(\\S+)\\s"
       if (!grepl(patt,crs))
          return(NA)
@@ -262,8 +271,11 @@
 '.crsX0' <- function(crs) {
    if (missing(crs))
       crs <- session_crs()
-   if (!.isWKT(crs))
+   if (!.isWKT(crs)) {
+      if (!.isProj4(crs))
+         crs <- .proj4string(crs)
       return(as.numeric(.gsub2("\\+x_0=(\\S+)\\s","\\1",crs)))
+   }
    if (.isLongLat(crs))
       return(NA)
    a1 <- strsplit(crs,split="(\\n\\s+|,|\\[|\\])")[[1]]
@@ -281,8 +293,11 @@
 '.crsY0' <- function(crs) {
    if (missing(crs))
       crs <- session_crs()
-   if (!.isWKT(crs))
+   if (!.isWKT(crs)) {
+      if (!.isProj4(crs))
+         crs <- .proj4string(crs)
       return(as.numeric(.gsub2("\\+y_0=(\\S+)\\s","\\1",crs)))
+   }
    if (.isLongLat(crs))
       return(NA)
    a1 <- strsplit(crs,split="(\\n\\s+|,|\\[|\\])")[[1]]
@@ -299,10 +314,36 @@
   #    return(.crsLon0(sf::st_crs(crs)$proj4string)) ## RECURSIVE
    a2
 }
+'.crsScale' <- function(crs) {
+   if (missing(crs))
+      crs <- session_crs()
+   if (!.isWKT(crs)) {
+      if (!.isProj4(crs))
+         crs <- .proj4string(crs)
+      return(as.numeric(.gsub2("\\+k=(\\S+)\\s","\\1",crs)))
+   }
+   if (.isLongLat(crs))
+      return(NA)
+   a1 <- strsplit(crs,split="(\\n\\s+|,|\\[|\\])")[[1]]
+   patt <- c("Scale\\sfactor")
+   if (length(ind <- grep(paste0("(",paste(patt,collapse="|"),")"),a1))>0) {
+      opW <- options(warn=1)
+      a2 <- as.numeric(a1[ind+1L])
+      options(opW)
+   }
+   else {
+      a2 <- NA
+   }
+  # if ((is.na(a2))&&(isNamespaceLoaded("sf")))
+  #    return(.crsLon0(sf::st_crs(crs)$proj4string)) ## RECURSIVE
+   a2
+}
 '.crsLatTS' <- function(crs) {
    if (missing(crs))
       crs <- session_crs()
    if (!.isWKT(crs)) {
+      if (!.isProj4(crs))
+         crs <- .proj4string(crs)
       a2 <- .gsub2("\\+lat_(ts|1|2)=(\\S+)\\s","\\2",crs)
       a2 <- ifelse(a2==crs,0,as.numeric(a2))
       return(a2)
@@ -372,8 +413,11 @@
    if (!nchar(crs))
       return(crs)
    if (.isProj4(crs)) {
-      if (!extended)
+      if (!extended) {
+         if (!is.null(attr(crs,"rotation")))
+            attr(crs,"rotation") <- NULL
          return(crs)
+      }
    }
    if (.crsForceProj4())
       return(.proj4string(crs))
@@ -429,6 +473,8 @@
    if (all(!is.na(lat_ts <- .crsLatTS(crs)))) {
       ret <- paste(ret,paste0("lat_ts=",paste(round(lat_ts,digits),collapse=",")))
    }
+   if (!is.na(sc <- .crsScale(crs)))
+      ret <- paste(ret,paste0("k=",round(sc,3)))
    if (!is.na(x_0 <- .crsX0(crs)))
       if (x_0!=0)
          ret <- paste(ret,paste0("x_0=",round(x_0,0)))
@@ -455,9 +501,13 @@
       return("")
    if (.isProj4(crs))
       return(crs)
-   ret <- sf::st_crs(unclass(crs))$proj4string
+   ret <- try(sf::st_crs(unclass(crs))$proj4string,silent=TRUE)
+   if (inherits(ret,"try-error"))
+      return(crs)
    if (is.na(ret))
       return("")
+   if (!is.null(attr(crs,"rotation")))
+      attr(ret,"rotation") <- attr(crs,"rotation")
    ret
 }
 '.WKT' <- function(crs,WKT2=TRUE) {
@@ -499,4 +549,17 @@
 }
 '.identicalCRS' <- function(src,dst) {
    identical(.crsBeauty(src,extended=TRUE),.crsBeauty(dst,extended=TRUE))   
+}
+'.beautyInput' <- function(obj) {
+   if (inherits(obj,"ursaCRS")) {
+      return(as.character(.crsBeauty(obj)))
+   }
+   else if (inherits(obj,"sfc")) {
+      attr(obj,"crs")$input <- as.character(.crsBeauty(attr(obj,"crs")$input))
+   }
+   else if (inherits(obj,"sf")) {
+      attr(obj[[attr(obj,"sf_column")]],"crs")$input <-
+             as.character(.crsBeauty(attr(obj[[attr(obj,"sf_column")]],"crs")$input))
+   }
+   obj
 }

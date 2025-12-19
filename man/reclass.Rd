@@ -53,7 +53,7 @@ If \code{dst} is \code{NULL} then object of class \code{ursaRaster} with empty c
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 There were no a lot of tests how GIS software reads "ENVI .hdr Labelled Raster" files with color tables without color values (only \emph{categories}). At least, \href{https://gdal.org/en/latest/drivers/raster/envi.html}{GDAL} recognizes categories (\href{https://gdal.org/en/latest/programs/gdalinfo.html}{\code{gdalinfo}} utility).

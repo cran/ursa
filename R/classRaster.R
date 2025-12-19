@@ -1,6 +1,8 @@
 '.raster.skeleton' <- function()
 {
-   obj <- list(grid=NA,con=NA,value=NA,dim=NA,name=NA,colortable=character(0))
+   obj <- list(grid=NA,con=NA
+              ,value=if (.length0()) logical(0) else NA
+              ,dim=NA,name=NA,colortable=character(0))
    class(obj$value) <- "ursaNumeric"
    class(obj$colortable) <- "ursaColorTable"
    class(obj) <- "ursaRaster"
@@ -42,6 +44,10 @@
          Rgrid <- TRUE
       else
          Rgrid <- FALSE
+   }
+   if (!length(object$value)) {
+      isInt <- isTRUE(object$con$datatype %in% c(1L,11L,2L,12L,3L,13L,14L,15L))
+      object$value[] <- if (isInt) integer() else numeric()
    }
    if (!con) {
       if (!is.na(nodata <- ursa_nodata(object)))

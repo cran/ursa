@@ -62,7 +62,7 @@ Function \code{panel_segments} returns value of function \code{\link[graphics]{s
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 For plotted elements it is possible to create legend for colors using color bars. No shapes kind and size, no line widths.

@@ -33,7 +33,7 @@
    function imageFit() {
       const element = document.querySelector('html');
       const figure = document.querySelector('.fit')
-      const image = document.querySelector('.fit > img');
+      const image = document.querySelector('.fit > img, .fit > a > img');
       if (!image)
          return;
       if (false) {   
@@ -65,9 +65,11 @@
      // console.log("scroll",element.scrollHeight,element.clientHeight,figure.scrollHeight,figure.clientHeight,figure.scrollWidth,figure.clientWidth);
      // console.log(element.scrollHeight>element.clientHeight,element.scrollWidth>element.clientWidth);
       while(!hasScrollbar()) {
-          image.style.height = `${image.offsetHeight+1}px`;
+         image.style.height = `${image.offsetHeight+1}px`;
       }
-      image.style.height = `${image.offsetHeight-1}px`;
+      image.style.height = `${image.offsetHeight-2}px`;
+     // if (hasScrollbar())
+     //    image.style.height = `${image.offsetHeight-1}px`;
       image.style.width = `${Math.floor(image.offsetHeight * ratio)}px`;
      // figure.style.lineHeight = `${element.clientHeight-16}px`;
      // console.log(`${Math.floor(image.offsetHeight * ratio)}px`);
@@ -81,6 +83,10 @@
 </script>
 </head>
 <body>
-<div class="fit"><img src="$(fullname)"/></div>
+<div class="fit">
+   <a href="$(fullname)">
+      <img src="$(fullname)"/>
+   </a>
+</div>
 </body>
 </html>

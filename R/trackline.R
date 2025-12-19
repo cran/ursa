@@ -26,14 +26,17 @@
       return(ret)
    }
    if (is_spatial_lines(obj)) {
+     # options(warn=10)
       crd <- sapply(seq(1,2),function (x) basename(tempfile(pattern="")))
       if (is.null(by)) {
          by <- rep(0L,spatial_count(obj))
       }
-      index <- by(obj,by,rownames)
+      index <- by(obj,by,simplify=FALSE,rownames) ## 20251008 simplify=FALSE
       conseq <- is.list(index)
       if (!conseq)
          da <- spatial_data(obj)
+     # str(index)
+     # print(c('conseq.before'=conseq))
       a <- lapply(index,function(x) {
          if (is.null(x))
             return(NULL)
@@ -48,29 +51,36 @@
          }
         # ind2 <- which(!duplicated(xy))
          da <- spatial_data(obj[ind,])
-         da <- rbind(da[1L,],da)
+         da <- rbind(da[1L,,drop=FALSE],da)
          cname <- colnames(da)
-         if (length(ind3 <- grep("\\.1$",cname))>0) {
+         if (hasSuppl <- length(ind3 <- grep("\\.1$",cname))>0) {
             for (i in ind3) {
                da[1,gsub("\\.1$","",cname[i])] <- da[1,i]
             }
             da[,ind3] <- NULL
          }
          nxy <- unname(sapply(xy,nrow))
-         if (nrow(da[-1,])==sum(nxy)) {
+         if (nrow(da[-1,,drop=FALSE])==sum(nxy)) {
             xy <- do.call(rbind,xy)
             colnames(xy) <- crd
             ind2 <- c(1L,which(seq_len(nrow(xy)) %% 2 ==0))
             ret <- cbind(xy[ind2,],da)
             return(ret)
          }
-         da <- da[-1,]
+         if (!hasSuppl)
+            da <- da[-1,,drop=FALSE]
          ret <- vector("list",nrow(da))
          for (i in seq_along(ret)) {
-            if (i<length(ret))
-               ret[[i]] <- cbind(head(xy[[i]],-1L),da[rep(i,nxy[i]-1L),])
-            else
-               ret[[i]] <- cbind(xy[[i]],da[rep(i,nxy[i]),])
+            if (i<length(ret)) {
+               ret[[i]] <- cbind(head(xy[[i]],-1L),da[rep(i,nxy[i]-1L),,drop=FALSE])
+            }
+            else {
+               if (hasSuppl) {
+                  ret[[i]] <- cbind(tail(xy[[i-1]],1),da[rep(i,nxy[i-1]-1L),,drop=FALSE])
+               }
+               else
+                  ret[[i]] <- cbind(xy[[i]],da[rep(i,nxy[i]),,drop=FALSE])
+            }
          }
          ret <- do.call(rbind,ret)
          colnames(ret)[c(1,2)] <- crd
@@ -150,8 +160,12 @@
             sp::proj4string(res) <-  sp::CRS(spatial_crs(obj),doCheckCRSArgs=FALSE)
       }
       else if (.isSF(obj)) {
-         if (nrow(xy)==1)
-            res <- sf::st_sfc(sf::st_linestring(xy[integer(),]),crs=spatial_crs(obj))
+         if (nrow(xy)==1) {
+            if (FALSE)
+               res <- sf::st_sfc(sf::st_linestring(xy[integer(),]),crs=spatial_crs(obj))
+            else
+               res <- sf::st_sfc(sf::st_linestring(xy[c(1,1),]),crs=spatial_crs(obj))
+         }
          else
             res <- sf::st_sfc(sf::st_linestring(xy),crs=spatial_crs(obj))
          if (develNullInput <- TRUE) {

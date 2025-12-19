@@ -220,6 +220,7 @@
    if ((missing(pos))&&(missing(vertical))&&(missing(cex))) {
       pos <- getOption("ursaPngAttribution","bottomright vertical")
       pos <- strsplit(pos,split="\\s+")[[1]]
+      pos <- pos[nchar(pos)>0]
       ind1 <- grep("^[hv]",pos)
       ind2 <- grep("(^top(left|right)*|^bottom(left|right)*|^(left|right))",pos)
       ind3 <- grep("\\d+(\\.\\d+)",pos)
@@ -228,7 +229,7 @@
       if (length(ind1)) {
          if (grepl("^h",pos[ind1]))
             vertical <- FALSE
-         else if (grepl("^v",pos[ind2]))
+         else if (grepl("^v",pos[ind1]))
             vertical <- TRUE
       }
       if (length(ind3)) {
@@ -239,6 +240,10 @@
       } else {
          pos <- "bottomright"
       }
+      if ((vertical)&&(pos %in% c("bottom","top")))
+         vertical <- FALSE
+      else if ((!vertical)&&(pos %in% c("left","right")))
+         vertical <- TRUE
    }
   # print(data.frame(pos=pos,vertical=vertical,cex=cex));q()
   # ann <- paste(c(getOption("ursaPngCopyright")),collapse="\n")

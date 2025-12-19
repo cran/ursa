@@ -44,6 +44,22 @@
          fname <- .ursaCacheRaster(fname0,unpack="bzip2")
       }
    }
+   else if ((nchar(Sys.which("zstd")))&&
+            (isZip <- (isZip1 <- .lgrep("\\.zst$",fname)>0)||
+                      (isZip2 <- file.exists(paste0(fname,".zst"))))) {
+      if (isZip1)
+         fname0 <- fname
+      else if (isZip2)
+         fname0 <- paste0(fname,".zst")
+      if (FALSE) {
+         fname <- tempfile()
+        # on.exit(file.remove(fname))
+         system2("zstd",c("-f -d -c",.dQuote(fname0)),stdout=fname,stderr=FALSE)
+      }
+      else {
+         fname <- .ursaCacheRaster(fname0,unpack="zstd")
+      }
+   }
    else if (.lgrep("^(https|http|ftp)\\://",fname)) {
       fname <- .ursaCacheDownload(fname,quiet=FALSE,mode="wb")
    }
@@ -216,27 +232,34 @@
          stop(paste("","-----","Please specify only one variable (argument 'var='):"
                    ,paste(paste(seq(along=varList),". ",varList,sep=""),collapse="\n")
                    ,"-----",sep="\n"))
-      else
-         varName <- varList[1]
+      else {
+         if (length(varName)>1)
+            varName <- varList[1]
+      }
    }
-   att <- ncdf4::ncatt_get(nc,varName)
-   md <- nc$var[[varName]][c("size","dimids","prec","unlim")]
-   md$id <- md$dim <- NULL
-   if (length(att))
-      md <- c(md,'-------------'=NA,att)
-   if ((verbose)&&(1)) {
-      str(md)
+   general <- isFALSE(length(varName)==1)
+   if (!general) {
+      att <- ncdf4::ncatt_get(nc,varName)
+      md <- nc$var[[varName]][c("size","dimids","prec","unlim")]
+      md$id <- md$dim <- NULL
+      if (length(att))
+         md <- c(md,'-------------'=NA,att)
+      if ((verbose)&&(1)) {
+         str(md)
+      }
+      if (FALSE) {
+         nc2 <- nc$var[[varName]]
+         val2 <- ncdf4::ncvar_get(nc,varName)
+         att2 <- ncdf4::ncatt_get(nc,varName) ## $flag_values $flag_meanings -> colortable
+         str(nc2)
+         str(val2)
+         str(att2)
+         q()
+      }
+      a <- nc$var[[varName]]$dim
    }
-   if (FALSE) {
-      nc2 <- nc$var[[varName]]
-      val2 <- ncdf4::ncvar_get(nc,varName)
-      att2 <- ncdf4::ncatt_get(nc,varName) ## $flag_values $flag_meanings -> colortable
-      str(nc2)
-      str(val2)
-      str(att2)
-      q()
-   }
-   a <- nc$var[[varName]]$dim
+   else
+      a <- nc$dim
    if (is.null(a)) {
       if (verbose)
          message("scalar value")
@@ -263,7 +286,7 @@
       y
    })
   # b$crs <- "" #ncdf4.helpers::nc.get.proj4.string(nc,varName)
-   if (length(md$dimids)<2) {
+   if ((!general)&&(length(md$dimids)<2)) {
       if (verbose)
          message("one-dimensional variable")
       val3 <- ncdf4::ncvar_get(nc,varName)

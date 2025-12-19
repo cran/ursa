@@ -7,6 +7,7 @@
       if (!is.numeric(retina0))
          retina0 <- 1
    }
+  # options(ursaFigChunk=NULL)
    arglist <- list(...)
    mosaic <- .getPrm(arglist,name="",default=NA,class="")
    fileout <- .getPrm(arglist,name="fileout",default="")
@@ -19,10 +20,11 @@
    scale <- .getPrm(arglist,name="^scale$",class="",default=NA_real_)
    width <- .getPrm(arglist,name="width",class=list("integer","character"),default=NA_real_)
    height <- .getPrm(arglist,name="height",class=list("integer","character"),default=NA_real_)
-   indent <- .getPrm(arglist,name="(space|offset|indent)",default=NA_real_)
+   indent <- .getPrm(arglist,name="(^space|offset|indent)",default=NA_real_)
   # frame <- .getPrm(arglist,name="(frame|colorbar|strip)(height)*",default=NA_real_)
    frame <- .getPrm(arglist,name="((frame|strip)(height)*|colorbar$)",default=NA_real_)
    box <- .getPrm(arglist,name="box",default=TRUE)
+   extraspace <- .getPrm(arglist,name="extraspace",default=NA_real_)
    delafter <- .getPrm(arglist,name="(del|remove)after",default=NA)
    dim <- .getPrm(arglist,name="^dim",class=list("integer","ursaGrid"),default=NA_integer_)
    wait <- .getPrm(arglist,name="wait",default=switch(.Platform$OS.type,windows=1,3))
@@ -40,14 +42,21 @@
    fixed <- .getPrm(arglist,name="^(fixed)",default=FALSE)
    verbose <- .getPrm(arglist,name="verb(ose)*",kwd="open",default=FALSE)
    options(ursaPngWebCartography=FALSE)
-   if (length(dim)==2) {
-      .compose_grid(unname(dim))
+   if (is.null(getOption("ursaPngComposeGrid"))) {
+      if (length(dim)==2) {
+         .compose_grid(unname(dim))
+      }
+      else if (.is.grid(dim)) {
+        # .compose_grid(unname(dim(dim)))
+         .compose_grid(dim)
+      }
+      else if (is_spatial(mosaic))
+         .compose_grid(regrid(spatial_grid(mosaic),border=27))
+      else if (is_ursa(mosaic)) {
+         .compose_grid(mosaic)
+      }
    }
-   else if (.is.grid(dim)) {
-      .compose_grid(unname(dim(dim)))
-   }
-   if (is_spatial(mosaic))
-      .compose_grid(regrid(spatial_grid(mosaic),border=27))
+   g3 <- .compose_grid()
    if (is.ursa(mosaic)) {
       cr <- attr(mosaic,"copyright")
       if ((is.character(cr))&&(nchar(cr)>1)) {
@@ -56,8 +65,20 @@
          options(ursaPngWebCartography=TRUE)
          scale <- 1
       }
+      else {
+         if (.isWeb(g3)) {
+            if (!("scale" %in% names(arglist))) {
+           # if (is.na(scale)) {
+               options(ursaPngWebCartography=TRUE)
+               scale <- 1
+            }
+           # else if (!is.numeric(scale))
+           #    scale <- NA
+         }
+      }
    }
-   else if ((.isMerc())&&(!is.na(.is.near(session_cellsize(),2*6378137*pi/(2^(1:21+8)))))) {
+  # else if ((.isMerc())&&(!is.na(.is.near(session_cellsize(),2*6378137*pi/(2^(1:21+8)))))) {
+   else if (.isWeb()) {
      # print("WEB #2")
       arglist <- as.list(match.call()) ## try mget(names(match.call())[-1])
       if (!("scale" %in% names(arglist))) {
@@ -79,14 +100,26 @@
    }
    if ((is.character(mosaic))&&(mosaic=="rgb"))
       mosaic <- compose_design(layout=c(1,1),legend=NULL)
-   else if (!inherits(mosaic,"ursaLayout"))
+   else if (!inherits(mosaic,"ursaLayout")) {
       mosaic <- compose_design(...)
+   }
    if ((isTRUE(fixed))&&(is.na(scale)))
       scale <- 1
+   if ((is.na(scale))&&(length(dim)==2)&&(all(!is.na(dim)))) {
+      scale <- 1
+   }
+   if ((is.character(scale))&&(!grepl("^\\d.+",scale)))
+      scale <- NA
+   ##~ if (fixed) {
+      ##~ print(mosaic)
+      ##~ print(session_grid())
+      ##~ q()
+     ##~ # ol <- .optimal_layout(obj,ratio=ratio,verbose=verbose)
+   ##~ }
    .compose_open(mosaic=mosaic,fileout=fileout,dpi=dpi,pointsize=pointsize
                 ,scale=scale,width=width,height=height
-                ,indent=indent,frame=frame,box=box,delafter=delafter,wait=wait
-                ,device=device,antialias=antialias,font=font
+                ,indent=indent,frame=frame,box=box,extraspace=extraspace,delafter=delafter
+                ,wait=wait,device=device,antialias=antialias,font=font
                 ,background=background,retina=retina,bpp=bpp,dev=dev,verbose=verbose)
    if (dev) {
       options(ursaPngPlot=TRUE)
@@ -96,7 +129,7 @@
 }
 '.compose_open' <- function(mosaic=NULL,fileout="",dpi=NA,pointsize=NA,scale=NA
                           ,width=NA,height=NA
-                          ,indent=NA,frame=NA,box=TRUE,delafter=NA,wait=5
+                          ,indent=NA,frame=NA,box=TRUE,extraspace=NA,delafter=NA,wait=5
                           ,device=NA,antialias=NA,font=NA,background="white"
                           ,retina=NA,bpp=NA,dev=FALSE,verbose=FALSE) {
    if (is.na(retina)) {
@@ -109,7 +142,7 @@
       str(list(mosaic=if (is.list(mosaic)) sapply(mosaic,class) else class(mosaic)
               ,fileout=fileout,dpi=dpi,pointsize=pointsize,scale=scale
               ,width=width,height=height,indent=indent,frame=frame
-              ,box=box,delafter=delafter,wait=wait,device=device
+              ,box=box,extraspace=extraspace,delafter=delafter,wait=wait,device=device
               ,antialias=antialias,font=font,background=background,bpp=bpp,dev=dev
               ,verbose=verbose))
    }
@@ -272,8 +305,12 @@
       sizec <- sizec+1*2.54/dpi
       sizer <- sizer+1*2.54/dpi
    }
-   png_height <- round(sum(sizer)*dpi/2.54+5*dpi/96+5*dpi*pointsize/pointsize0)
-   png_width <- round(sum(sizec)*dpi/2.54+5*dpi/96+5*dpi*pointsize/pointsize0)
+   if (is.na(extraspace))
+      extraspace <- 1
+   else if (extraspace<0.1)
+      extraspace <- 1/5
+   png_height <- round(sum(sizer)*dpi/2.54+5*dpi/96+extraspace*5*dpi*pointsize/pointsize0)
+   png_width <- round(sum(sizec)*dpi/2.54+5*dpi/96+extraspace*5*dpi*pointsize/pointsize0)
    dname <- dirname(fileout)
    if ((dname!=".")&&(!dir.exists(dname)))
       dir.create(dname,recursive=TRUE)

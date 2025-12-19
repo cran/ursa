@@ -3,6 +3,7 @@
    if (forceInfo <- TRUE) {
       gi <- sf::gdal_utils("info",fname,quiet=TRUE)
       gi <- strsplit(gi,split="\\n")[[1]]
+     # cat(gi,sep="\n");q()
       nd <- grep("NoData Value",gi,value=TRUE)
       if (length(nd)>0) {
          md$nodata <- as.numeric(gsub("^.*=(\\s*(\\S+))$","\\1",nd))

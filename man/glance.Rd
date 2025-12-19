@@ -145,7 +145,7 @@ Command line usage implies external software for PNG view \code{\link[ursa:sessi
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 Package \pkg{sp} is 'Suggested' for package \pkg{ursa}.

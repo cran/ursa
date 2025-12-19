@@ -1,1 +1,1 @@
-'ursa_cache' <- function() NULL
+'ursa_cache' <- function() invisible(NULL)

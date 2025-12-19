@@ -22,8 +22,17 @@
    kwd <- "blank"
    g1 <- .getPrm(arglist,name="(\\s*|grid|ref|dim)",kwd=kwd
                 ,class=c("ursaRaster","ursaGrid"),default=NULL)
-   if (is.null(g1))
-      g1 <- .panel_grid()
+   if (is.null(g1)) {
+      if (!is.null(g0 <- getOption("ursaSessionGrid"))) {
+         g2 <- .compose_grid()
+         if (!identical(g0,g2))
+            g1 <- g0 ## or `g2`?
+         else
+            g1 <- .panel_grid()
+      }
+      else
+         g1 <- .panel_grid()
+   }
    else {
       g1 <- ursa_grid(g1)
       .panel_grid(g1)

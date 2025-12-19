@@ -18,7 +18,7 @@
       ret <- with(.panel_grid(),rasterImage(as.raster(obj),minx,miny,maxx,maxy,...))
    }
    else if (is.character(obj)) {
-      if (.lgrep("\\.(shp(\\.zip)*|(geojson|sqlite|gpkg)(\\.(gz|bz2))*)$",obj)) {
+      if (.lgrep("\\.(shp(\\.zip)*|(geojson|sqlite|gpkg)(\\.(gz|bz2|zst))*)$",obj)) {
          if (FALSE) { ## 20171216 deprecated
             op <- options(warn=0)
            # requireNamespace("rgdal",quietly=.isPackageInUse())
@@ -521,13 +521,33 @@
    ##~ str(obj)
    ##~ str(arglist)
    ##~ message("-----------------")
+   g1 <- getOption("ursaPngPanelGrid")
+   if ((length(g1$rotation))&&(g1$rotation!=0)) {
+      rotation <- .rotation(g1)
+      str(rotation)
+      print(spatial_coordinates(obj))
+      xy <- spatial_geometry(obj)
+      b <- attributes(xy)
+      xy <- lapply(xy,function(xy2) {
+         if (!is.list(xy2))
+            .rotate(xy2,rotation)
+         xy3 <- lapply(xy2,.rotate,rotation)
+         return(xy3)
+      })
+      attributes(xy) <- b
+      spatial_geometry(obj) <- xy
+      print(spatial_coordinates(obj))
+     # 'rot' <- function(a) matrix(c(cos(a),sin(a),-sin(a),cos(a)),2,2)
+     # spatial_geometry(obj) <- spatial_geometry(obj)*rot(g1$rotation*pi/180)
+     # print(spatial_coordinates(obj))
+     # q()
+   }
    ret <- do.call("plot",c(list(obj),arglist))
    if (!is.null(opW))
       options(opW)
    ret
 }
-'.legend.skeleton' <- function()
-{
+'.legend.skeleton' <- function() {
    leg <- list(name="legend item",type="default"
               ,col="transparent",border="transparent",lty=NULL,lwd=NULL,pch=0,cex=NA
               ,fill="transparent",bg="transparent",density=NA,angle=45)

@@ -26,7 +26,7 @@
       }
       return(obj)
    }
-   g1 <- g2 <- obj$grid
+   g1 <- obj$grid
    g1$minx <- min(a$x)-g1$resx/2-border[2]*g1$resx
    g1$miny <- min(a$y)-g1$resy/2-border[1]*g1$resy
    g1$maxx <- max(a$x)+g1$resx/2+border[4]*g1$resx

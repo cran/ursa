@@ -38,7 +38,7 @@ Returned value from \code{\link[graphics]{image}} or \code{\link[graphics]{fille
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

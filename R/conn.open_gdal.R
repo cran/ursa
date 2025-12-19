@@ -14,7 +14,7 @@
   # if (verbose)
   #    print(c(engine=engine),quote=FALSE)
    fname <- gsub("\\.$","",fname)
-   if (length(envi_list(fname))==1) {
+   if (length(envi_list(fname,exact=TRUE))==1) {
       return(open_envi(fname,cache=TRUE,verbose=verbose))
    }
    if ((engine=="vapour")&&(requireNamespace("vapour",quietly=.isPackageInUse()))) {

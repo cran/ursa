@@ -35,7 +35,7 @@
       border <- ifelse(bg1<128,"#FFFFFF4F","#0000002F") # grey70
    lwd <- .getPrm(arglist,name="lwd",kwd=kwd,default=0.5)
    lty <- .getPrm(arglist,name="lty",kwd=kwd,default=2L)
-   language <- .getPrm(arglist,name="language",kwd=kwd,default=NA_character_)
+   language <- .getPrm(arglist,name="lang(uage)*",kwd=kwd,default=NA_character_)
    verbose <- .getPrm(arglist,name="verb(ose)*",kwd=kwd,default=FALSE)
    if (is.integer(marginalia)) {
       if ((length(panel)==1)&&(panel==0))
@@ -85,6 +85,8 @@
       proj4 <- .proj4string(g1$crs)
    else
       proj4 <- g1$crs ## proj4sring is FASTER for 'sf'
+   if (length(g1$rotation))
+      attr(proj4,"rotation") <- .rotation(g1)
    isProj <- .isCRS(g1$crs)
   # projClass <- if (isProj) .gsub(".*\\+proj=(\\S+)\\s.+","\\1",proj4) else ""
    if (isProj) {
@@ -265,7 +267,7 @@
       lat <- xy[,2]
       cond1 <- length(which(abs(lon)<=10))>0
       cond2 <- length(which(abs(abs(lon)-180)<=10))>0
-      if (cond1 && cond2 && projClass %in% c("laea","stere"))
+      if (cond1 && cond2 && projClass %in% c("laea","stere","aeqd"))
          pole <- TRUE
       else {
          pole <- FALSE
@@ -283,13 +285,13 @@
       isNorth <- all(lat>=0)
       isEquator <- any(lat>0) & any(lat<0)
       isLatDistortion <- isEquator & isProj & !isLonLat &
-                         projClass %in% c("laea","merc","cea")
+                         projClass %in% c("laea","aeqd","merc","cea")
      # alat <- sort(abs(lat))
       alat <- sort(lat)
      # print(c(lat=lat,lon=lon))
      # pole <- any(lat>80)
-      dx <- (maxx-minx)/1000
-      dy <- (maxy-miny)/1000
+      dx <- (maxx-minx)/g1$resx ## --20250326 (maxx-minx)/1000
+      dy <- (maxy-miny)/g1$resy ## --20250326 (maxy-miny)/1000
       nrE <- ifelse(isLatDistortion,5,3) ## if equator then 5?
       if (dx<dy) {
          sc <- dy/dx
@@ -531,7 +533,7 @@
       }
       else {
          latSet <- na.omit(latSet)
-         if (projClass %in% c("stere","laea")[1])
+         if (projClass %in% c("stere","laea","aeqd")[1])
             latS <- seq(min(latSet),max(latSet),len=2)
          else if (projClass %in% c("merc"))
             latS <- c(-1,1)*(90-1e-6)
@@ -947,7 +949,11 @@
    .panel_graticule(obj,marginalia=marginalia,verbose=verbose)
 }
 '.panel_graticule' <- function(obj,marginalia=rep(TRUE,4),verbose=FALSE) {
-   g1 <- .compose_grid()
+   g1 <- getOption("ursaPngCoastLine",NULL)
+   if (is.null(g1))
+      g1 <- .compose_grid()
+   else
+      g1 <- g1$grid
    g2 <- .panel_grid()
   # internal <- isTRUE(comment(marginalia)=="internal")
    internal <- !identical(g1,g2)
@@ -993,6 +999,7 @@
                      cond3 <- TRUE
                   if (!.isPackageInUse())
                      cat("============ panel_graticule: try `.identicalCRS()`\n")
+                       # ,.identicalCRS(g1a,g2a),"\n")
                   ret <- cond1 & cond2 & cond3
                }
             }
@@ -1040,7 +1047,28 @@
          if ((sum(marginalia[c(1,3)])>0)&&(sum(marginalia[c(2,4)])))
             internal <- FALSE
       }
-     # print(c(bottom=isBottom,left=isLeft,top=isTop,right=isRight))
+     # print(data.frame(indc=indc,indr=indr,bottom=isBottom,left=isLeft,top=isTop,right=isRight))
+      if (develI <- TRUE) { ## ++ 20250326
+         p <- pngOp[["ursaPngLayout"]]
+         if (prod(p$dim)==p$legend) {
+            if ((!isLeft)&&(!isRight)&&(length(indr)==1)) {
+               p3 <- pngOp[["ursaPngFigure"]]
+               p2 <- p$layout[indr,]
+               p4 <- p2[p2>0 & p2<=p$image]
+               p2[p2<=p$image] <- 0L
+               if ((p3==tail(p4,1))&&(head(p2,1)>0)&&(tail(p2,1)>0))
+                  internal <- TRUE
+            }
+            else if ((!isTop)&&(!isBottom)&&(length(indc)==1)) {
+               p3 <- pngOp[["ursaPngFigure"]]
+               p2 <- p$layout[,indc]
+               p4 <- p2[p2>0 & p2<=p$image]
+               p2[p2<=p$image] <- 0L
+               if ((p3==head(p4,1))&&(head(p2,1)>0)&&(tail(p2,1)>0))
+                  internal <- TRUE
+            }
+         }
+      }
       if (internal) {
          panel2 <- pngOp[["ursaPngLayout"]][["image"]]
         # fig2 <- pngOp[["ursaPngFigure"]]

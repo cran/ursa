@@ -78,7 +78,6 @@
    if (!nchar(proj4)) {
       opt <- c(opt,to="SRC_METHOD=NO_GEOTRANSFORM",to="DST_METHOD=NO_GEOTRANSFORM")
    }
-   a <- ursa_read(src)
    if (!("co" %in% names(opt))) {
       if (driver=="GTiff") {
          pr <- ifelse(((removeSrc)&&(inherits(.src$value,"ursaNumeric"))),c(3,1)[2],c(2,1)[2])
@@ -173,7 +172,7 @@
      # hdr <- readLines(paste0(dst,".hdr"))
      # print(hdr)
       if (length(ct)>0) {
-         ret <- colorize(ret,colorable=ct,lazyload=TRUE) ## ++ 20240304
+         ret <- colorize(ret,colortable=ct,lazyload=TRUE) ## ++ 20240304
         # ursa_colortable(ret) <- ct ## -- 20240304
       }
       if (is.ursa(src))

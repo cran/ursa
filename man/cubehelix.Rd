@@ -8,7 +8,7 @@ Generate "cubehelix" palette.
 }
 \usage{
 cubehelix(n, value = numeric(), weak = NA, rich = NA, rotate = NA, hue = NA, gamma = 1,
-          dark = NA, light = NA, bright = NA, inv = NA, verbose = NA)
+          dark = NA, light = NA, bright = NA, inv = NA, shuffle = FALSE, verbose = NA)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -43,7 +43,10 @@ Positive numeric in interval between 0 and 255. The intensity of the lightest co
 Positive numeric in interval between 0 and 255. Value for equal intensity for \code{dark} and \code{light} in the palette. Applied only for both \code{dark=NA} and \code{light=NA}.
 }
   \item{inv}{
-Logical. Inversion of color intensity. If \code{TRUE} then color vector is \link[base:rev]{reversed} before return. Default is \code{FALSE}.
+Logical. Inversion of color intensity. If \code{TRUE} then color vector is \link[base:rev]{reversed} before return. Default is \code{NA}, which is interpeted as \code{FALSE}.
+}
+  \item{shuffle}{
+Logical. Should sequence of colors be rearranged occassionally. If \code{TRUE} then color vector is \link[base:sample]{rearranged} before return. Default is \code{NA}, which is interpeted as \code{FALSE}.
 }
   \item{verbose}{
 Logical. Value \code{TRUE} provides information about cube helix on console. Default is \code{NA}, which is interpreted as \code{FALSE}.

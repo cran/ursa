@@ -3,9 +3,9 @@
 # b <- colorize(n,rich=0,rotate=60,hue=1.5 ~ for bathymetry
 
 'cubehelix' <- function(n,value=numeric(),weak=NA,rich=NA,rotate=NA,hue=NA,gamma=1
-                       ,dark=NA,light=NA,bright=NA,inv=NA,verbose=NA)
+                       ,dark=NA,light=NA,bright=NA,inv=NA,shuffle=FALSE,verbose=NA)
 {
-  # str(match.call())
+  # str(as.list(match.call()))
   # set.seed(as.integer(as.numeric(Sys.time())/10))
   # value <- NULL
   # verbose <- TRUE
@@ -72,7 +72,15 @@
             divergent <- FALSE
          }
          else {
+            indZ <- integer()
             if (isInterval) {
+               if (TRUE) { ## 20251204 TRUE
+                  if (length(indZ <- which(value %in% 0))==1L) {
+                     indZ <- indZ+c(0L,1L)
+                  }
+                  else
+                     indZ <- integer()
+               }
                dval <- diff(value)
                value <- c(head(value,1)-head(dval,1)/2
                          ,tail(value,-1)-dval/2
@@ -81,7 +89,8 @@
             nzer2 <- length(which(abs(value)<eps))
            # npos <- length(which(value>(-eps)))
            # nneg <- length(which(value<(+eps)))
-            indZ <- which(abs(abs(value)-min(abs(value)))<1e-11)
+            if (!length(indZ))
+               indZ <- which(abs(abs(value)-min(abs(value)))<1e-11)
             if (nzer2) { ## 20170123 added '(TRUE)', 20170201 changed (nzer)
               # print(c(pos=npos,neg=nneg))
                npos <- length(which(seq(n)>=head(indZ,1)))
@@ -132,9 +141,21 @@
          lambda <- rev(lambda)
      # print(round(lambda*255,1))
    }
-   if ((is.character(rotate))&&(.lgrep("circle|round",rotate))) {
-      if (n>1)
-         rotate <- .sample(c(-1,1),1)*360*(1-1/n)
+   if (is.character(rotate)) {
+      if (n>1) {
+         if (.lgrep("circle|round",rotate))
+            rotate <- .sample(c(-1,1),1)*360*(1-1/n)
+         else if (.lgrep("lap",rotate)) {
+            rotate <- gsub("(\\d+(\\.\\d+)*)\\s*\\w+","\\1",rotate)
+            if (grepl("\\.",rotate))
+               rotate <- as.numeric(rotate)
+            else
+               rotate <- as.numeric(rotate)*(n-1)/n
+            rotate <- .sample(c(-1,1),1)*360*rotate
+         }
+         else
+            rotate <- NA
+      }
       else
          rotate <- NA
    }
@@ -208,6 +229,8 @@
       cond1 <- !length(value[value>0]) & length(value[value<0])>2
       inv <- bg<128 | cond1
    }
+   if (isTRUE(shuffle))
+      return(.sample(out))
    if (inv)
       return(rev(out))
    out

@@ -68,6 +68,7 @@
          compose_open(legend=NULL,...)
          panel_new(...)
          panel_decor(...)
+         panel_annotation(...)
          if (TRUE) { #(.isPackageInUse())
             fann <- .dir(path=system.file("optional/sponsorship",package="ursa")
                          ,pattern="\\.png$",full.names=TRUE)

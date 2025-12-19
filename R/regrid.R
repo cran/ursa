@@ -2,7 +2,6 @@
                       ##~ ,resetGrid=TRUE,verbose=0L)
 'regrid' <- function(x,...)
 {
-  # print("resize")
    arglist <- list(...)
    if (missing(x)) {
       result <- .regrid(...)
@@ -22,12 +21,16 @@
    }
   # grid <- do.call("regrid",as.list(match.call())[-1])
   # session_grid(x) ## removed 20160619
-   cond <- .getPrm(arglist,class="ursaRaster",default=NULL)
-   if ((FALSE)&&((is.ursa(cond))||(length(arglist)==0))) { ## or don't include '!length'?
+   cond1 <- .getPrm(arglist,class="ursaRaster",default=NULL)
+   cond2 <- any(!is.na(pmatch(names(arglist),c("mul","aaaaextragrid!!!"))))
+   if ((FALSE)&&((is.ursa(cond1))||(length(arglist)==0))) { ## or don't include '!length'?
       return(ursa_crop(x,...))
    }
-   else
+   else {
+      if (cond2)
+         session_grid(x)
       g2 <- do.call(".regrid",arglist)
+   }
    session_grid(x) ## added 20160619
    resetGrid <- TRUE
    cover <- NA
@@ -65,6 +68,7 @@
       }
       arglist[[1]] <- g2
       names(arglist)[1] <- "grid"
+      arglist <- arglist[names(arglist) %in% names(as.list(args(".gdalwarp")))]
       arglist <- c(list(src=x),arglist)
       res <- do.call(".gdalwarp",arglist)
       return(res)
@@ -175,8 +179,9 @@
          class(y$value) <- clValue
          storage.mode(y$value) <- smValue
       }
-      else
+      else {
          class(y$value) <- "ursaNumeric"
+      }
    }
   # if ((.is.colortable(x$colortable))&&(length(unique(y$value))==length(x$colortable)))
   #    y$colortable <- x$colortable
@@ -193,7 +198,7 @@
                              ,proj4=NA,crs=NA,border=0
                              ,zero=c("keep","node","center")
                              ,raster=FALSE,tolerance=NA #1e-10
-                             ,zoom=NA,adjust=c(0.5,0.5)
+                             ,zoom=NA,rotation=NA,adjust=c(0.5,0.5)
                              ,verbose=FALSE,...)
 {
    if (is.character(border)) ## cuttof 'border' in 'plot' functions
@@ -204,7 +209,7 @@
       res <- .getPrm(arglist,name="cell",default=as.numeric(res)) ## cell, cellsize -> res
    }
    mtol <- 1e5 # [1e2->1e5 20170720]
-   etol <- 1e-14
+   etol <- 1e-9 # 1e-14 before 20250818
    zero <- match.arg(zero)
    if (missing(grid)) {
       checkZero <- FALSE
@@ -352,6 +357,9 @@
    }
    if ((anyNA(res))&&(!is.na(resx))&&(!is.na(resy)))
       res <- c(resx,resy)
+   if (!is.na(rotation))
+      if (rotation!=0)
+         g$rotation <- rotation
    if (is.numeric(mul))
    {
       g$resx <- g$resx/mul
@@ -380,11 +388,19 @@
          g$maxy <- maxy
          minx <- miny <- maxx <- maxy <- NA
       }
+      if (isTRUE(tolerance==0)) {
+         tolerance <- NA
+         tryExpand <- TRUE
+      }
+      else
+         tryExpand <- FALSE
       if (is.na(tolerance))
          tolerance <- getOption("ursaTolerance",NA)
       if (is.na(tolerance)) {
-         tolx <- .Machine$double.eps*max(abs(c(g$minx,g$maxx)))*mtol
-         toly <- .Machine$double.eps*max(abs(c(g$miny,g$maxy)))*mtol
+        # tolx <- .Machine$double.eps*max(abs(c(g$minx,g$maxx)))*mtol
+        # toly <- .Machine$double.eps*max(abs(c(g$miny,g$maxy)))*mtol
+         tolx <- .Machine$double.eps*g$resx*mtol
+         toly <- .Machine$double.eps*g$resy*mtol
          if (tolx<etol)
             tolx <- etol
          if (toly<etol)
@@ -397,7 +413,7 @@
       c0 <- with(g,(maxx-minx)/resx)
       r0 <- with(g,(maxy-miny)/resy)
      # r0 <- with(g,((maxy-meany)-(miny-meany))/resy)
-      if ((!.is.integer(r0,toly))||(!.is.integer(c0,tolx))) {
+      if ((tryExpand)||(!.is.integer(r0,toly))||(!.is.integer(c0,tolx))) {
          if (verbose) {
             message("#1. 'bbox' is changed to integerity of matrix dimension")
          }
@@ -412,6 +428,7 @@
          g$columns <- as.integer(round(c0))
          g$rows <- as.integer(round(r0))
       }
+     # print(c(ncol=g$columns,nrow=g$rows))
       if ((!.is.integer(g$columns,tolx))||(!.is.integer(g$rows,toly))) {
          print(c(dc=g$columns-round(g$columns),dr=g$rows-round(g$rows)))
          stop(paste("#1. Unable to calculate integer dim size."
@@ -547,8 +564,11 @@
       c0 <- with(g,(maxx-minx)/resx)
       r0 <- with(g,(maxy-miny)/resy)
       if (is.na(tolerance)) {
-         tolx <- .Machine$double.eps*max(abs(c(g$minx,g$maxx)))*mtol
-         toly <- .Machine$double.eps*max(abs(c(g$miny,g$maxy)))*mtol
+         ##~ tolx <- .Machine$double.eps*max(abs(c(g$minx,g$maxx)))*mtol
+         ##~ toly <- .Machine$double.eps*max(abs(c(g$miny,g$maxy)))*mtol
+         tolx <- .Machine$double.eps*g$resx*mtol
+         toly <- .Machine$double.eps*g$resy*mtol
+        # print(c(tolx=tolx,toly=toly,etol=etol,eps=.Machine$double.eps))
          if (tolx<etol)
             tolx <- etol
          if (toly<etol)
@@ -573,7 +593,7 @@
          g$rows <- as.integer(round(r0))
       }
       if ((!.is.integer(g$columns,tolx))||(!.is.integer(g$rows,toly))) {
-        # print(g)
+         print(g)
         # if (verbose)
             print(c(dc=g$columns-round(g$columns),dr=g$rows-round(g$rows)
                    ,tolx=tolx,toly=toly))
@@ -603,8 +623,14 @@
   # else {
   #    message("skip")
   # }
-   if (is.na(g$crs))
+   if (is.na(g$crs)) {
       g$crs <- ""
+   }
+   if (!nchar(g$crs)) {
+      if (!is.na(bbox[1]))
+         if (!is.null(crs <- attr(bbox,"crs")))
+            g$crs <- crs
+   }
    if (any(border!=0))
    {
       border <- round(rep(border,length=4))
@@ -616,8 +642,10 @@
       g$rows <- with(g,(maxy-miny)/resy)
      # print("STEP3")
       if (is.na(tolerance)) {
-         tolx <- .Machine$double.eps*max(abs(c(g$minx,g$maxx)))*mtol
-         toly <- .Machine$double.eps*max(abs(c(g$miny,g$maxy)))*mtol
+         ##~ tolx <- .Machine$double.eps*max(abs(c(g$minx,g$maxx)))*mtol
+         ##~ toly <- .Machine$double.eps*max(abs(c(g$miny,g$maxy)))*mtol
+         tolx <- .Machine$double.eps*g$resx*mtol
+         toly <- .Machine$double.eps*g$resy*mtol
          if (tolx<etol)
             tolx <- etol
          if (toly<etol)

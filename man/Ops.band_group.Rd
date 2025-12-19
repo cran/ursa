@@ -55,7 +55,7 @@ Named vector of numerical or integer values. Band names are used for naming.
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 Currently, implementation is not optimal, because firstly bundle of statistics is computed using {\link[ursa:Ops.band_stat]{band_stat}} function, and then required statistics is extracted.

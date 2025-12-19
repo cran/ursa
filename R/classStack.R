@@ -80,6 +80,18 @@
          class(ursa_value(res)) <- "ursaCategory"
       }
    }
+   g1 <- ursa_grid(obj[[1]])
+   sameGrid <- !identical(g1,getOption("ursaSessionGrid"))
+   if (sameGrid) {
+      for (i in tail(seq_along(obj),-1)) {
+         if (identical(g1,ursa_grid(obj[[i]])))
+            next
+         sameGrid <- FALSE
+         break
+      }
+      if (sameGrid)
+         ursa_grid(res) <- g1
+   }
   # class(res) <- c(class(res),"ursaBrick") ## not necessary
    res
 }

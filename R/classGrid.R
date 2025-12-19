@@ -3,7 +3,7 @@
    g1 <- list(columns=NA_integer_,rows=NA_integer_,resx=NA_real_,resy=NA_real_
              ,minx=NA_real_,maxx=NA_real_,miny=NA_real_,maxy=NA_real_
              ,seqx=numeric(0),seqy=numeric(0)
-             ,crs="",retina=NA)
+             ,retina=NA,rotation=numeric(0),crs="")
    class(g1$crs) <- c("ursaCRS","character")[1]
    class(g1) <- "ursaGrid"
    g1
@@ -17,6 +17,8 @@
       x$seqy <- NULL
    if (is.na(x$retina))
       x$retina <- NULL
+   if (!length(x$rotation))
+      x$rotation <- NULL
   # x$crs <- .crsBeauty(x$crs)
    str(x,formatNum=function(x) format(x,scientific=FALSE),...)
 }
@@ -39,6 +41,8 @@
       object$seqy <- NULL
    if ((!is.null(object$retina))&&(is.na(object$retina)))
       object$retina <- NULL
+   if (!length(object$rotation))
+      object$rotation <- NULL
   # object$crs <- .crsBeauty(object$crs)
    str(object,...)#,formatNum=function(x) format(x,scientific=FALSE),...)
   # do.call("str",lx,...)#,formatNum=function(x) format(x,scientific=FALSE),...)
@@ -57,6 +61,10 @@
    expand.grid(x=seq(x,"x"),y=seq(x,"y"),KEEP.OUT.ATTRS=FALSE)
 }
 '.identicalGrid' <- function(src,dst) {
+   if (!.is.grid(src))
+      src <- ursa_grid(src)
+   if (!.is.grid(dst))
+      dst <- ursa_grid(dst)
    if ((!.is.grid(src))||(!.is.grid(dst)))
       return(NULL)
    cond1 <- .identicalCRS(src$crs,dst$crs)

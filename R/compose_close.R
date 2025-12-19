@@ -26,6 +26,17 @@
       str(list(kind=kind,border=border,bpp=bpp,execute=execute,verbose=verbose))
    isPackageTest <- isTRUE(Sys.getenv("_R_CHECK_PACKAGE_NAME_")=="ursa")
    toOpen <- !isPackageTest & session_pngviewer()
+   if ((toOpen)&&(.Platform$GUI %in% c("Rgui","RStudio"))) {
+      iseq <- seq(6,11)
+      ires <- rep("",length(iseq))
+      for (i in seq_along(iseq)) {
+         ret <- try(sys.call(which=iseq[i]),silent=TRUE)
+         if (inherits(ret,"try-error"))
+            break
+         ires[i] <- as.character(ret)[1]
+      }
+      toOpen <- !any(grepl("example2html",ires))
+   }
    if (FALSE) {
       message(paste(commandArgs(FALSE),collapse=" "))
       print(Sys.getenv()[grep("^(_)*R_",names(Sys.getenv()))])
@@ -41,6 +52,8 @@
       op <- options()
       if (length(ind <- .grep("^ursaPng.+",names(op))))
          options(lapply(op[ind],function(x) NULL))
+     # if (.isKnitr())
+     #    options(ursaFigChunk=fileout)
       NULL
    })
    if (sysRemove & execute) { ## patch for "shell"
@@ -75,9 +88,10 @@
    if (!toOpen) {
       if (delafter)
          delafter <- .normalizePath(dirname(fileout))!=.normalizePath(tempdir())
-      message(paste("Use",.sQuote("session_pngviewer(TRUE)")
-             ,"\nto open",.sQuote(.normalizePath(fileout))
-             ,"in external software."))
+      if (FALSE)
+         message(paste("Use",.sQuote("session_pngviewer(TRUE)")
+                ,"\nto open",.sQuote(.normalizePath(fileout))
+                ,"in external software."))
    }
    if (getOption("ursaPngFigure")==0L) ## plot layout only
    {

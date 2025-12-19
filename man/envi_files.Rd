@@ -86,7 +86,7 @@ Functions do not view content of any files. The major identifier of ENVI files i
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 
-\author{Nikita Platonov \email{platonov@sevin.ru}}
+\author{Nikita Platonov \email{platonov@sev-in.ru}}
 
 %%~ \note{
 %%~ %%  ~~further notes~~

@@ -7,7 +7,7 @@
 }
 'envi_copy' <- function(src,dst,overwrite=TRUE)
 {
-   patlist <- "(\\.(hdr|gz|bz2|xz|bin|bingz|envi|envigz|img|dat))*$"
+   patlist <- "(\\.(hdr|gz|bz2|zst|xz|bin|bingz|envi|envigz|img|dat))*$"
    srcdir <- dirname(src)
    srcname <- basename(src)
    n <- nchar(dst)
@@ -72,7 +72,7 @@
    for (a in list1)
    {
       toRemove <- FALSE
-      for (ext in c("envi","envigz","bin","","bingz","img","dat","gz","bz2","xz"))
+      for (ext in c("envi","envigz","bin","","bingz","img","dat","gz","bz2","zst","xz"))
       {
          b <- gsub("\\.$","",sprintf("%s.%s",a,ext))
          if (verbose)
@@ -118,7 +118,7 @@
    }
    srcname <- paste0("^",srcname)
    list1 <- .dir(path=srcdir
-                    ,pattern=paste0(srcname,"(\\.(hdr|gz|bzip2|xz|envi|envigz|bin|bingz|img|dat))*$")
+                    ,pattern=paste0(srcname,"(\\.(hdr|gz|bzip2|zstd|xz|envi|envigz|bin|bingz|img|dat))*$")
                     ,full.names=TRUE)
    list2 <- file.path(dstdir,.gsub(srcname,dstname,basename(list1)))
    file.rename(list1,list2)
@@ -168,8 +168,8 @@
             else {
                p <- strsplit(pattern,split="/")[[1]]
                if (length(p)>1) {
-                  path <- head(p,-1)
-                 # print(c(path=path,pattern=pattern))
+                  path <- do.call(file.path,as.list(head(p,-1)))
+                 # str(list(p=p,path=path,pattern=pattern))
                   if (!dir.exists(path)) {
                      return(character())
                   }
@@ -188,7 +188,7 @@
    patt1a <- patt1 <- .gsub("\\.hdr$","",pattern)
    patt1 <- .gsub("(\\.)$","",patt1)
    patt1a <- patt1
-   patt2 <- .gsub("\\.(bin|envi|img|dat|gz|bz2|xz|bingz|envigz)$","",patt1)
+   patt2 <- .gsub("\\.(bin|envi|img|dat|gz|bz2|zst|xz|bingz|envigz)$","",patt1)
    if (exact) {
       patt1 <- paste0("^",patt1,"$")
       patt2 <- paste0("^",patt2,"$")
@@ -212,7 +212,8 @@
       ind <- integer()
    if (length(ind))
       return(.noESRI(list2[ind]))
-   if (.lgrep("\\.(tif|tiff|png|bmp|shp|shz|sqlite|geojson|gpkg|kml|mif|fgb)$",patt2)) {
+   if (.lgrep("\\.(tif|tiff|png|bmp|shp|shz|sqlite|geojson|gpkg|kml|mif|fgb)$"
+             ,gsub("(^\\^|\\$$)","",patt2))) {
       return(character()) ## if exist TIF and HDR, then HDR is not associated with TIF
    }
    patt2a <- .gsub("(\\..+)$","",patt2)
@@ -243,15 +244,19 @@
 'ursa_exists' <- function(fname) {
    if (length(fname)>1)
       return(unname(sapply(fname,ursa_exists)))
-   list1 <- envi_list(fname)
+   list1 <- envi_list(fname,exact=TRUE)
    if (length(list1)>1) {
-      print(list1)
-      warning("Multiple datasests")
+     # print(list1)
+     # warning("Multiple datasests")
       return(FALSE)
    }
    if (length(list1)==1)
       return(TRUE)
-   list1 <- dir(path=dirname(fname),pattern=basename(fname),full.names=TRUE)
+  # print(c(dirname=dirname(fname),basename=basename(fname)))
+   list1 <- try(dir(path=dirname(fname),pattern=basename(fname),full.names=TRUE)
+               ,silent=TRUE)
+   if (inherits(list1,"try-error"))
+      return(FALSE)
    if (length(list1)) {
       ind <- grep("\\.(tif|tiff|hfa|bin)$",basename(list1))
       if (length(ind)==1)

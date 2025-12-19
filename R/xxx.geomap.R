@@ -9,10 +9,10 @@
    geocode <- match.arg(geocode,geocodeList)
    if (!sum(nchar(style)))
       style <- paste(switch(geocode,nominatim="openstreetmap",pickpoint="openstreetmap"
-                           ,google="google","internal.CartoDB"),"color")
+                           ,google="google","default"),"color")
    if (is.na(zoom))
       zoom <- "0"
-   isWGS84 <- .lgrep("(maps\\.yandex|^(Yandex|\u042f\u043d\u0434\u0435\u043a\u0441)$)"
+   isWGS84 <- .lgrep("(maps\\.yandex|^Yandex\\.\\w+|^(Yandex|\u042f\u043d\u0434\u0435\u043a\u0441)$)"
                        ,style,ignore.case=TRUE)
    staticMap <- c("openstreetmap","google$","sputnikmap")
    if (F) ## 2024-12-10
@@ -227,7 +227,7 @@
   #    stop("Operation is prohibited: unable to display attribution.")
   # }
    len <- 640L
-   if (is.na(size[1]))
+   if (autoSize <- is.na(size[1]))
       size <- c(len,len)
    else if (is.character(size)) {
       size <- as.integer(unlist(strsplit(
@@ -241,7 +241,7 @@
    if (isStatic) {
       len[len>mlen] <- mlen
    }
-   if (trytodeprecate20230723 <- TRUE) {
+   if (trytoretire20230723 <- TRUE) {
       canUrl <- length(unlist(regmatches(style,gregexpr("\\{(z|x|(-)*y)\\}",style))))==3
       if (!canUrl) {
          sascache <- style
@@ -311,8 +311,18 @@
          if (is.null(g0)) ## not after 'panel_new()'
             g0 <- getOption("ursaSessionGrid")#session_grid()
          notYetGrid <- is.null(g0)
-         if (!.isWeb(g0))
-            g0 <- regrid(g0,expand=1.5)
+         isExact <- .isWeb(g0)
+         if (!isExact) {
+            if (FALSE) {
+               sc <- getOption("ursaPngScale")
+               if (sc>1) {
+                  g0 <- regrid(g0,mul=sc)
+                  size <- size*sc
+               }
+            }
+            size <- size*2
+            g0 <- regrid(g0,mul=2,expand=1.5)
+         }
          g3 <- g0
          if (notYetGrid)
             loc <- c(-179,-82,179,82)
@@ -460,11 +470,16 @@
                }
             }
          }
-         else if ((g0$columns<=size[1])&&(g0$rows<=size[2]))
-            break
+         else {
+            if ((g0$columns<=size[2])&&(g0$rows<=size[1]))
+               break
+         }
       }
       if ((!notYetGrid)&&(!fixRes)&&(i==1)) {
-         g0 <- spatial_grid(spatialize(polygonize(ursa_bbox(g3)),style="web"))
+         g0 <- spatialize(polygonize(ursa_bbox(g3)),style="web")
+         if (!.identicalCRS(spatial_crs(g0),ursa_crs(g3)))
+            g0 <- spatial_transform(g0,ursa_crs(g3))
+         g0 <- spatial_grid(g0)
          i <- which.min(abs(s-ursa(g0,"cellsize")))
       }
       if ((isPolar)&&(!notYetGrid)) { ## more accurate checking is required
@@ -553,6 +568,9 @@
       g0 <- session_grid()
       proj4 <- g0$crs
    }
+   if (!autoSize) {
+      g0 <- consistent_grid(g0,ref=size)
+   }
    ##~ cat("------------- geomap ---------------\n")
    ##~ print(g0)
    ##~ cat("------------- geomap ---------------\n")
@@ -636,7 +654,12 @@
          }
          else {
             g1 <- regrid(g0,setbound=c(minx,g0$miny,maxx,g0$maxy),proj=epsgWeb)
-            g1 <- regrid(g1,res=2*B/dz)
+            if ((.is.integer(g1$columns/256L))&&
+               (.is.integer(c(g1$minx,g1$maxx)/g1$resx/256)))
+               tol <- NA
+            else
+               tol <- 0
+            g1 <- regrid(g1,res=2*B/dz,tolerance=tol)
             g1 <- regrid(g1,res=c(g0$resx,g0$resy),crs=g0$crs)
             g1$minx <- g1$minx-dx0
             g1$maxx <- g1$maxx-dx0
@@ -647,24 +670,27 @@
          dx <- diff(sx)
          for (expandZoom in seq(1,9,by=1)) {
             dr <- 3+expandZoom*zoom
-            yr <- with(g0,seq(maxy,miny,len=dr))
+            yr <- with(g0,seq(maxy+1e-6,miny-1e-6,len=dr)) ## stretched to 1e-6
             t0 <- NULL
             h <- NULL
             for (j in seq_along(dx)) {
-               tX <- NULL
                xr <- seq(sx[j]+1e-6,sx[j+1]-1e-6,len=dr)
                gr <- .project(as.matrix(expand.grid(x=xr,y=yr)),g0$crs,inv=TRUE)
                gr[,1] <- gr[,1]-lon_0
               # print(unique(gr[,1]))
               # print(unique(gr[,2]))
+              # tX <- NULL
+               tX <- array(NA_real_,dim=dim(gr))
                if (isWGS84) {
                   for (i in seq(nrow(gr))) {
-                     tX <- rbind(tX,.deg2numYa(lon=gr[i,1],lat=gr[i,2],zoom=zoom))
+                    # tX <- rbind(tX,.deg2numYa(lon=gr[i,1],lat=gr[i,2],zoom=zoom))
+                     tX[i,] <- .deg2numYa(lon=gr[i,1],lat=gr[i,2],zoom=zoom)
                   }
                }
                else {
                   for (i in seq(nrow(gr))) {
-                     tX <- rbind(tX,.deg2num(lon=gr[i,1],lat=gr[i,2],zoom=zoom))
+                    # tX <- rbind(tX,.deg2num(lon=gr[i,1],lat=gr[i,2],zoom=zoom))
+                     tX[i,] <- .deg2num(lon=gr[i,1],lat=gr[i,2],zoom=zoom)
                   }
                }
                ind <- which(tX[,1]<0)
@@ -673,6 +699,8 @@
                ind <- which(tX[,1]>=dz)
                if (length(ind))
                   tX[ind,1] <- tX[ind,1]-dz
+              # print(table(tX[,1]))
+              # print(table(tX[,2]))
                tX <- unique(tX)
                hX <- unique(tX[,1])
               # str(tX)
@@ -839,7 +867,10 @@
      # str(lapply(img1,dim))
       dimb <- apply(list2DF(lapply(img1[ind],dim)),1,max)
       img <- array(0L,dim=c(dimb[1]*length(v),dimb[2]*length(h),nbmax))
+     # inull <- which(sapply(img1,is.null))
       for (i in sample(seq(nrow(tgr)))) {
+        # if (i %in% inull)
+        #    next
         # img[igr[i,"y"]*256L+seq(256),igr[i,"x"]*256+seq(256),] <- img2[,,1:3]
         # img[igr[i,"y"]*256L+seq(256),igr[i,"x"]*256+seq(256),] <- img2[,,seq(nb)]
         # img[igr[i,"y"]*256L+seq(256),igr[i,"x"]*256+seq(256),seq(nb)] <- img2[,,seq(nb)]

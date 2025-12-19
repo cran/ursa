@@ -1,6 +1,6 @@
 '.syn' <- function(new,kind=0,...) { ## function names synonyms
    if (!FALSE) {
-      res <- .parentFunc()
+      res <- head(.parentFunc(),-1)
       old <- res[length(res)]
       res <- res[-c(1,length(res))]
       parent <- paste(paste0(res,"()"),collapse=" -> ")
@@ -16,9 +16,9 @@
    }
    do.call(new,list(...))
 }
-'.parentFunc' <- function() {
+'.parentFunc' <- function(p=3) {
    op <- options(warn=0)
-   n <- sys.parent()-3:1+1
+   n <- sys.parent()-p:1+1
    n <- n[n>0]
    res <- as.character(sys.call(which=0))[1]
    for (i in n) {

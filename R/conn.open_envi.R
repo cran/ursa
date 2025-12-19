@@ -52,15 +52,26 @@
    f3 <- .gsub("\\s=","=",f3)
    f3 <- .gsub("=\\s","=",f3)
    mylen <- nchar(f3)
+  # print(substr(f3,1,300))
    map <- NULL
    cl <- list(n=0,val=NULL,name=NULL)
    wkt <- ""
    p <- character()
+   if (TRUE) {
+      ind <- sapply(paste0("^",fields),function(name) {
+         i <- grep(name,f1,ignore.case=TRUE,perl=TRUE,fixed=FALSE)
+         if (!length(i))
+            return(0L)
+         i
+      })
+      fields <- gsub("^\\^","",names(ind)[ind>0])
+   }
    for (name in tolower(sample(fields)))
    {
       ind1 <- regexpr(name,f3,ignore.case=TRUE,perl=TRUE,fixed=FALSE)
-      if (ind1<0)
+      if (ind1<0) {
          next
+      }
       len <- attr(ind1,"match")
       f4 <- substr(f3,ind1+len,mylen)
       ind2 <- substr(f4,2,2)
@@ -356,6 +367,7 @@
       con$indexR <- with(grid2,rev(grid$rows+1-which(y1>=miny & y1<=maxy)))
       grid <- grid2
    }
+   fname.src <- fname
    fname.envi <- paste(fname,".envi",sep="")
    fname.bin <- paste(fname,".bin",sep="")
    fname.img <- paste(fname,".img",sep="")
@@ -365,6 +377,7 @@
    fname.envigz  <- paste(fname,".envigz",sep="")
    fname.xz <- paste(fname,".xz",sep="")
    fname.bz <- paste(fname,".bz2",sep="")
+   fname.zst <- paste(fname,".zst",sep="")
    fname.aux <- NA
    if (is.character(cache))
       cache <- 1L
@@ -402,7 +415,7 @@
    }
    else if ((file.exists(fname.gz))&&(!file.info(fname.gz)$isdir))
    {
-      verbose <- Sys.Date()<=as.Date("2024-04-20") & !.isPackageInUse()
+      verbose <- Sys.Date()<=as.Date("2024-10-25") & !.isPackageInUse()
       solved <- FALSE
       if (nchar(Sys.which("gzip"))) {
          if (cache) {
@@ -422,7 +435,7 @@
                                          ,".unpacked",basename(fbase),"~"))
            # print(con$fname)
            # q()
-            system2("gzip",c("-f -d -c",.dQuote(fname.bz)),stdout=con$fname,stderr=FALSE)
+            system2("gzip",c("-f -d -c",.dQuote(fname.gz)),stdout=con$fname,stderr=FALSE)
             solved <- !is.null(con$fname)
          }
          if (solved) {
@@ -443,7 +456,7 @@
    }
    else if ((file.exists(fname.envigz))&&(!file.info(fname.envigz)$isdir))
    {
-      verbose <- Sys.Date()<=as.Date("2023-05-29") & !.isPackageInUse()
+      verbose <- Sys.Date()<=as.Date("2024-05-29") & !.isPackageInUse()
       solved <- FALSE
       if (nchar(Sys.which("gzip"))) {
          if (cache) {
@@ -452,6 +465,7 @@
             srcname <- con$fname
             con$fname <- .ursaCacheRaster(fname.envigz
                               ,ifelse(decompress,"gzip","gzip"),reset=cache!=1)
+            attr(con$fname,"source") <- fname.envigz
             solved <- !is.null(con$fname)
             if (F & solved)
                attr(con$fname,"aux") <- c(fname.envigz,"gzfile","read")
@@ -483,6 +497,46 @@
       if (!solved)
          stop("Unable to open gzipped file")
       fname.aux <- paste0(fname.envi,".aux.xml")
+   }
+   else if ((file.exists(fname.zst))&&(!file.info(fname.zst)$isdir)) {
+      verbose <- Sys.Date()<=as.Date("2025-12-31") & !.isPackageInUse()
+      solved <- FALSE
+      if (nchar(Sys.which("zstd"))) {
+         if (cache) {
+            if (verbose)
+               message("trying cache")
+            con$fname <- .ursaCacheRaster(fname.zst
+                              ,ifelse(decompress,"zst","zst"),reset=cache!=1)
+            solved <- !is.null(con$fname)
+         }
+         else if (decompress) {
+            if (verbose)
+               message("local unpack")
+           # con$fname <- paste0(fname,".unpacked",.maketmp(),"~")
+            fbase <- .maketmp()
+            con$fname <- file.path(dirname(fbase)
+                                  ,paste0(basename(fname)
+                                         ,".unpacked",basename(fbase),"~"))
+           # print(con$fname)
+           # q()
+            system2("zstd",c("-f -d -c",.dQuote(fname.zst)),stdout=con$fname,stderr=FALSE)
+            solved <- !is.null(con$fname)
+         }
+         if (solved) {
+            con$connection <- "file"
+            con$compress <- ifelse(cache,0L,-1L)
+         }
+      }
+      if ((!solved)&&(!decompress)) {
+         if (verbose)
+            message("internal un-zstd")
+         con$connection <- "zstdfile"
+         con$fname <- fname.zst
+         solved <- TRUE
+      }
+      if (!solved)
+         stop("Unable to open zstd-ed file")
+      fname.aux <- paste0(fname,".aux.xml")
    }
    else if ((file.exists(fname.bz))&&(!file.info(fname.bz)$isdir)) {
       verbose <- Sys.Date()<=as.Date("2020-04-20") & !.isPackageInUse()
@@ -765,8 +819,10 @@
    arglist <- list(...)
    compress <- .getPrm(arglist,name="^compress$",default=NA,verbose=FALSE)
    if (isTRUE(compress)) {
-      if (con$compress==0L)
-         con$compress <- -2L
+      if (con$compress==0L) {
+         con$compress <- 2L ## 20251023 replaced '-2' to '+2'
+        # attr(con$fname,"source") <- fname ## ++ 20251023
+      }
    }
    else if (isFALSE(compress)) {
       if (con$compress==-1L) {
@@ -802,14 +858,14 @@
    dst <- create_envi(wname,...)
    srcname <- names(src)
    dstname <- names(dst)
-   cb <- chunk_band(src)
+   cb <- chunk_band(src,40)
    from <- head(m21,1)
    to <- tail(m21,1)
    for (i in chunk_band(src)) {
       j <- i[i>=from & i<=to]
       if (!length(j))
          next
-      k <- match(j,m21)
+      k <- m12[match(j,m21)] ## --20251016 k <- match(j,m21)
       if (anyNA(k)) {
          j <- j[which(!is.na(k))]
          k <- c(na.omit(k))

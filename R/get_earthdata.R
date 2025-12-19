@@ -120,14 +120,20 @@
       g1 <- regrid(g0,mul=2^(zoom),bbox=bbox)
    }
    else {
-      size <- if ((is.numeric(res))&&(res>128)) res else 480
-     # print(g0)
-      for (z in zoomList) {
-         g1 <- regrid(g0,mul=2^(z+1),bbox=bbox)
-         if ((g1$columns>size)||(g1$rows>size))
-            break
+      if (.isWeb(g4)) {
+         zoom <- .is.near(ursa(g4,"cellsize"),2*6378137*pi/(2^(1:21+8)))
+         g1 <- g4
       }
-      zoom <- z+1
+      else {
+         size <- if ((is.numeric(res))&&(res>128)) res else 480
+        # print(g0)
+         for (z in zoomList) {
+            g1 <- regrid(g0,mul=2^(z+1),bbox=bbox)
+            if ((g1$columns>size)||(g1$rows>size))
+               break
+         }
+         zoom <- z+1
+      }
    }
    g2 <- regrid(ursa_grid(),setbound=c(-B,-B,B,B),dim=c(2^zoom,2^zoom)
                ,proj=ifelse(is3413,epsg3413,epsg3857))

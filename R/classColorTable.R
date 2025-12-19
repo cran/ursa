@@ -49,7 +49,7 @@
          print("unreachable")
       return(NULL)
    }
-   else if (any(sapply(x,inherits,"ursaLegend"))) {
+   else if (any(sapply(unclass(x),inherits,"ursaLegend"))) {
       return(lapply(x,ursa_colortable)) ## RECURSIVE!!!
    }
    else if (!is.ursa(x)) {
@@ -179,4 +179,16 @@
 'ursa_color' <- function(ct,...) {
    x <- colorize(ct,...)
    as.character(x$colortable[x$index])
+}
+'category_value' <- function(ct,name) {
+   if (missing(name))
+      return(NULL)
+   if (is_ursa(ct))
+      ct <- ursa_colortable(ct)
+   if (!.is.colortable(ct))
+      return(NULL)
+   ind <- match(name,names(ct))
+   if (!is.na(ind))
+      return(ind-1L)
+   ind
 }

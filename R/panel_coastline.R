@@ -105,7 +105,7 @@
             }
          }
          else if (.lgrep("\\.rds$",obj)) {
-            stop("COASLINE GRID AGAIN")
+            stop("COASTLINE GRID AGAIN")
            # g1 <- session_grid() ## earlier
             coast_xy <- readRDS(obj)
             if (.isCRS(g1$crs)) {
@@ -142,6 +142,8 @@
    if (!.isCRS(proj)) {
       return(NULL)
    }
+   if (length(g1$rotation))
+      attr(proj,"rotation") <- .rotation(g1)
    isDetail <- !is.na(detail)
    if (is.na(detail))
       detail <- "l"
@@ -499,7 +501,7 @@
                else {
                   arglist <- as.list(match.call()) ## try mget(names(match.call())[-1])
                   arglist$detail <- detail
-                  return(do.call(as.character(arglist[[1]]),arglist[-1]))
+                  return(do.call(as.character(arglist[[1]]),arglist[-1])) ## RECURSIVE
                }
             }
          }
@@ -626,9 +628,17 @@
            ## ?polypath: Hatched shading (as implemented for polygon()) is not (currently) supported.
            ## if semi-opacity|trasparency them 'polygon' else fill is transparent
             ret <- try(polypath(coast_xy[,1],coast_xy[,2],border=col,col=fill
-                    ,rule=c("winding","evenodd")[2],lwd=lwd)) ##,density=15??
-            if (inherits(ret,"try-error"))
-               cat("Plotting coastline...",ret)
+                    ,rule=c("winding","evenodd")[2],lwd=lwd),silent=TRUE) ##,density=15??
+            if (inherits(ret,"try-error")) {
+               if (!.isPackageInUse())
+                  cat("Plotting coastline:",ret,sep="\n")
+               if (inherits(coast_xy,"SpatialPolygonsDataFrame"))
+                  plot(coast_xy,border=col,col=fill,lwd=lwd,add=TRUE)
+               else
+                  polygon(coast_xy[,1],coast_xy[,2],border=col,col=fill,lwd=lwd)
+            }
+           # print(summary(coast_xy))
+           # print(session_grid())
          }
       }
    })

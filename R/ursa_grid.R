@@ -11,7 +11,7 @@
       return(obj)
    if ((is.character(obj))&&(envi_exists(obj,exact=TRUE))) {
       g1 <- getOption("ursaSessionGrid")
-      a <- open_envi(obj,resetGrid=TRUE,decompress=FALSE)
+      a <- open_envi(obj,resetGrid=TRUE,headerOnly=TRUE)
       res <- a$grid
       close(a)
       if (is.null(g1))
@@ -116,8 +116,9 @@
       obj <- g0
    if (identical(obj,ref))
       return(obj)
-   isWeb <- ((.isMerc())&&
-      (!is.na(.is.near(ursa(obj,"cellsize"),2*6378137*pi/(2^(1:21+8))))))
+  # isWeb <- ((.isMerc())&&
+  #    (!is.na(.is.near(ursa(obj,"cellsize"),2*6378137*pi/(2^(1:21+8))))))
+   isWeb <- .isWeb(obj)
    if (is_spatial(ref))
       ref <- spatial_grid(ref)
    if (is_ursa(ursa_grid(ref),"grid"))

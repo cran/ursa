@@ -180,6 +180,13 @@
      # dom <- unlist(strsplit(.gsub2("\\{(.+)\\}","\\1",gsub("\\{.\\}","",src)),""))
      # src <- .gsub("{.+}",sample(dom,1),src0)
      # src <- unname(sapply(sample(dom),function(x) .gsub("{.+}",x,src0)))
+   } else if ((!FALSE)&&(.lgrep("\\{\\w{2,4}\\}",src))) {
+     # dom <- unlist(strsplit(.gsub2("\\{\\w+\\}","\\1",gsub("\\{.\\}","",src)),""))
+      dom <- unlist(strsplit(.gsub2("\\{(\\w{2,4})\\}","\\1",gsub("\\{.\\}","",src)),""))
+     # print(dom)
+      src <- .gsub("{.+}",sample(dom,1),src)
+      print(src)
+      q()
    }
    if (missing(dst))
       dst <- NULL
@@ -258,7 +265,7 @@
    }
    dst
 }
-'.ursaCacheRaster' <- function(src,unpack=c("none","gzip","bzip2"),reset=FALSE) {
+'.ursaCacheRaster' <- function(src,unpack=c("none","gzip","bzip2","zstd"),reset=FALSE) {
    enc <- "UTF-8"
    unpack <- match.arg(unpack)
    finfo <- file.info(src)
@@ -312,12 +319,14 @@
          dst <- NULL
       if (is.null(dst)) {
          dst <- .ursaCacheFile()
-         if (unpack %in% c("gzip","bzip2")) {
+         if (unpack %in% c("gzip","bzip2","zstd")) {
             if (unpack=="gzip") {
                system2("gzip",c("-f -d -c",.dQuote(src)),stdout=dst,stderr=FALSE)
             }
             else if (unpack=="bzip2")
                system2("bzip2",c("-f -d -c",.dQuote(src)),stdout=dst,stderr=FALSE)
+            else if (unpack=="zstd")
+               system2("zstd",c("-f -d -c",.dQuote(src)),stdout=dst,stderr=FALSE)
             if (debugExact <- F) {
                str(src)
                str(dst)

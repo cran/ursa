@@ -654,6 +654,8 @@
          x$con$compress <- -2L
       else if (x$con$compress==0)
          x$con$compress <- 3L
+      else if (x$con$compress==2) ## ++ 20251023
+         x$con$compress <- -2L
       return(x)
    }
    else

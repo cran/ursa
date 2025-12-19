@@ -22,6 +22,14 @@
      # class(obj) <- c("character","ursaProjection")
       return(obj)
    }
+   if (inherits(obj,"crs")) {
+      if ((is.list(obj))&&("wkt" %in% names(obj))) {
+         obj <- .ursaCRS(obj[["wkt"]])
+        # obj <- obj[["wkt"]]
+        # class(obj) <- c("ursaCRS","character")
+         return(obj)
+      }
+   }
    NULL
 }
 'ursa_crs<-' <- function(obj,keepGrid=FALSE,value) {
@@ -29,6 +37,8 @@
       value <- paste0("EPSG:",round(value))
    else if (inherits(value,"CRS"))
       value <- methods::slot(value,"projargs")
+   else if (inherits(value,"crs")) {
+   }
    else if (!is.character(value))
    {
       warning("unable to detect projection")
@@ -41,6 +51,8 @@
      # obj$crs <- ursa_crs(value)
       return(obj)
    }
+   if (.crsForceWKT())
+      value <- .WKT(value)
    obj$grid$crs <- .ursaCRS(ursa_crs(value))
    if (!keepGrid)
       session_grid(obj)

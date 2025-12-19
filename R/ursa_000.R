@@ -39,7 +39,7 @@
       if (.lgrep("brick",attr))
          return(ursa_brick(obj))
       if (.lgrep("^cell",attr))
-         return(with(ursa_grid(obj),sqrt(resx*resy)))
+         return(with(ursa_grid(obj),sqrt(abs(resx*resy))))
       if (.lgrep("^(extent|bbox)",attr)) {
          res <- with(ursa_grid(obj),c(xmin=minx,ymin=miny,xmax=maxx,ymax=maxy))
          attr(res,"crs") <- ursa_crs(obj)

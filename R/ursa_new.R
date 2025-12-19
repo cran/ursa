@@ -136,11 +136,15 @@
       if (is.null(dim(value))) {
          nb <- length(value)/with(result$grid,columns*rows)
          if ((bands==1)&&((length(value)>1)&&(!.is.integer(nb)))) { ## 12 months
-            opW <- options(warn=1)
-            warning("How many bands do you mean? Please specify argument 'bands='.")
-            opW <- options(opW)
-            if (length(value)<12)
+            if (TRUE & nb<0.9) ## ++ 20251020
                bands <- length(value)
+            else {
+               opW <- options(warn=1)
+               warning("How many bands do you mean? Please specify argument 'bands='.")
+               opW <- options(opW)
+               if (length(value)<12)
+                  bands <- length(value)
+            }
          }
          if (.is.integer(nb))
             bands <- as.integer(round(nb))

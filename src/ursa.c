@@ -2146,6 +2146,32 @@ void bilinear(double *src,int *dim,int *S,int *verb,double *dst)
    }
    return;
 }
+void identifyValues(int *dim,double *bg,double *bbox,double *src
+                   ,double *x,double *y,int *n,int *verb
+                  // ,int *col,int *row
+                   ,double *dst) {
+   int samples=dim[0];
+   int lines=dim[1];
+   //~ int bands=dim[2];
+   float dimx=(float)samples;
+   float dimy=(float)lines;
+   int verbose=*verb;
+   //~ double background=*bg;
+   int i;
+   int total=*n;
+   int c,r;
+   for (i=0;i<total;i++) {
+      c=(int)floor(dimx*(x[i]-bbox[0])/(bbox[2]-bbox[0]));
+      r=(int)floor(dimy*(y[i]-bbox[1])/(bbox[3]-bbox[1]));
+      dst[i]=src[(lines-r-1)*samples+c];
+     // col[i]=c;
+     // row[i]=r;
+      if ((verbose)&&(i<6))
+         Rprintf("x=%.1f y=%.1f value=%.1f c=%d r=%d\n"
+                ,x[i],y[i],dst[i],c,r);
+   }
+   return;
+}
 void table_log(int *x,int *size,int *res)
 {
    int i;
@@ -2175,7 +2201,7 @@ void rasterize(double *img,int *dim,double *bbox
    int n=*len;
    int kind=*_kind;
    int adr1,adr2,t,i,c,r;
-   int debug=1;
+   int debug=0;
    double bg=*nodata;
    int *valid=(int *)malloc(n*sizeof(int));
    double *S=(double *)malloc(samples*lines*sizeof(double));
@@ -3810,6 +3836,7 @@ void dist2dist(double *x1,double *y1,double *x2,double *y2
       else
          dist[j]=sqrt(minD);
       ind[j]=i2;
+     // Rprintf("%d x=%.1f y=%.1f <-- x=%.1f y=%.1f \n",i2,x1[i2],y1[i2],x2[j],y2[j]);
       if (verbose)
          progressBar(j,n2,"");
       if ((0)&&(spherical)) {

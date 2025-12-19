@@ -133,17 +133,32 @@
       print(c(ind=ind,c=col,r=row))
    }
    nc <- length(col)
-   res <- matrix(NA,ncol=nc,nrow=nband(obj),dimnames=list(bandname(obj),ind))
-   for (i in seq(nc)) {
-      if ((is.na(col[i]))||(is.na(row[i])))
-         next
-      val <- obj[,row[i]]$value[col[i],]
+   if (TRUE) {
+      invalid <- which(is.na(col) | is.na(row))
+      if (length(invalid)>0) {
+         res <- matrix(NA,ncol=nc,nrow=nband(obj),dimnames=list(bandname(obj),NULL))
+         res[,-invalid] <- t(obj$value[ind[-invalid],,drop=FALSE])
+      }
+      else {
+         res <- t(obj$value[ind,,drop=FALSE])
+         rownames(res) <- bandname(obj)
+      }
       if (isCT)
-         res[,i] <- cl[val+1L]
-      else
-         res[,i] <- val
+         res <- cl[res+1L]
    }
-  # obj$value[ind,] ## incorrect if use "open_envi" construction
+   else { ## retired
+      res <- matrix(NA,ncol=nc,nrow=nband(obj),dimnames=list(bandname(obj),NULL))
+      for (i in seq(nc)) {
+         if ((is.na(col[i]))||(is.na(row[i])))
+            next
+         val <- obj[,row[i]]$value[col[i],]
+         if (isCT)
+            res[,i] <- cl[val+1L]
+         else
+            res[,i] <- val
+      }
+   }
+ # obj$value[ind,] ## incorrect if use "open_envi" construction
   # if (.is.colortable(obj)) {
   #    res[] <- res[][ursa(res,"value")]
   # }
@@ -196,36 +211,43 @@
       columns <- grid$columns
       rows <- grid$rows
    }
-   nx <- length(x)
-   ny <- length(y)
-   if (nx!=-11)
-   {
-      x2 <- with(grid,(seq(minx,maxx,resx)-0.5*resx)[-1])
-      whichx <- numeric(nx)
-      insidex <- rep(FALSE,length(whichx))
-      for (i in seq(nx)) {
-         dx <- abs(x2-x[i])
-         whichx[i] <- which.min(dx)
-         insidex[i] <- min(dx)<sqrt(2)*grid$resx
-      }
+   if (TRUE) {
+      whichx <- as.integer(floor(columns*(x-grid$minx)/(grid$maxx-grid$minx)))+1L
+      whichy <- rows-as.integer(floor(rows*(y-grid$miny)/(grid$maxy-grid$miny)))
+      ind <- (whichy-1L)*columns+(whichx-1L)+1L
    }
-   else
-      stop("TODO#1-X")
-   if (ny!=-11)
-   {
-      y2 <- with(grid,(seq(miny,maxy,resy)-0.5*resy)[-1])
-      whichy <- numeric(ny)
-      insidey <- rep(FALSE,length(whichy))
-      for (i in seq(ny)) {
-         dy <- abs(y2-y[i])
-         whichy[i] <- rows-which.min(dy)+1
-         insidey[i] <- min(dy)<sqrt(2)*grid$resy
+   else { # retired
+      nx <- length(x)
+      ny <- length(y)
+      if (nx!=-11)
+      {
+         x2 <- with(grid,(seq(minx,maxx,resx)-0.5*resx)[-1])
+         whichx <- numeric(nx)
+         insidex <- rep(FALSE,length(whichx))
+         for (i in seq(nx)) {
+            dx <- abs(x2-x[i])
+            whichx[i] <- which.min(dx)
+            insidex[i] <- min(dx)<sqrt(2)*grid$resx
+         }
       }
+      else
+         stop("TODO#1-X")
+      if (ny!=-11)
+      {
+         y2 <- with(grid,(seq(miny,maxy,resy)-0.5*resy)[-1])
+         whichy <- numeric(ny)
+         insidey <- rep(FALSE,length(whichy))
+         for (i in seq(ny)) {
+            dy <- abs(y2-y[i])
+            whichy[i] <- rows-which.min(dy)+1
+            insidey[i] <- min(dy)<sqrt(2)*grid$resy
+         }
+      }
+      else
+         stop("TODO#1-Y")
+      inside <- insidex & insidey
+      ind <- as.integer((whichy-1)*columns+(whichx-1)+1)
+      ind[!inside] <- NA
    }
-   else
-      stop("TODO#1-Y")
-   inside <- insidex & insidey
-   ind <- as.integer((whichy-1)*columns+(whichx-1)+1)
-   ind[!inside] <- NA
    ind
 }

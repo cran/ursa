@@ -44,6 +44,7 @@
             if (length(sname))
                panel_annotation(sname[i],pos="bottomright")
             do.call("panel_decor",arglist[-1])
+           # do.call("panel_annotation",arglist[-1])
             setUrsaProgressBar(pb,i)
          }
          close(pb)
@@ -72,7 +73,7 @@
   # }
   # str(arglist)
    if (is.character(arglist[[1]])) {
-      if (.lgrep("\\.(gpkg|tab|kml|geojson|mif|sqlite|fgb|shp|shz|osm|gpx|gdb)(\\.(zip|gz|bz2))*$"
+      if (.lgrep("\\.(gpkg|tab|kml|geojson|mif|sqlite|fgb|shp|shz|osm|gpx|gdb)(\\.(zip|gz|bz2|zst))*$"
                      ,arglist[[1]])) {
          ret <- do.call(".glance",arglist)
          if (plotKnitr)
@@ -181,7 +182,7 @@
    }
    else
       geocode <- match.arg(geocode)
-   projClass <- c("longlat","stere","laea","merc")
+   projClass <- c("longlat","stere","laea","aeqd","merc")
    projPatt <- paste0("(",paste(projClass,collapse="|"),")")
    staticMap <- c("openstreetmap","sputnikmap","google")
    tileClass <- c(staticMap,.tileService())
@@ -216,6 +217,7 @@
                     ,resetProj=resetProj,resetGrid=resetGrid
                     ,style=style#,zoom=NA
                     ,verbose=verbose)
+  # print(spatial_crs(obj))
    isMulti <- ((!is_spatial(obj))&&(!isS4(obj))&&(all(sapply(obj,is_spatial))))
    if (isMulti) {
       objExtra <- obj[-1]
@@ -233,6 +235,13 @@
   # g1 <- getOption("ursaSessionGrid")
   # if (identical(g0,g1))
   #    border <- 0
+   if ("dim" %in% names(arglist)) {
+      g0 <- consistent_grid(g0,ref=arglist$dim-2*border)
+      .compose_grid(g0)
+     # session_grid(g0)
+      if (anyNA(size))
+         size <- arglist$dim
+   }
    if ((FALSE)&&(expand!=1)) {
       bbox <- with(g0,c(minx,miny,maxx,maxy))
       .sc <- (expand-1)*sqrt(diff(bbox[c(1,3)])*diff(bbox[c(2,4)]))
@@ -324,6 +333,8 @@
    #attr(obj,"geocodeStatus") <- NULL
    basemapRetina <- FALSE
    if (isWeb) {
+     # zoom <- tail(which((.toZoom(g0)-1)<1),1)-1
+     # zoom <- head(which((.toZoom(g0)-1)>1),1)
       bbox <- with(g0,c(minx,miny,maxx,maxy))
       if (.isLongLat(g0$crs))
          lim <- bbox
@@ -337,12 +348,14 @@
          nextStyle <- .grep(ostyle[1],staticMap
                            ,invert=TRUE,value=TRUE)
       else
-         nextStyle <- .grep(ostyle[1],c("internal.CartoDB","mapnik","opentopomap")
+         nextStyle <- .grep(ostyle[1],c("default","mapnik","opentopomap")
                            ,invert=TRUE,value=TRUE)[seq(3)]
       nsize <- length(nextStyle)+1
       cache <- .getPrm(arglist,"cache",class=c("logical","character"),default=TRUE)
       for (i in seq(nsize)) {
          opE <- options(show.error.messages=TRUE)
+        # str(list(lim,style=style,size=size,zoom=zoom
+        #               ,border=border,cache=cache,verbose=verbose))
          basemap <- try(.geomap(lim,style=style,size=size,zoom=zoom
                        ,border=border,cache=cache,verbose=verbose))
          options(opE)
@@ -359,6 +372,7 @@
       }
      # print(basemap)
      # str(basemap)
+      .compose_grid(basemap)
       if (inherits(basemap,"try-error")) {
          message(paste("failed to get map; cancel"))
          print(lim)
@@ -507,7 +521,7 @@
       }
    }
    if ((isWeb)&&(is.na(basemap.alpha)))
-      basemap.alpha <- ifelse(before,0.5,0.35)
+      basemap.alpha <- ifelse(before,0.5+0.49,0.35)
    if (is.na(alpha))
       alpha <- ifelse(isWeb,ifelse(before,0.75,1),1)
    if (feature=="field") {
@@ -557,6 +571,7 @@
       }
       else {
          compose_open(res,...)
+        # compose_open(res)
       }
       gline <- compose_graticule(...)
       if (toCoast)
@@ -564,9 +579,9 @@
       pb <- ursaProgressBar(min=0,max=length(res),silent=silent,tail=TRUE)
       for (i in seq_along(res)) {
          if (isWeb)
-            panel_new(fill="transparent",...)
+            panel_new(grid=g0,fill="transparent",...)
          else
-            panel_new(...) #fill=ifelse(isWeb,"transparent","chessboard"))
+            panel_new(grid=g0,...) #fill=ifelse(isWeb,"transparent","chessboard"))
          if (before) {
             panel_plot(basemap,alpha=basemap.alpha)
             if (toCoast)

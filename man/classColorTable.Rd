@@ -8,6 +8,7 @@
 \alias{names<-.ursaColorTable}
 \alias{ursa_colorindex}
 \alias{ursa_color}
+\alias{category_value}
 
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
@@ -29,6 +30,8 @@ ursa_colortable(x) <- value
 ursa_colorindex(ct)
    
 ursa_color(ct, ...)
+
+category_value(ct, name)
 
 \method{names}{ursaColorTable}(x)
 
@@ -52,6 +55,9 @@ For \code{names()}: values are names of categories. If length of names is \code{
 }
   \item{i}{
 Integer vector. Indices specifying elements to extract part (subset) of color table.
+}
+  \item{name}{
+Character of length one. Name of category or name of colortable to get desired integer value stored in data.
 }
   \item{\dots}{
 In \code{print()}, passing to generic \code{\link[base]{print}}. Currently not used.
@@ -87,6 +93,8 @@ Class of \code{$colortable} element is \dQuote{ursaColorTable}. This is named ch
 \code{ursa_colorindex} returns index (if presents) for \code{ursaColorTable} object.
 
 \code{ursa_color} returns character vector of colors in hex format.
+
+\code{catefory_value} returns integer value, which is corresponded to index of color table or category table.
 
 Color tables are written to ENVI header file.
 }
@@ -136,6 +144,7 @@ lab
 ct <- ursa_color(lab)
 names(ct) <- lab
 ct
+category_value(b2,"High")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

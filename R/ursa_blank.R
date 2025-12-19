@@ -1,5 +1,4 @@
-'band_blank' <- function(obj,ref=c("any","0","NA"),verbose=FALSE)
-{
+'band_blank' <- function(obj,ref=c("any","0","NA"),verbose=FALSE) {
    if (!is.ursa(obj))
       return(NULL)
    arglist <- eval(as.list(args(band_blank))$ref)
@@ -8,19 +7,20 @@
    z <- obj$con$posZ
    nb <- if (!is.na(z[1])) length(z) else obj$dim[2]
    res <- rep(FALSE,nb)
-   if (is.matrix(obj$value))
-   {
+   if (is.matrix(obj$value)) {
       for (i in seq_along(res)) {
          r <- unique(obj$value[,i])
+         ##~ print(obj)
+         ##~ str(r)
+         ##~ print(c('before'=res[i]))
          res[i] <- switch(ref
-                         ,'0'=(length(r)==1)&&(r==0)
+                         ,'0'=(length(r)==1)&&(!is.na(r))&&(r==0)
                          ,'NA'=(length(r)==1)&&(is.na(r))
                          ,(length(r)==1)&&(r==0 | is.na(r))
                          )
       }
    }
-   else
-   {
+   else {
       cb <- chunk_band(obj)
       if (pr <- verbose & length(cb)>1)
          pb <- ursaProgressBar(min=0,max=length(cb),tail=TRUE)

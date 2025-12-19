@@ -7,7 +7,7 @@
    print(sc)
    invisible(NULL)
 }
-'.panel_basemap' <- function(style="internal.CartoDB",...) {
+'.panel_basemap' <- function(style="default",...) {
    if (.skipPlot(TRUE))
       return(NULL)
    sc <- getOption("ursaPngScale")

@@ -23,8 +23,9 @@
 'print.ursaConnection' <- function(x,...) str(x,...)
 'seek.ursaConnection' <- function(con,where=NA,origin="start",rw="",...)
 {
-   if ((1)||(con$seek))
+   if ((1)||(con$seek)) {
       return(seek(con$handle,where=round(where),origin=origin,rw=rw,...))
+   }
    stop("Reopenning is needed here, but it seems that connection doesn't support seek")
    F <- con$handle
    if (isOpen(F))

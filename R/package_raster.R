@@ -30,8 +30,10 @@
    '.addColorTable<-' <- function(r,value) {
       if (!length(value))
          return(r)
+     # r@data@max <- length(value)-1L
       r <- raster::as.factor(r)
-      x <- raster::levels(r)[[1]]
+     # x <- raster::levels(r)[[1]] ## -- 20251020
+      x <- data.frame(ID=seq(length(value))-1L) ## ++ 20251020
       x$code <- names(value)
       r@data@attributes[[1]] <- x # levels(r) <- x ## 'levels<-' is not public
       if (!anyNA(value))

@@ -53,7 +53,7 @@ If input file does not exists then these additional arguments will be passed to 
 %%~ \references{
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
-\author{Nikita Platonov \email{platonov@sevin.ru}}
+\author{Nikita Platonov \email{platonov@sev-in.ru}}
 
 %%~ \note{
 %%~ %%  ~~further notes~~

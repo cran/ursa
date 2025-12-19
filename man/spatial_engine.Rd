@@ -114,6 +114,7 @@ is_spatial_polygons(obj, verbose = FALSE)
 
 spatial_intersection(x, y,
                      geometry=c("default", "polygons", "lines", "points", "all"),
+%%~                      repair = c("make_valid", "buffer"),
                      verbose = FALSE)
 spatial_symdifference(x, y, verbose = FALSE)
 spatial_difference(x, y, verbose = FALSE)
@@ -188,6 +189,9 @@ Logical. Whether result will be returned for each record (\code{TRUE}) or genera
   \item{geometry}{
 Character. Desired output geometry for \code{engine="sf"}. If \code{"default"} then output geometry is defined internally (e.g., \code{"polygons"} for polygons intersection). If \code{"all"} then no output subsetting. Default is \code{"default"}.
 }
+%%~   \item{repair}{
+%%~ Character. Methods for repairing invalid geometries.
+%%~ }
   \item{reason}{
 Logical. If \code{TRUE}, then the reason for validity ("Valid Geomerty") or invalidity is returned. If \code{FALSE}, then logical value of validity is returned. Default is \code{FALSE}.
 }
@@ -279,7 +283,7 @@ Logical. Value \code{TRUE} provides information on console. Default is \code{FAL
 Classes and methods in packages \pkg{\link[sf:st]{sf}} and \pkg{\link[sp:00sp]{sp}} help.
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 
 %% ~Make other sections like Warning with \section{Warning }{....} ~

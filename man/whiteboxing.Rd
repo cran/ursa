@@ -29,7 +29,7 @@ Wrapper to function \code{\link[whitebox]{wbt_run_tool}}.
 If argument \code{output} is missed or \code{output=FALSE}, then object of class \code{ursaRaster}. Otherwise, output GeoTIFF file name.
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 Internally, for piping support, first character argument without \code{*.tif} suffix is interpreted as \code{tool_name}. First unnamed character argument with \code{*.tif} suffix or \code{ursaRaster} object is interpreted as input.

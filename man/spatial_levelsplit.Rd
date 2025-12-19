@@ -22,7 +22,7 @@ spatial_levelsplit(obj, sep = " - ")
 Spatial object, which class is the same as class of \code{obj}.
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 
 %% ~Make other sections like Warning with \section{Warning }{....} ~

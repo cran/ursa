@@ -40,7 +40,7 @@
 }
 'Ops.ursaRaster' <- function(e1,e2=NULL)
 {
-   verbose <- FALSE
+   verbose <- isTRUE(getOption("ursaDevel"))
    if (is.ursa(e1)) {
      # e1 <- discolor(e1) ## removed 20160805
       if (.is.category(e1)) {## added 20161214 # attr(e1$value,"category")

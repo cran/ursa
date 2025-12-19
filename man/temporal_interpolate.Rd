@@ -36,7 +36,7 @@ Function uses weighted averaging depending of proximity of found non-\code{NA} v
 %%~ \references{
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

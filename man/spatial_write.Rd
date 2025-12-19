@@ -9,7 +9,8 @@ If spatial objest are abstract of class Spatial (package \pkg{sp}) then prelimin
 
 }
 \usage{
-spatial_write(obj, fname, layer, driver = NA, compress = "", verbose = FALSE)
+spatial_write(obj, fname, layer, driver = NA, compress = "", 
+              dopt = character(), lopt = character(), verbose = FALSE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -30,14 +31,23 @@ Character. Layer name. If missed, then basename of \code{fname} is used.
 Character. Driver for specification of output file format. Default is \code{NA}; value is determined from extension of \code{fname}.
 }
   \item{compress}{
-Character or logical. Will output file or list of files be packed after writing and what archive format will be used. Available character values are \code{""} (default; no compression), \code{"gz"}, \code{"gzip"}, \code{"bz2"}, \code{"bzip2"}, \code{"zip"}, \code{"xz"}. If logical and \code{TRUE}, then "zip" is used for \code{driver} "ESRI Shapefile" and "gzip" otherwise. If logical and \code{FALSE}, then no compression.
+Character or logical. Will output file or list of files be packed after writing and what archive format will be used. Available character values are \code{""} (default; no compression), \code{"gz"}, \code{"gzip"}, \code{"bz2"}, \code{"bzip2"}, \code{"zip"}, \code{"xz"}, \code{"zstd"}, \code{"zst"}. If logical and \code{TRUE}, then "zip" is used for \code{driver} "ESRI Shapefile" and "gzip" otherwise. If logical and \code{FALSE}, then no compression.
 }
 %%~   \item{ogr2ogr}{
 %%~ DEPRECATED: ogr2ogr = nchar(Sys.which("ogr2ogr"))>0
 %%~ Logical. If \code{"ogr2ogr"} is found in system path, then GDAL utils are used for speed up and layer merge (if \code{obj} is list of spatial objects)
 %%~ }
+  \item{dopt}{
+Named character or named list. Driver dependent dataset creation options, , similar to argument \code{dataset_options} in function \code{\link[sf:st_write]{st_write()}}.
+}
+  \item{lopt}{
+Named character or named list. Driver dependent layer creation options, similar to argument \code{layer_options} in function \code{\link[sf:st_write]{st_write()}}.
+}
   \item{verbose}{
 Logical. Value \code{TRUE} provides information on console. Default is \code{FALSE}.
+}
+  \item{\dots}{
+Argument, which are passed to functions from suggested packages, e.g. \code{pretty = TRUE} in the case of using package \pkg{yyjson}.
 }
 }
 \details{
@@ -49,7 +59,7 @@ function with additonal options: compressing of output file(s), coordinates tras
 invisible \code{NULL}.
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 
 \seealso{

@@ -47,7 +47,7 @@ If \code{fname} is specified, then \code{NULL}.
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
 Implementation is very slow even for moderate image size. Use progress bar (\code{verbose=TRUE}) to control this process.

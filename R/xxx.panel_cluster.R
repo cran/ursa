@@ -55,12 +55,25 @@
       legend <- NULL
    }
    if (verbose) {
-      print(c('Category'=indCat))
-      print(c('Count'=indNum))
+      print(c('Category'=indCat,'Count'=indNum))
    }
    g1 <- .panel_grid()
    xy <- spatial_coordinates(spatial_transform(spatial_geometry(obj),ursa_crs(g1)))
    xy <- cbind(xy,da)
+   if ((isCat)&&(label)) {
+     # print(names(indCat))
+      ind <- rownames(xy)
+      xy <- do.call("rbind",by(xy,xy[,colnames(xy)[1:2],],\(v) {
+         if (nrow(v)==1)
+            return(v)
+         vx <- abs(v[[1]][1]*1e-4)
+         vy <- abs(v[[2]][1]*1e-4)
+         v[[1]] <- v[[1]]+runif(length(v[[1]]),min=-vx,max=vx)
+         v[[2]] <- v[[2]]+runif(length(v[[2]]),min=-vy,max=vy)
+         v
+      }))
+      xy <- xy[match(ind,rownames(xy)),]
+   }
    n <- if (!isNum) rep(1L,spatial_count(obj)) else obj[[indNum]]
    xy4 <- xy[do.call(c,lapply(seq_along(n),function(i) rep(i,n[i]))),,drop=FALSE]
    rownames(xy4) <- NULL
@@ -77,7 +90,7 @@
       s <- s*0.5
    if (verbose)
       print(data.frame(cell=cell,retina=retina,scale=scale
-           ,overlap=overlap,dpi=dpi,ps=ps,cex=cex,s=s))
+           ,overlap=overlap,dpi=dpi,ps=ps,cex=cex,s=s,caterories=isCat))
    if (isCat)
       bname <- if (is.factor(aname)) levels(aname) else unique(aname)
    else {
@@ -139,7 +152,10 @@
       else
          xy5 <- xy4
      # print(bname)
+      if (!nrow(xy5))
+         return(NULL)
       if (nrow(xy5)<2) {
+         print("1016c")
          chcD <- 1L
       }
       else {
@@ -401,8 +417,7 @@
       if (!"pt.lwd" %in% names(arglist)) {
          arglist[["pt.lwd"]] <- ifelse(label,1,0)*2.4/par("cex")
       }
-      do.call("legend",c(list(legend
-         ,legend=bname
+      arglist2 <- list(legend=bname
          ,title=title
          ,col=ctInd
          ,cex=c(1,cex)[1]/par("cex")
@@ -413,9 +428,11 @@
         # ,text.col="yellow"
         # ,bg=bgBox
         # ,pt.bg=ursa_colortable(colorize(seq_along(ctInd),pal=ctInd,alpha="30"))
-         ,pt.bg=if (label) bgCol else ctInd
-         ),arglist)
-      )
+         ,pt.bg=if (label) bgCol else ctInd)
+      arglist2 <- c(arglist2,arglist)
+      if (!"x" %in% names(arglist))
+         arglist2 <- c(legend,arglist2)
+      do.call("legend",arglist2)
      # return(invisible(ct)) ## colortable of obj[[indCat]]
       return(invisible(ursa_colortable(ct)))
    }

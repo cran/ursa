@@ -32,6 +32,8 @@
          arglist$datatype <- ifelse(n<255,1L,ifelse(n<65535,12L,13L))
          arglist$nodata <- n
          class(x$value) <- "ursaCategory"
+         if (length(.grep("^(category)",names(arglist)))>0)
+            ct[] <- NA
          x$colortable <- ct
          class(x$colortable) <- "ursaColorTable"
       }
@@ -86,7 +88,13 @@
    else if (x$con$driver=="RGDAL") {
       .rgdal_prepare_con(x)
    }
-   x$value <- NA
+   x$value <- if (.length0()) logical(0) else NA
+   if (FALSE) {
+      cat("length:\n   ")
+      print(length(x$value))
+      cat("dim:\n   ")
+      print(dim(x$value))
+   }
   # class(x$value) <- ifelse(isCT,"ursaCategory","ursaNumeric")
    class(x$value) <- ifelse(.is.colortable(x),"ursaCategory","ursaNumeric")
    x

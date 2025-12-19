@@ -66,11 +66,13 @@
    fname3 <- gsub("(\\..+$)",".zip",fname1)
    fname4 <- paste0(fname1,".gz")
    fname5 <- paste0(fname1,".bz2")
+   fname6 <- paste0(fname1,".zst")
    cond1 <- file.exists(fname1)
    cond2 <- file.exists(fname2)
    cond3 <- file.exists(fname3)
    cond4 <- file.exists(fname4)
    cond5 <- file.exists(fname5)
+   cond6 <- file.exists(fname6)
   # print(dsn)
   # print(c(fname1=fname1,fname2=fname2,fname3=fname3))
   # print(c(isZip=isZip,cond1=cond1,cond2=cond2,cond3=cond3,cond4=cond4,cond5=cond5))
@@ -93,6 +95,11 @@
       dsn0 <- dsn
       dsn <- tempfile();on.exit(file.remove(dsn))
       system2("bzip2",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
+   }
+   else if ((cond6)&&(nchar(Sys.which("zstd")))) {
+      dsn0 <- dsn
+      dsn <- tempfile();on.exit(file.remove(dsn))
+      system2("zstd",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
    }
    else
       dsn <- NA
@@ -154,7 +161,7 @@
    }
    lname <- .lname
    rm(.lname)
-   if (proj4!=g0$crs) {
+   if (proj4!=.proj4string(g0$crs)) {
      # if (verbose)
      #   message("REPROJECT")
       shpname <- .maketmp()
@@ -269,19 +276,25 @@
             va <- va+1L
       }
       va[va==0] <- NA
-      res <- lapply(dname,function(x) {
-         isFID <- .lgrep("fid",x)
-         if ((isFID)||(identical(tavalue,obj[[x]])))
-            a <- va
-         else {
-            a <- reclass(va,src=seq(nrow(obj)),dst=obj[[x]])
-         }
-         if (.is.category(a))
-            ursa(a,"nodata") <- length(ursa(a,"colortable"))
-         names(a) <- x
-         a
-      })
-      names(res) <- dname ## or, comment it
+      if (!length(dname)) {
+         res <- va ## list(va)
+      }
+      else {
+         res <- lapply(dname,function(x) {
+            isFID <- .lgrep("fid",x)
+            print(c(isFID=isFID))
+            if ((isFID)||(identical(tavalue,obj[[x]])))
+               a <- va
+            else {
+               a <- reclass(va,src=seq(nrow(obj)),dst=obj[[x]])
+            }
+            if (.is.category(a))
+               ursa(a,"nodata") <- length(ursa(a,"colortable"))
+            names(a) <- x
+            a
+         })
+         names(res) <- dname ## or, comment it
+      }
    }
    else if (feature=="geometry") {
       writeValue <- FALSE

@@ -1,6 +1,7 @@
 'spatial_write' <- function(obj,fname,layer,driver=NA,compress=""
-                       # ,ogr2ogr=nchar(Sys.which("ogr2ogr"))>0
-                        ,verbose=FALSE) {
+                           ,dopt=character(),lopt=character()
+                          # ,ogr2ogr=nchar(Sys.which("ogr2ogr"))>0
+                           ,verbose=FALSE,...) {
   # obj <- head(obj,100)
    ogr2ogr <- TRUE
    gdalUtils <- TRUE
@@ -10,13 +11,13 @@
       dir.create(dname,recursive=TRUE)
    fext <- .gsub("^.+\\.(.+)$","\\1",bname)
    wait <- 60
-   isGeoJSON <- fext %in% c("geojson")
+   isGeoJSON <- fext %in% c("geojson","gpx")
    interimExt <- if (isGeoJSON) fext else c("gpkg","geojson","shp","sqlite")[4]
    driverList <- c(shp="ESRI Shapefile",shz="ESRI Shapefile"
                   ,sqlite="SQLite",json="GeoJSON",geojson="GeoJSON",gpkg="GPKG"
-                  ,tab="Mapinfo File",kml="KML",fgb="FlatGeobuf")
+                  ,tab="Mapinfo File",kml="KML",fgb="FlatGeobuf",gpx="GPX")
    if (!nchar(compress)) {
-      packPatt <- "^(zip|bz(ip)*2|gz(ip)*|xz)$"
+      packPatt <- "^(zip|bz(ip)*2|gz(ip)*|xz|zst(d)*)$"
       if (.lgrep(packPatt,fext)>0) {
          compress <- .gsub(packPatt,"\\1",fext)
          bname <- gsub(paste0("\\.",compress),"",bname)
@@ -30,19 +31,27 @@
    else
       isList <- is.list(obj)
    if (isList) {
-      cl <- sapply(obj,inherits,c("sf","sfc","SpatialLinesDataFrame"
-                          ,"SpatialPointsDataFrame","SpatialPolygonsDataFrame"
-                          ,"SpatialLines","SpatialPoints","SpatialPolygons"))
-      cl2 <- sapply(obj,function(x) {
-         if (.isSF(x))
-            return("sf")
-         if (.isSP(x))
-            return("sp")
-         return("unknown")
-      })
+      cl1 <- cl <- inherits(obj,"sfc")
+      if (!cl1)
+         cl <- sapply(obj,inherits,c("sf","sfc","SpatialLinesDataFrame"
+                             ,"SpatialPointsDataFrame","SpatialPolygonsDataFrame"
+                             ,"SpatialLines","SpatialPoints","SpatialPolygons"))
+      if (!cl1) {
+         cl2 <- sapply(obj,function(x) {
+            if (.isSF(x))
+               return("sf")
+            if (.isSP(x))
+               return("sp")
+            return("unknown")
+         })
+      }
+      else
+         cl2 <- "unknown"
       allSF <- all(cl2 %in% "sf")
       allSP <- all(cl2 %in% "sp")
-      if (any(!cl))
+      if (cl1)
+         isList <- FALSE
+      else if (any(!cl))
          isList <- FALSE
    }
    if (!is.character(driver)) {
@@ -68,6 +77,7 @@
      # fname1 <- paste0("res",seq_along(obj),".gpkg")
      # fname1 <- .maketmp(length(obj),ext=interimExt)
       fname1 <- file.path(tempdir(),paste0("interim",seq_along(obj),".",interimExt))
+     # fname1 <- basename(fname1)
       if (!allSF)
          pb <- ursaProgressBar(min=0,max=2*length(obj),tail=TRUE)
       p4s <- sapply(obj,function(x){
@@ -112,11 +122,14 @@
          iname[[i]] <- jname
          options(ursaSpatialMultiLayer=getOption("ursaSpatialMultiLayer")+1L)
          if (allSF) {
+            if (verbose)
+               print(data.frame(layer=i,fname1=fname1[i],fname=fname))
             if (isGeoJSON) {
-               spatial_write(o,fname1[i],verbose=verbose) ## RECURSIVE
+               spatial_write(o,fname1[i],layer=lname[i],verbose=verbose) ## RECURSIVE
             }
-            else
+            else {
                spatial_write(o,fname,layer=lname[i],verbose=verbose) ## RECURSIVE
+            }
          }
          else
             spatial_write(o,fname1[i],verbose=verbose) ## RECURSIVE
@@ -131,23 +144,58 @@
             return(invisible(0L))
          a <- lapply(fname1,function(src) {
             a <- readLines(src,encoding="UTF-8")
+           # cat("-------------------\n")
+           # cat(sapply(head(a,7),\(x) substr(x,1,72)),sep="\n")
+           # cat("-------------------\n")
+            if (TRUE)
+               return(a)
             a <- paste(a,collapse="")
             ind2 <- regexpr("\"features\":\\s*\\[",a)
+           # print(substr(a,1,180))
+           # str(ind2)
             a <- substr(a,ind2+attr(ind2,"match.length"),nchar(a)-2)
+           # print(substr(a,1,180))
             a <- paste0(a,",")
             a
          })
-         a <- c("{","\"type\": \"FeatureCollection\", \"features\": [",do.call(c,a),"]}")
-         ind <- length(a)-1L
-         a[ind] <- substr(a[ind],1,nchar(a[ind])-1)
+         patt <- "\"name\":\\s*\"(.+)\","
+         aname <- sapply(a,function(x) {
+            if (length(ind <- grep(patt,head(x,6)))==1)
+               return(gsub(patt,"\\1",x[ind]))
+            "unnamed"
+         })
+         for (i in seq_along(aname)) {
+            if (i>1)
+               a[[i]] <- c(",",paste0(dQuote(aname[i]),":"),a[[i]])
+            else
+               a[[i]] <- c(paste0(dQuote(aname[i]),":"),a[[i]])
+           # cat("-------------------\n")
+           # cat(sapply(head(a[[i]],7),\(x) substr(x,1,72)),sep="\n")
+           # cat("-------------------\n")
+         }
+         a <- c("{",c(do.call(c,a),"}"))
+         if (FALSE) {
+            a <- c("{","\"type\": \"FeatureCollection\", \"features\": [",do.call(c,a),"]}")
+            ind <- length(a)-1L
+            a[ind] <- substr(a[ind],1,nchar(a[ind])-1)
+         }
          Fout <- file(fname,encoding="UTF-8")
          writeLines(a,Fout)
          close(Fout)
          file.remove(fname1)
-         return(invisible(0L))
+         if (!isTRUE(compress)) {
+            fname.compress <- paste0(fname,".gz")
+            if (file.exists(fname.compress))
+               file.remove(fname.compress)
+            return(invisible(NULL))
+         }
+         compress <- if (driver %in% c("GeoJSON","SQLite","FlatGeobuf","GPKG","KML")) "gz" 
+                     else "zip"
+         return(.compress_output(fname=fname,dname=dname,lname=lname,ext=ext
+                                ,wait=wait,compress=compress,verbose=verbose))
       }
-      dopt <- character()
-      lopt <- character()
+     # dopt <- character()
+     # lopt <- character()
       if (driver=="ESRI Shapefile")
          lopt <- c(lopt,"ENCODING=UTF-8","ADJUST_GEOM_TYPE=ALL_SHAPES")
       if (driver=="MapInfo File")
@@ -263,8 +311,10 @@
    }
    else
       interim <- FALSE
-   dopt <- character()
-   lopt <- character()
+  # dopt <- character()
+  # lopt <- character()
+   if (!is.null(names(lopt)))
+      lopt <- paste(names(lopt),unname(lopt),sep="=")
    if (driver=="ESRI Shapefile")
       lopt <- c(lopt,"ENCODING=UTF-8")
    if (driver=="MapInfo File")
@@ -277,8 +327,11 @@
       lopt <- c(lopt,"SPATIAL_INDEX=NO")
    }
    if ((is.logical(compress))&&(compress)) {
-      compress <- if (driver %in% c("GeoJSON","SQLite","FlatGeobuf","GPKG","KML")) "gz" 
-                  else "zip"
+      if (fext %in% "shz")
+         compress <- FALSE
+      else 
+         compress <- if (driver %in% c("GeoJSON","SQLite","FlatGeobuf","GPKG","KML")) "gz" 
+                     else "zip"
    }
    if (verbose)
       print(data.frame(fname=fname,pack=compress,bname=bname,layer=lname
@@ -434,9 +487,27 @@
                 ,delete_dsn=file.exists(fname) & !appendlayer
                 ,append=appendlayer))
       }
-      jsonSF <- (isSF)&&(driver=="GeoJSON")&&(T | !inherits(obj,"sfc"))&&
+      jsonSF <- (F & isSF)&&(driver=="GeoJSON")&&(missing(layer))&&(T | !inherits(obj,"sfc"))&&
          (requireNamespace("geojsonsf",quietly=.isPackageInUse()))
-      if ((jsonSF)&&(!useCRS)) {
+      jsonYY <- (isSF)&&(driver=="GeoJSON")&&(missing(layer))&&(T & !inherits(obj,"sfc"))&&
+         (requireNamespace("yyjsonr",quietly=.isPackageInUse()))
+      if (jsonYY) {
+         if (useCRS)
+            obj <- sf::st_transform(obj,4326)
+         if (inherits(obj,"sfc")) {
+            a <- yyjsonr::write_geojson_str(obj)
+            Fout <- file(fname)
+            writeLines(a,Fout)
+            close(Fout)
+         }
+         else {
+           # pretty <- spatial_count(obj)<50 & object.size(obj)<50000
+            yyjsonr::write_geojson_file(obj,filename=fname
+               ,json_opts=yyjsonr::opts_write_json(...)) ## pretty=pretty
+         }
+      }
+      else if ((F & jsonSF)&&(!useCRS)) {
+         print("use {geojsonsf}")
         # fromList <- length(tail(.parentFunc(),-1))>1
         # enc2native(a);Encoding(a) <- "UTF-8"
          Fout <- file(fname)#,encoding="UTF-8")
@@ -484,6 +555,14 @@
          close(Fout)
       }
       else if (utils::packageVersion("sf")>="0.9-0") {
+         if (verbose) {
+            str(list(dsn=fname,layer=lname,driver=driver
+                     ,dataset_options=dopt,layer_options=lopt
+                     ,delete_layer=file.exists(fname) & !appendlayer
+                     ,delete_dsn=file.exists(fname) & !appendlayer
+                     ,append=!file.exists(fname) | appendlayer
+               ))
+         }
          sf::st_write(obj,dsn=fname,layer=lname,driver=driver
                      ,dataset_options=dopt,layer_options=lopt
                      ,delete_layer=file.exists(fname) & !appendlayer
@@ -578,14 +657,20 @@
    }
    if (!nchar(compress))
       return(invisible(NULL))
+   .compress_output(fname=fname,dname=dname,lname=lname,ext=ext,wait=wait
+                   ,compress=compress,verbose=verbose)
+}
+'.compress_output' <- function(fname,dname,lname,ext,wait,compress,verbose) {
    if (verbose)
-      cat("pack...")
+      cat("pack... ")
    if ((.lgrep("gz",compress))&&(nchar(Sys.which("gzip"))))
-      system2("gzip",c("-9","-f",fname))
+      system2("gzip",c("-9","-f",.dQuote(fname)))
    else if (.lgrep("bz(ip)*2",compress)&&(nchar(Sys.which("bzip2"))))
-      system2("bzip2",c("-f",fname))
+      system2("bzip2",c("-f",.dQuote(fname)))
+   else if (.lgrep("zst(d)*",compress)&&(nchar(Sys.which("zstd"))))
+      system2("zstd",c("--rm","--no-progress",ifelse(verbose,"","-q"),"-f","-11",.dQuote(fname)))
    else if (.lgrep("xz",compress)&&(nchar(Sys.which("xz"))))
-      system2("xz",c("-f",fname))
+      system2("xz",c("-f",.dQuote(fname)))
    else if (compress=="zip") {
       f <- .dir(path=dname
                ,pattern=paste0("^",lname,"\\.",ext,"$")
@@ -643,6 +728,6 @@
       }
    }
    if (verbose)
-      cat(" done!\n")
+      cat("done!\n")
    invisible(NULL)
 }

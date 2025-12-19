@@ -1,6 +1,44 @@
+'.rotation' <- function(g1) {
+   if (!.is.grid(g1))
+      g1 <- ursa_grid(g1)
+   ret <- with(g1,list(x=(minx+maxx)/2,y=(miny+maxy)/2,angle=rotation[1]))
+   class(ret) <- "ursaRotation"
+   ret
+}
+'.rotate' <- function(xy,rotation,inv=FALSE,verbose=FALSE) {
+   if (!inherits(rotation,"ursaRotation")) {
+      if (is.null(attr(rotation,"rotation")))
+         return(xy)
+      rotation <- attr(rotation,"rotation")
+   }
+   if (rotation$angle==0)
+      return(xy)
+   radians <- rotation$angle*ifelse(inv,-1,1)*pi/180;
+   cosA = cos(radians)
+   sinA = sin(radians)
+   if ((FALSE)&&(is.list(xy))) {
+      b <- attributes(xy)
+      xy <- lapply(xy,function(chunk) ## RECURSIVE
+                  .rotate(xy=chunk,rotation=rotation,inv=inv,verbose=verbose))
+      attributes(xy) <- b
+      return(xy)
+   }
+   isMatrix <- is.matrix(xy)
+   dx <- (if (isMatrix) xy[,1] else xy[1])-rotation$x
+   dy <- (if (isMatrix) xy[,2] else xy[2])-rotation$y
+  # rot <- function(a) matrix(c(cos(a),sin(a),-sin(a),cos(a)),2,2)
+   ret <- cbind(cosA*dx+sinA*dy+rotation$x,cosA*dy-sinA*dx+rotation$y)
+  # class(ret) <- class(xy)
+   if (!isMatrix)
+      dim(ret) <- NULL
+   attributes(ret) <- attributes(xy)
+   ret
+}
 '.project' <- function(xy,proj,inv=FALSE,verbose=FALSE) {
    on.exit(NULL)
-  # print("ENTERED IN"); on.exit(print("ENTERED OUT"),add=TRUE)
+  # print(paste("ENTERED IN",tolower(inv))); on.exit(print("ENTERED OUT"),add=TRUE)
+   if (inv)
+      xy <- .rotate(xy,proj,inv,verbose)
   # verbose <- TRUE
    ## because of quicker load of 'proj4' package
   # show.error.messages=verbose
@@ -293,6 +331,9 @@
    }
    if (!exists("res"))
       return(NULL)
+   if (!inv) {
+      res <- .rotate(res,proj,inv,verbose)
+   }
    return(res)
 }
 '.epsg2proj4' <- function(code,force=FALSE,dismissEPSG=FALSE,verbose=FALSE) {

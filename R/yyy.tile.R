@@ -49,6 +49,7 @@
       level <- grid
       grid <- session_grid()
    }
+  # print(ursa(grid,"cellsize"))
    ursa(grid,"cellsize")/.webResolution(level)
 } 
 # https://leaflet-extras.github.io/leaflet-providers/preview/
@@ -94,8 +95,8 @@
                  ,paste0(osmCr,", \u0421\u043F\u0443\u0442\u043D\u0438\u043A \uA9 \u0420\u043E\u0441\u0442\u0435\u043B\u0435\u043A\u043E\u043C"))
   # http://cartodb-basemaps-c.global.ssl.fastly.net/light_all/6/37/21.png   
   # http://a.basemaps.cartocdn.com/light_only_labels/6/39/18.png
-   s$'internal.CartoDB' <- c("https://{abcd}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                 ,paste0(osmCr,", \uA9 CartoDB"))
+  # s$'internal.CartoDB' <- c("https://{abcd}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+  #               ,paste0(osmCr,", \uA9 CartoDB"))
    s$'Positron' <- c("https://{abcd}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                     ,paste0(osmCr,", \uA9 CartoDB"))
    s$'Dark Matter' <- c("https://{abcd}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -190,11 +191,11 @@
    s$'Yandex.Map' <- c(paste0("https://vec0{1234}.maps.yandex.net/tiles?l=map" 
                                  ,"&x={x}&y={y}&z={z}&scale={r}&lang="
                                  ,switch(language,ru="ru_RU","en_US")),yandexCr)
-   s$'Yandex.Satellite' <- c(paste0("https://vec0{1234}.maps.yandex.net/tiles?l=sat" 
+   s$'Yandex.Satellite' <- c(paste0("https://sat0{1234}.maps.yandex.net/tiles?l=sat" 
                                  ,"&x={x}&y={y}&z={z}&scale={r}&lang="
                                  ,switch(language,ru="ru_RU","en_US")),yandexCr)
   # '\u044f\u043d\u0434\u0435\u043a\u0441' 
-   s$'Yandex.ru' <- c(paste0("https://vec0{1234}.maps.yandex.net/"
+   s$'Yandex.ru' <- c(paste0("https://core-renderer-tiles.maps.yandex.net/"
                               ,"tiles?l=map&x={x}&y={y}&z={z}&scale={r}&lang=ru_RU"),yandexCr)
    s$mapy <- c("https://mapserver.mapy.cz/base-m/{r}/{z}-{x}-{y}","mapy.cz")
    s$'internal.Stadia.AlidateSmooth' <- c(paste0("https://tiles.stadiamaps.com/tiles/alidade_smooth"
@@ -219,16 +220,19 @@
                  ,"\u0420\u435\u043b\u044c\u0435\u0444 \u0420\u0443\u043c\u0430\u043f Scanex")
    s$'wikimapia' <- c("https://{s}.wikimapia.org/?x={x}&y={y}&zoom={z}&type=map&lng=1"
                  ,"Wikimapia CC-BY-SA")
-   s$'windy' <- c("https://tiles.windy.com/tiles/v10.0/darkmap-retina/{z}/{x}/{y}.png"
+   s$'windy.dark' <- c("https://tiles.windy.com/tiles/v10.0/darkmap-retina/{z}/{x}/{y}.png"
                  ,paste(osmCr,"(Infringing of windy.com copyrights)"))
-                 
+   s$'windy.outdoor' <- c("https://tiles.windy.com/v1/maptiles/outdoor/256@2x/{z}/{x}/{y}/?lang=en"
+                 ,paste(osmCr,"(Infringing of windy.com copyrights)"))
   # s$'soviet' <- c(paste0("https://proxy.nakarte.me/http/88.99.52.155/tmg/5/18/4"),"Soviet military maps")
    s$'soviet' <- c(paste0("http://88.99.52.155/tmg/{z}/{x}/{y}"),"Soviet military maps")
-   
+   s$'lightpollution' <- c(paste0("https://www2.lightpollutionmap.info/osm/{z}/{x}/{y}.png")
+                         ,"This basemap is takent from lightpollutionmap.info")
   # http://a.maps.owm.io/map/precipitation_new/6/37/19?appid=b1b15e88fa797225412429c1c50c122a1   
   # s$'MapTilesAPI' <- c(paste0("https://maptiles.p.rapidapi.com/en/map/v1/{z}/{x}/{y}.png"
   #                            ,"?rapidapi-key=",MapTilesAPI)
   #                     ,paste(osmCr,"Map Tiles API"))
+   s$'default' <- s$'Positron'
    if (!sum(nchar(server))) {
       val1 <- .grep(".*zzz(google|yandex).*",names(s),value=TRUE,invert=TRUE)
       if ((providers)&&(requireNamespace("leaflet",quietly=.isPackageInUse()))&&
@@ -382,8 +386,8 @@
       s <- paste0("i",(x %% 4)+(y %% 4)*4L)
       tile <- gsub("\\{s\\}",s,tile)
    }
-   if ((FALSE)&&(.lgrep("\\{..+}",tile))) {
-      dom <- unlist(strsplit(.gsub2("\\{(.+)\\}","\\1",gsub("\\{.\\}","",tile)),""))
+   if ((FALSE)&&(.lgrep("\\{\\w{2,4}\\}",tile))) {
+      dom <- unlist(strsplit(.gsub2("\\{\\w{2,4}\\}","\\1",gsub("\\{.\\}","",tile)),""))
       ##~ print(tile)
       ##~ print(dom)
       tile <- .gsub("{.+}",sample(dom,1),tile)
@@ -466,7 +470,9 @@
          if (inherits(a,"try-error"))
             a <- try(255*.readJPEG(fname),silent=!verbose)
          if (inherits(a,"try-error")) {
-            a <- 255*.readGRAPHICS(fname) ## -- .readPNG
+            a <- try(255*.readGRAPHICS(fname)) ## -- .readPNG
+            if (inherits(a,"try-error"))
+               return(NA)
          }
       }
       else

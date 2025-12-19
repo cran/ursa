@@ -57,7 +57,7 @@ Returned value from either \code{\link[ursa]{display_brick}} or \code{\link[ursa
 %%~ %% ~put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%~ %%  ~~further notes~~

@@ -69,11 +69,12 @@
    else
    {
      # session_grid(obj) ## added 2015-12-02 # removed 20161226
-      if (is.null(g0 <- getOption("ursaPngComposeGrid")))
+      if (is.null(g0 <- getOption("ursaPngComposeGrid"))) {
          if (is.null(g0 <- getOption("ursaSessionGrid"))) { ## added 20161226
             session_grid(obj)
             g0 <- session_grid()
          }
+      }
       isList <- .is.ursa_stack(obj)
       if (isList)
       {
@@ -424,10 +425,12 @@
    res
 }
 '.optimal_layout' <- function(panels=1,ratio=10,grid=NULL,verbose=FALSE,...) {
+  # verbose <- TRUE
    if (.is.grid(grid))
       grid <- with(grid,c(rows,columns))
    if (!((is.numeric(grid))&&(length(grid)==2))) {
-      grid <- with(session_grid(),c(rows,columns))
+      grid <- with(.compose_grid(),c(rows,columns))
+     # grid <- with(session_grid(),c(rows,columns))
    }
    if (verbose)
       print(grid)
@@ -453,7 +456,19 @@
    y <- round(grid[1]/v)
    if (verbose)
       print(data.frame(nr=v,nc=u,x=x,y=y))
-   session_grid(unname(c(y,x)))
+   if (!FALSE) {
+     # cat("-------------------------------\n")
+     # g3 <- ursa_grid(unname(c(y,x)))
+     # print(g3)
+     # print(session_grid())
+     # options(ursaPngComposeGrid=g3)
+      .compose_grid(unname(c(y,x)))
+     # print(getOption("ursaPngComposeGrid"))
+     # print(g3)
+     # session_grid(unname(c(y,x)))
+     # print(getOption("ursaPngComposeGrid"))
+     # print(getOption("ursaPngPanelGrid"))
+   }
    c(nr=v,nc=u)
   # cd <- compose_design(,scale=1,legend=NULL,r)
 }

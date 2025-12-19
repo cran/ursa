@@ -30,7 +30,7 @@ Depending of used engine, either simple features (package \pkg{sf}) or Spatial a
 %%~ Object of Simple Features (package \pkg{sf}). 
 }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 \note{
    For GeoJSON files in the case \code{engine="geojsonsf"} reading is faster and the order of fields can be rearranged.

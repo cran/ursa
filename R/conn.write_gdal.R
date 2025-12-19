@@ -85,6 +85,7 @@
    if (file.exists(dst))
       file.remove(dst)
    op <- character()
+   pr <- if (T) ifelse(datatype %in% c(4L,5L),3L,2L) else 1L
    if (!is.null(driver)) {
       op <- c("-of",driver)
       if (length(indDriver))
@@ -94,7 +95,6 @@
       op <- c("-of","ENVI")
    }
    else if (.lgrep("\\.(tif(f)*)$",basename(dst))) {
-      pr <- 1L # ifelse(datatype %in% c(4L,5L),3L,2L)
       op <- c("-of","GTiff")
       if (!length(opts))
          op <- c(op
@@ -134,8 +134,11 @@
          else
             op2 <- paste0(oname,"=",opts)
       }
-      else if (is.list(opts))
+      else if (is.list(opts)) {
+         if (("predictor" %in% names(opts))&&(isTRUE(opts[["predictor"]])))
+            opts[["predictor"]] <- pr
          op2 <- paste0(names(opts),"=",sapply(opts,function(x) x))
+      }
       else
          op2 <- character()
       op <- c(op,do.call("c",lapply(op2,function(x) c("-co",x))))

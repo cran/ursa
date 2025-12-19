@@ -1,10 +1,30 @@
-2025-02-20
+2025-12-19
 
 <!--
-+ ongoing...
 + Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to using native pipes `|>` in code
 + Depends on R (>= 4.1.0) instead of R (>= 3.0.0) due to changed behaviour in `*apply()` functions with argument `simplify`
++ ongoing...
 -->
+
+### Version 3.11.5
+
+-   Package **`yyjsonr`** added to ‘Suggested’ to speed up GeoJSON
+    reading/writing instead of functions from **`geojsonsf`** package.
+
+-   Package **`jsonlite`** removed from ‘Suggested’
+
+-   Argument `...` is added to function `spatial_write` to support
+    options in the case, when other packages are used (e.g.,
+    `pretty=TRUE` for writting GeoJSON by functions from package
+    **`yyjsonr`**).
+
+-   New function `category_value()` to get index by name from category
+    table or color table.
+
+-   New function `ursa_match()` for categoric rasters to create mask
+    using reference values.
+
+-   Coastline is updated to version 2025-12-19T04:15.
 
 ### Version 3.11.4
 

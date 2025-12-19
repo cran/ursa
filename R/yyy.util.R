@@ -1,16 +1,19 @@
-'.elapsedTime' <- function(message="",reset=FALSE,toPrint=FALSE)
+'.elapsedTime' <- function(message="",sep="--",reset=FALSE,toPrint=FALSE)
 {
+  # sep <- c('blue=">+",'green="!+",'red'="---",'aqua'=c("--","----")
    startTime <- getOption("ursaTimeStart")
    deltaTime <- getOption("ursaTimeDelta")
    if (message=="")
-      message <- paste(as.character(Sys.time()),"***")
+      message <- paste(as.character(Sys.time()),sep)
    else
       message <- paste(message,":",sep="")
-   mytext <- sprintf("*** %s: %s %.2f(%.2f) seconds ***"
+   mytext <- sprintf("%s %s: %s %.2f(%.2f) seconds %s"
                    # ,as.character(Sys.time())
+                    ,sep
                     ,.argv0()
                     ,message,(proc.time()-startTime)[3]
-                    ,(proc.time()-deltaTime)[3])
+                    ,(proc.time()-deltaTime)[3]
+                    ,sep)
    if (reset)
       options(ursaTimeStart=proc.time())
    options(ursaTimeDelta=proc.time())
@@ -416,6 +419,10 @@
    b1
 }
 '.degminsec' <- function(x,suffix=c("A","B"),unique=FALSE) {
+   if (((is.data.frame(x))||(is.matrix(x)))&&(ncol(x)==2)) {
+      return(data.frame(lon=.degminsec(x[,1,drop=TRUE],suffix=c("E","W"))
+                       ,lat=.degminsec(x[,2,drop=TRUE],suffix=c("N","S"))))
+   }
    s <- sign(x)
    x <- abs(x)
    y <- rep("",length(x))
@@ -599,11 +606,13 @@
    if (isTRUE(br)) {
       fname <- normalizePath(url,winslash="/")
       isTemp <- getOption("ursaCacheDir")==dirname(fname)
+      isRstudio <- .Platform$GUI %in% "RStudio"
       fname <- paste0("file:///",fname)
     #  a <- readLines(system.file("template","browseURL.html",package="ursa"))
       a <- readLines(file.path(getOption("ursaRequisite"),"browseURL.html"))
       if (length(ind <- grep(patt <- "(^.*)(\\$\\(fullname\\))(.*$)",a))>0)
-         a[ind] <- gsub(patt,paste0("\\1",basename(fname),"\\3"),a[ind])
+         a[ind] <- gsub(patt,paste0("\\1"
+                ,ifelse(isTemp | isRstudio,basename(fname),fname),"\\3"),a[ind])
       if (length(ind <- grep(patt <- "(^.*)(\\$\\(shortname\\))(.*$)",a))>0)
          a[ind] <- gsub(patt,paste0("\\1",basename(fname),"\\3"),a[ind])
       if (!isTemp)
@@ -611,6 +620,7 @@
       else
          fname <- gsub("\\.\\w+$",".html",fname)
       writeLines(a,fname)
+     # writeLines(a,"C:/tmp/interim.html")
       return(.viewer(fname))
    }
    if (!is.null(browser <- getOption("browser")))
@@ -806,6 +816,15 @@
    arglist
 }
 '.isColor' <- function(x) !inherits(try(col2rgb(x),silent=TRUE),"try-error")
+'.getZoom' <- function(grid) {
+   if (missing(grid))
+      grid <- getOption("ursaSessionGrid")
+   if (is.null(grid))
+      return(NA)
+   if (!.isWeb(grid))
+      return(NA)
+   .is.near(ursa(grid,"cellsize"),2*6378137*pi/(2^(1:21+8)))
+}
 '.isWeb' <- function(grid) {
    if (missing(grid))
       grid <- getOption("ursaSessionGrid")
@@ -851,3 +870,5 @@
    invisible(value)
 }
 '.greyscale' <- function() c(0.30,0.59,0.11)
+'.length0' <- function() TRUE ## $value in 'open_envi' 'create_envi'
+'.memfree' <- function () as.numeric(system("awk '/MemFree/ {print $2}' /proc/meminfo",intern=T))/1024

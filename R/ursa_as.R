@@ -498,6 +498,8 @@
                    ,"Try to change 'tolerance'",paste0("(",tolerance,")")))
       g$columns <- as.integer(round(g$columns))
       g$rows <- as.integer(round(g$rows))
+      str(g)
+      q()
       p <- attr(obj,"crs")
       if ((is.character(p))&&(nchar(p)))
          g$crs <- p

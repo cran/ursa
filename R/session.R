@@ -30,6 +30,11 @@
    if (is.null(obj))
       return(options(ursaSessionGrid=NULL))
    if (length(arglist)) {
+      if (is_spatial(obj)) { ## ++ 20251110
+         arglist2 <- arglist[grep("^border",names(arglist),invert=TRUE)]
+         if (length(arglist2))
+            obj <- do.call(spatialize,c(list(obj),arglist))
+      }
      # if (is_spatial(obj))
       obj <- do.call(regrid,c(list(spatial_grid(obj)),arglist))
      # else
@@ -63,7 +68,7 @@
       else {
          opW <- options(warn=2)
          if (envi_exists(obj,exact=TRUE)==1)
-            a <- try(open_envi(obj,resetGrid=TRUE,decompress=FALSE))
+             a <- try(open_envi(obj,resetGrid=TRUE,headerOnly=TRUE))
          else
             a <- NULL
          options(opW)

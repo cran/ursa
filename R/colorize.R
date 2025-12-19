@@ -73,10 +73,14 @@
       alpha[alpha>255] <- 255
       alpha <- sprintf("%02X",alpha)
    }
+   if (removePal <- isFALSE(pal))
+      pal <- NULL
    col <- NULL ## plug
    palname <- NULL ## plug
    keepColors <- ncolor
    dropIndex <- FALSE
+   if ((length(name)>0)&&(isTRUE(lazyload))) ## TODO: ncolor!=name, nbreak!=name
+      lazyload <- FALSE
    if (missing(obj)) {
       if (length(value)) {
         # v <- length(value)
@@ -129,7 +133,7 @@
          else
             od <- sort(unique(obj))
          if (length(od)>1) {
-            od <- sort(unique(diff(od)))
+            od <- as.numeric(sort(unique(diff(od))))
             if (all(od %% min(od) == 0)) {
                os <- seq(min(obj),max(obj),by=min(od))
                daily <- match(obj,os)
@@ -831,6 +835,8 @@
       }
       obj <- .as.colortable(obj,col=col,name=name,alpha=alpha)
       class(obj$value) <- "ursaCategory"
+      if (removePal)
+         obj$colortable[] <- NA
       return(obj)
    }
   # labels <- ncolor ## (TODO: keep desired labels if ramp=TRUE)
@@ -906,7 +912,8 @@
          }
          sl <- unique(substr(label,nchar(label)-1,nchar(label)))
          if ((length(sl)==1)&&(sl==".0")) {
-            label <- sprintf(sprintf("%%.0f",i2),as.double(value))
+           # str(list(sl=sl,i2=i2,label=label,value=value,sprintf=try(sprintf("%%.0f"))))
+            label <- sprintf(sprintf("%%.%df",0L),as.double(value))
          }
          value <- as.numeric(label)
       }
@@ -1347,6 +1354,8 @@
       ignorevalue(obj) <- n
    else if (is.na(ignorevalue(obj)))
       ignorevalue(obj) <- .optimal.nodata(ursa_value(obj))
+   if (removePal)
+      obj$colortable[] <- NA
    obj
 }
 '.as.colortable' <- function(x,value=NULL,name=NULL,blank="",col=NULL
@@ -1386,12 +1395,17 @@
 }
 'palettize' <- function(...) {
    arglist <- list(...)[[1]]
-  # cat("---------\n")
+  # cat("-1--------\n")
   # str(arglist)
    if (length(ind <- which(sapply(arglist,.is.colortable)))) {
       ret <- arglist[[ind]]
       return(ret)
    }
-  # cat("---------\n")
-   ursa_colortable(colorize(...))
+  # print(names(arglist))
+  # cat("-2--------\n")
+  # ursa_colortable(colorize(...))
+  # val <- do.call("colorize",list(...))
+  # str(val)
+  # cat("-3--------\n")
+   ursa_colortable(do.call("colorize",list(...)))
 }

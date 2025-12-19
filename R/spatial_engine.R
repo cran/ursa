@@ -4,6 +4,8 @@
                                                  # ,beauty=FALSE
                                                   ,verbose=FALSE) {
    beauty <- FALSE
+   if (missing(obj))
+      return(session_crs())
    if (.isUrsaCRS(obj))
       return(obj)
    if (!is.null(attr(obj,"crs",exact=TRUE))) {
@@ -455,8 +457,9 @@
       return(sf::st_transform(obj,sf::st_crs(crs),...))
    }
    if (isSP) {
-      if (is.numeric(crs))
-         crs <- .epsg2proj4(crs,force=FALSE)
+      if (is.numeric(crs)) {
+         crs <- .proj4string(crs) # .epsg2proj4(crs,force=FALSE)
+      }
       else if (.isSP(crs))
          crs <- sp::proj4string(crs)
       opW <- options(warn=ifelse(verbose,0,-1))
@@ -503,7 +506,6 @@
          return(geoType)
       return(rep(geoType,spatial_count(obj)))
    }
-  # print(class(obj))
    return(NULL)
 }
 'spatial_coordinates' <- function(obj,verbose=FALSE) {
@@ -859,8 +861,14 @@
 }
 'spatial_filelist' <- 'spatial_dir' <- function(path=".",pattern=NA,full.names=TRUE
                                                ,recursive=FALSE,ignore.case=TRUE) {
-   patt0 <- "\\.(gpkg|tab|kml|geojson|mif|sqlite|fgb|shp|shz|osm)(\\.(zip|gz|bz2))*$"
-   if (devel <- TRUE & all(!dir.exists(path))) {
+   if (length(path)>1) ## RECURSIVE
+      return(do.call(c,lapply(path,function(p) spatial_dir(path=p,pattern=pattern
+         ,full.names=full.names,recursive=recursive,ignore.case=ignore.case))))
+   patt0 <- "\\.(gpkg|tab|kml|geojson|mif|sqlite|fgb|shp|shz|osm)(\\.(zip|gz|bz2|zst))*$"
+   devel <- getOption("ursaDevel",FALSE)
+   if (devel2 <- TRUE & all(!dir.exists(path))) {
+      if (devel)
+         print("A1")
       dname <- dirname(path)
       if (dname!=".") {
          dpath <- list.dirs(dirname(path),full.names=FALSE)
@@ -875,18 +883,24 @@
      # if (full.names)
      #    res 
    }
-   else
+   else {
+      if (devel)
+         print("A2")
       res <- dir(path=path,pattern=patt0,full.names=full.names
                 ,recursive=recursive,ignore.case=ignore.case)
+   }
    if ((!length(res))&&(is.na(pattern))) {
       if ((path==basename(path))&&(!dir.exists(path))) {
-        # print("A")
+         if (devel)
+            print("A3")
          pattern <- path
          path <- "."
          res <- dir(path=path,pattern=patt0,full.names=full.names
                    ,recursive=recursive,ignore.case=ignore.case)
       }
       else {
+         if (devel)
+            print("A4")
          pattern <- basename(path)
          path2 <- dirname(path)
          res <- dir(path=path2,pattern=patt0,full.names=full.names
@@ -899,18 +913,42 @@
          }
       }
    }
+   if ((!length(res))&&(!is.na(pattern))) { ## try to split pattern to path+pattern
+      if (devel)
+         print("A5")
+      spath <- dirname(pattern)
+      if (dir.exists(spath)) {
+         sname <- basename(pattern)
+         res <- dir(path=spath,pattern=sname,full.names=full.names
+                   ,recursive=recursive,ignore.case=ignore.case)
+         if (length(res))
+            pattern <- sname
+      }
+   }
    if (is.character(pattern)) {
-      ind <- grep(pattern,basename(res),ignore.case=ignore.case)
+      if (devel)
+         print("A6")
+      patt <- paste0(ifelse(grepl("^\\^",pattern),"","^")
+                    ,gsub("\\.","\\\\.",pattern)
+                    ,"$")
+      ind <- grep(patt,basename(res),ignore.case=ignore.case)
       if (!length(ind)) {
+         if (devel)
+            print("A7")
          ind <- na.omit(match(pattern,basename(res)))
          if (!length(ind)) {
             ind <- na.omit(match(pattern,spatial_basename(res)))
+            if (!length(ind)) {
+               if (devel)
+                  print("A8")
+               ind <- grep(pattern,spatial_basename(res),ignore.case=ignore.case)
+            }
            # return(res[ind])
          }
       }
       res <- res[ind]
    }
-  # res <- gsub("(\\.zip|gz|bz2)*$","",res) ## lack for 'file.info'
+  # res <- gsub("(\\.zip|gz|bz2|zst)*$","",res) ## lack for 'file.info'
    res
 }
 '.spatial_shape' <- function(data,geometry,verbose=FALSE) { ## not useful
@@ -978,7 +1016,9 @@
    obj
 }
 'spatial_intersection' <- function(x,y,geometry=c("default","polygons","lines"
-                                                 ,"points","all"),verbose=FALSE) {
+                                                 ,"points","all")
+                                 # ,repair=c("make_valid","buffer")
+                                  ,verbose=FALSE) {
    geometry <- match.arg(geometry)
    if (is.ursa(x)) {
       if (.isSF(y))
@@ -988,7 +1028,9 @@
       else
          x <- polygonize(x,verbose=verbose)
    }
-   if (is.ursa(y)) {
+   if ((is.ursa(y))||(.is.grid(y))) {
+      if (.is.grid(y))
+         y <- spatial_bbox(y)
       if (.isSF(x))
          y <- polygonize(y,engine="sf",verbose=verbose)
       else if (.isSP(x))
@@ -1005,21 +1047,45 @@
          sf::st_agr(x) <- "constant"
       if (inherits(y,"sf"))
          sf::st_agr(y) <- "constant"
-      if (missedAttrTable <- is.null(spatial_data(x))) {
+      if (missedAttrTableX <- is.null(spatial_data(x))) {
          xname <- basename(tempfile(pattern="field",tmpdir=""))
          spatial_data(x) <- data.frame(array(0,dim=c(spatial_count(x),1)
                                             ,dimnames=list(NULL,xname)))
          sf::st_agr(x) <- "constant"
       }
-      res <- try(sf::st_intersection(x,y),silent=TRUE)
-      if (inherits(res,"try-error")) {
-         if (length(grep("st_crs\\(x\\) == st_crs\\(y\\) is not TRUE"
-                        ,as.character(res))))
-         res <- sf::st_intersection(x,spatial_transform(y,x))
+      if (missedAttrTableY <- is.null(spatial_data(y))) {
+         yname <- basename(tempfile(pattern="field",tmpdir=""))
+         spatial_data(y) <- data.frame(array(0,dim=c(spatial_count(y),1)
+                                            ,dimnames=list(NULL,yname)))
+         sf::st_agr(y) <- "constant"
       }
-      if (missedAttrTable) {
+      for (attept in seq(5)) {
+         res <- try(sf::st_intersection(x,y),silent=!verbose)
+         if (!inherits(res,"try-error"))
+            break
+         if (verbose)
+            cat(res)
+         if (length(grep("st_crs\\(x\\) == st_crs\\(y\\) is not TRUE"
+                        ,as.character(res)))) {
+            y <- spatial_transform(y,x)
+         }
+         if (length(grep("(Loop.+is not valid|is invalid)"
+                        ,as.character(res)))) {
+            if (!all(ind <- sf::st_is_valid(x)))
+               x[!ind,] <- sf::st_make_valid(x[!ind,])
+            if (!all(ind <- sf::st_is_valid(y)))
+               y[!ind,] <- sf::st_make_valid(y[!ind,])
+         }
+      }
+      if (missedAttrTableX) {
          x <- spatial_geometry(x)
          res[[xname]] <- NULL
+      }
+      if (missedAttrTableY) {
+         y <- spatial_geometry(y)
+         res[[yname]] <- NULL
+         if (!identical(spatial_fields(x),spatial_fields(res)))
+            spatial_fields(res) <- spatial_fields(x)
       }
       if (is.null(spatial_data(res))) {
          if (!is.null(spatial_data(x)))
@@ -1161,6 +1227,8 @@
    NULL
 }
 'spatial_difference' <- function(x,y,verbose=FALSE) {
+   if (.is.grid(x))
+      x <- polygonize(spatial_bbox(x))
    isSF <- .isSF(x) & .isSF(y)
    isSP <- .isSP(x) & .isSP(y)
    if (verbose)
@@ -1357,6 +1425,10 @@
 }
 'spatial_bind' <- function(...) {
    arglist <- list(...)
+   progress <- .getPrm(arglist,name="progress",default=FALSE)
+   if (is.logical(progress))
+      if (length(ind <- grep("progress",names(arglist)))==1)
+         arglist[[ind]] <- NULL
    if (length(ind <- which(sapply(arglist,is.null))))
       arglist <- arglist[-ind]
    if (!length(arglist))
@@ -1368,10 +1440,35 @@
       if (length(ind <- which(sapply(arglist,is.null))))
          arglist <- arglist[-ind]
    }
-   res <- arglist[[1]]
+   n <- sapply(arglist,spatial_count)
+   if (all(n==0))
+      return(NULL)
+   res <- arglist[[which(n>0)[1]]]
    isSF <- .isSF(res)
    isSP <- .isSP(res)
+   if (length(arglist)>1) {
+      crs <- sapply(arglist,spatial_crs)
+      if (length(unique(crs))!=1) {
+         for (i in tail(seq_along(crs),-1))
+            if (crs[i]!=crs[1])
+               arglist[[i]] <- spatial_transform(arglist[[i]],crs[1])
+      }
+   }
    if (!is.null(spatial_data(res))) {
+      if (length(arglist)>1) {
+         tname <- unlist(lapply(arglist,function(x) {
+            if (!spatial_count(x))
+               return(NULL)
+            spatial_fields(x)
+         }))
+         ta <- table(tname)
+         if (!length(ta))
+            return(NULL)
+         aname <- names(ta[ta==max(ta)])
+         aname <- aname[unique(na.omit(match(tname,aname)))]
+         if (length(ta)!=length(aname))
+            arglist <- lapply(arglist,function(x) x[,aname])
+      }
       if (isSP) {
         # res <- lapply(seq_along(arglist),function(i) sp::spChFIDs(arglist[[i]],as.character(i)))
          da <- do.call(rbind,lapply(arglist,spatial_data))
@@ -1386,8 +1483,23 @@
       }
       if (isSF) {
          geom <- unique(sapply(arglist,function(x) attr(x,"sf_column")))
-         if (length(unique(geom))==1)
-            return(do.call("rbind",arglist))
+         if (length(unique(geom))==1) {
+            if (!progress)
+               return(do.call("rbind",arglist))
+            else {
+               pb <- ursaProgressBar(arglist)
+               n <- sapply(arglist,spatial_count)
+               lut <- data.frame(i=seq_along(arglist),from=1L,to=cumsum(n))
+               lut$from[-1] <- head(cumsum(n),-1)+1L
+               ret <- arglist[[1]][rep(1,sum(n)),]
+               for (i in seq_along(arglist)) {
+                  setUrsaProgressBar(pb,title="Spatial binding")
+                  ret[seq(lut$from[i],lut$to[i]),] <- arglist[[i]]
+               }
+               close(pb)
+               return(ret)
+            }
+         }
          if (TRUE) { ## fixed st_column name 'geometry'
             for (i in seq_along(arglist))
                arglist[[i]] <- sf::st_sf(spatial_data(arglist[[i]])
@@ -1405,8 +1517,9 @@
          return(do.call("rbind",arglist))
       }
    }
-   if (isSF)
+   if (isSF) {
       return(do.call("c",arglist))
+   }
    geoType <- spatial_geotype(res)
    coerce <- switch(geoType
                    ,POLYGON="SpatialPolygons" ## "SpatialPolygonsDataFrame"
@@ -1423,7 +1536,7 @@
 'spatial_basename' <- function(fname) {
    gsub(paste0("\\."
               ,"(shp|shz|geojson|fgb|sqlite|gpkg|mif|kml|osm|csv|tif|envi|bin|envigz|img|bingz)"
-              ,"(\\.(gz|bz2|zip|rar))*$")
+              ,"(\\.(gz|bz2|zst|zip|rar))*$")
        ,"",basename(fname),ignore.case=TRUE)
 }
 'spatial_pattern' <- function(fname) {
@@ -1432,7 +1545,7 @@
    gsub(p,"\\\\\\1",spatial_basename(fname))
 }
 'spatial_fileext' <- function(fname) {
-   a <- gsub("^(.+)(\\.(gz|bz2|zip|rar))$","\\1",basename(fname),ignore.case=TRUE)
+   a <- gsub("^(.+)(\\.(gz|bz2|zst|zip|rar))$","\\1",basename(fname),ignore.case=TRUE)
    gsub(".*\\.(.+)$","\\1",a)
 }
 'spatial_revise' <- function(obj,engine=c("auto","sf","sp"),verbose=FALSE) {

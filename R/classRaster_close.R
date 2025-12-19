@@ -2,6 +2,9 @@
 'close.ursaRaster' <- function(...)
 {
    args <- list(...)
+   verbose <- .getPrm(args,"^verb",default=getOption("ursaDevel",FALSE))
+   if (!is.null(names(args)))
+      args <- args[grep("^verb",names(args),invert=TRUE)]
    for (i in seq(along=args))
    {
       con <- args[[i]]$con
@@ -31,7 +34,7 @@
             file.remove(extra)
             file.rename(con$fname,dst)
          }
-         else if (con$compress==-2L)
+         else if (con$compress==-1002L)
          {
             if (is.null(fname <- attr(con$fname,"source")))
                fname <- .gsub("\\.unpacked(.*)~$",".envi",con$fname)
@@ -44,7 +47,17 @@
                file.remove(ftmp)
             if (file.exists(ftmp <- paste0(.gsub("\\.envi","",fname),".gz")))
                file.remove(ftmp)
-            system(paste("gzip","-f -Sgz",dQuote(fname)))
+         }
+         else if (con$compress==-2002L) ## DEVEL: opened cache=T compress=T, then replaced
+         {
+            if (is.null(fname <- attr(con$fname,"source")))
+               fname <- .gsub("\\.unpacked(.*)~$",".envi",con$fname)
+            if (verbose)
+               cat("compress update to",.dQuote(basename(fname)),"...")
+            system2("gzip",c("-f -9 -c -n",.dQuote(con$fname))
+                   ,stdout=fname,stderr=FALSE)
+            if (verbose)
+               cat(" done!\n")
          }
          else if (con$compress==1L)
          {
@@ -60,7 +73,11 @@
                      break
                   Sys.sleep(7)
                }
+               if (verbose)
+                  cat("compress",.dQuote(basename(con$fname)),"...")
                a <- system(paste("gzip","-f -Sgz",dQuote(con$fname))) ##keep
+               if (verbose)
+                  cat(" done!\n")
               # str(a)
             }
            # .elapsedTime("PASSED")
@@ -68,22 +85,47 @@
            # dst <- file.path(dirname(src),.gsub("\\.bin",".gz",basename(con$fname)))
            # file.rename(src,dst)
          }
-         else if (con$compress==3L) { ## compress==0 and at least one 'replace'
+         else if (con$compress %in% c(-2L,3L)) { ## compress==0 and at least one 'replace'
             if (dirname(con$fname)==.ursaCacheDir()) {
                was <- .ursaCacheRead()
                if (!is.null(was)) {
-                  dst <- was$src[match(basename(con$fname),was$dst)]
-                  if (file.exists(dst)) {
-                     if ((.lgrep("(envi|bin|\\.)gz$",dst))&&
-                                                  (nchar(Sys.which("gzip")))) {
-                        system2("gzip",c("-f -9 -c -n",.dQuote(con$fname))
-                               ,stdout=dst,stderr=FALSE)
+                  ind <- tail(which(!is.na(match(was$dst,basename(con$fname)))),1)
+                  if (length(ind)==1) {
+                    # print(was[ind,])
+                    # print(file.mtime(was$src[ind]))
+                    # print(as.integer(file.mtime(was$src[ind])))
+                     dst <- was$src[ind]
+                   #  print(c('con$fname'=con$fname,'dst'=dst))
+                   #  print(was)
+                   #  print(file.size(file.path(.ursaCacheDir(),was$dst[ind])))
+                   #  q()
+                     if (file.exists(dst)) {
+                        if (verbose)
+                           cat("compress update to",.dQuote(basename(dst)),"...")
+                        if ((.lgrep("(envi|bin|\\.)gz$",dst))&&
+                                                     (nchar(Sys.which("gzip")))) {
+                           system2("gzip",c("-f -9 -c -n",.dQuote(con$fname))
+                                  ,stdout=dst,stderr=FALSE)
+                        }
+                        else if ((.lgrep("\\.bz2$",dst))&&
+                                                     (nchar(Sys.which("bzip2")))) {
+                           system2("bzip2",c("-f -9 -n",.dQuote(con$fname))
+                                  ,stdout=dst,stderr=FALSE)
+                        }
+                        else if ((.lgrep("\\.zst$",dst))&&
+                                                     (nchar(Sys.which("zstd")))) {
+                           system2("zstd",c("-f -11 -c",.dQuote(con$fname),"-o",dst)
+                                  ,stdout=dst,stderr=FALSE)
+                        }
+                        if (verbose)
+                           cat(" done!\n")
                      }
-                     else if ((.lgrep("\\.bz2$",dst))&&
-                                                  (nchar(Sys.which("bzip2")))) {
-                        system2("bzip2",c("-f -9 -c -n",.dQuote(con$fname))
-                               ,stdout=dst,stderr=FALSE)
-                     }
+                     was$size[ind] <- file.size(file.path(.ursaCacheDir(),was$dst[ind]))
+                     was$stamp[ind] <- as.integer(file.mtime(was$src[ind]))
+                     was$visits[ind] <- was$visits[ind]+1L
+                     was$time[ind] <- format(Sys.time(),format="%Y-%m-%dT%H:%M:%SZ",tz="UTC")
+                    # print(was[ind,])
+                     .ursaCacheWrite(was[ind,])
                   }
                }
             }

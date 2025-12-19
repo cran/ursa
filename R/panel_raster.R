@@ -8,8 +8,34 @@
                  ,class=list(c("list","ursaRaster"),"ursaRaster","ggmap","character"))
    verbose <- .getPrm(arglist,name="verb(ose)*",kwd=kwd,default=FALSE)
    if (is.character(obj)) {
-      cache <- .getPrm(arglist,name="cache",class=c("logical","character"),default=TRUE)
-      obj <- .geomap(style=obj,cache=cache,verbose=verbose)
+      e <- which(ursa_exists(obj))
+      if (length(e)==1) {
+         obj <- obj[e]
+         resample <- .getPrm(arglist,name="resample",default="near")
+         g1 <- getOption("ursaPngPanelGrid")
+         if ((length(g1$rotation))&&(!is.na(g1$rotation))&&(g1$rotation!=0)) {
+            rotation <- .rotation(g1)
+            g2 <- regrid(g1,mul=sqrt(2),expand=sqrt(2))
+            obj <- .gdalwarp(obj,grid=g2,resample="near",verbose=verbose)
+            da <- as.data.frame(obj)
+            xy2 <- .rotate(da[,c("x","y")],rotation,inv=!FALSE)
+            da$x2 <- xy2[,1]
+            da$y2 <- xy2[,2]
+            da <- da[da$x2>=g2$minx & da$x2<=g2$maxx & da$y2>=g2$miny & da$y2<=g2$maxy,]
+            dst <- t(value_xy(obj,x=da$x2,y=da$y2))
+            da[,colnames(dst)] <- dst
+            obj <- allocate(da[,seq(length(obj)+2L)])
+            obj <- .gdalwarp(obj,grid=g1,resample=resample,verbose=verbose)
+         }
+         else
+            obj <- .gdalwarp(obj,resample=resample,verbose=verbose)
+      }
+      else {
+         cache <- .getPrm(arglist,name="cache",class=c("logical","character"),default=TRUE)
+         obj <- .geomap(style=obj,cache=cache
+                      # ,size=dim(getOption("ursaPngPanelGrid"))
+                       ,verbose=verbose)
+      }
    }
    if (inherits(obj,"ggmap"))
       obj <- as.ursa(obj)
@@ -21,6 +47,12 @@
                    ,kwd=kwd,class=list("numeric","character"),default=NA)
    attribution <- .getPrm(arglist,name="(ann(otat)*|attr(ibution)*)"
                          ,kwd=kwd,default="bottomright vertical")
+   rotated <- isTRUE(.panel_grid()$rotation!=0)
+   if (rotated) {
+      opW <- options(warn=1)
+      warning("Grid is rotated, but raster's rotation is unsupported")
+      options(opW)
+   }
    if (verbose)
       str(list(obj=class(obj),useRaster=useRaster,interpolate=interpolate
               ,attribution=attribution,alpha=alpha))
@@ -60,10 +92,15 @@
             obj[4] <- round(obj[4]*alpha)
          }
       }
-      if (!.identicalCRS(ursa_crs(obj),.panel_crs())) {
+      if (T & !.identicalCRS(ursa_crs(obj),.panel_crs())) {
+        # print(ursa_crs(obj))
+        # print(.panel_crs())
          cntr <- attr(obj,"copyright")
          attr(obj,"copyright") <- NULL
          ref <- .panel_grid()
+         sc <- getOption("ursaPngScale",1)
+         if (sc>1)
+            ref <- regrid(ref,mul=sc)
         # ursa_write(obj,"C:/tmp/ex8b.tif")
          obj <- .round(.gdalwarp(obj,grid=ref,sf=FALSE,resample="bilinear",verbose=verbose))
         # ursa_write(obj,"C:/tmp/ex8c.tif")

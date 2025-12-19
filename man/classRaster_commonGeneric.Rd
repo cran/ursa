@@ -51,7 +51,7 @@ Other arguments, which are passed to the respective S3 method.
 %%~ put references to the literature/web site here ~
 %%~ }
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 %%~ \note{
 %%  ~~further notes~~

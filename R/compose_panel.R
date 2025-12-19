@@ -15,9 +15,23 @@
          panel_annotation(...)
       }
       else {
+         basemap <- .getPrm(arglist,name="basemap$"
+                           ,default="",class=c("character","logical"))
+         basemapOrder <- .getPrm(arglist,name="basemap.order",valid=c("before","after"))
+         basemapAlpha <- .getPrm(arglist,name="basemap.alpha"
+                                ,default=ifelse(basemapOrder=="before",1,0.3))
+         if (isTRUE(basemap))
+            basemap <- "default"
+         else if (is.logical(basemap))
+            basemap <- ""
+         hasBasemap <- nchar(basemap)>0
+         if (hasBasemap)
+            arglist$coast <- .getPrm(arglist,name="^coast$",default=FALSE)
          aname <- names(arglist)
          indB <- .grep("(^blank|^(ref|dim)$)",aname)
          do.call("panel_new",arglist[indB])
+         if ((hasBasemap)&&(basemapOrder=="before"))
+            .panel_basemap(basemap,alpha=basemapAlpha)
         # indSP <- which(sapply(arglist,inherits,"Spatial"))
         # indSF <- which(sapply(arglist,inherits,c("sfc","sf")))
          indSP <- which(sapply(arglist,.isSP))
@@ -44,6 +58,8 @@
          if ((!length(indS))&&(length(other))) {
             ret <- do.call("panel_plot",c(arglist[other]))$col
          }
+         if ((hasBasemap)&&(basemapOrder=="after"))
+            .panel_basemap(basemap,alpha=basemapAlpha)
          indD <- .grep("^(decor|coast|grid|graticul|scale|ruler)",aname)
          do.call("panel_decor",arglist[indD])
          indA <- .grep("^(caption|ann|label)",aname)
@@ -113,8 +129,21 @@
       names(ct) <- units
    else
       names(ct) <- rep("",length(ct))
-   ll <- do.call("compose_graticule",arglist)
-   coast <- do.call("compose_coastline",arglist)
+   sameGrid <- TRUE
+   if (isList) {
+      g1 <- ursa_grid(img[[1]])
+      for (i in tail(seq(img),-1)) {
+         if (identical(g1,ursa_grid(img[[i]])))
+            next
+         sameGrid <- FALSE
+         break
+      }
+   }
+   if (sameGrid) {
+      options(ursaPngPanelGrid=ursa_grid(img))
+      ll <- do.call("compose_graticule",arglist)
+      coast <- do.call("compose_coastline",arglist)
+   }
    for (j in seq(ng))
    {
       if (isList) {
@@ -143,7 +172,14 @@
          k <- k+1L
         # if (i %in% skip)
         #    next
-         panel_new(...)
+         if (isRGB)
+            panel_new(...)
+         else {
+           # a <- c(list(grid=ursa_grid(p[i])),arglist)
+           # str(a)
+           # q()
+            do.call("panel_new",c(list(grid=ursa_grid(p[i])),arglist))
+         }
          if (isRGB) {
             if (isList)
                panel_raster(img[[j]],...)
@@ -163,9 +199,9 @@
                do.call("panel_raster",c(list(p[i]),arglist))
             }
          }
-         if (FALSE) {
+         if (!sameGrid) {
             do.call("panel_coastline",arglist)
-            do.call("panel_graticule",arglist)
+           # do.call("panel_graticule",arglist)
          }
          else {
             panel_coastline(coast)

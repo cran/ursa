@@ -28,8 +28,7 @@
    }
    x[tail(seq_len(k),n)]
 }
-'series' <- function(x,n=3L,s=170,...)
-{
+'series' <- function(x,n=3L,s=170,...) {
    if (!is.ursa(x)) {
       if (is.null(dim(x))) {
          if (is.list(x)) {
@@ -58,6 +57,8 @@
       }
       ind <- seq(dim(x)[1])
       ind <- sort(unique(c(head(ind,n),tail(ind,n))))
+      if (length(dim(x))==1)
+         return(x[ind])
       return(x[ind,,drop=FALSE])
    }
    s2 <- with(ursa_grid(x),columns*rows*4)

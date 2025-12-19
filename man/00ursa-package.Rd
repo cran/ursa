@@ -20,7 +20,7 @@ See table of content.
 }
 
 \author{
-Nikita Platonov \email{platonov@sevin.ru}
+Nikita Platonov \email{platonov@sev-in.ru}
 }
 
 %%~ \section{Acknowledgements}{

@@ -1,4 +1,4 @@
-'spatialize' <- function(dsn,engine=c("native","sf")# ,"sp","geojsonsf")
+'spatialize' <- function(dsn,engine=c("native","sf")# ,"sp","geojsonsf","yyjsonr")
                          ,layer=".*",field=".+",coords=c("x","y"),crs=character()
                          ,geocode="",place="",area=c("bounding","point","shape")
                          ,grid=NULL,size=NA,cell=NA,expand=1,border=NA
@@ -21,6 +21,7 @@
       str(a)
       cat("----------------------------------------\n")
    }
+   verboseDevel <- isTRUE(getOption("ursaDevel"))
    if (isMulti <- ((!is_spatial(dsn))&&(!isS4(dsn) & all(sapply(dsn,is_spatial))))) {
       arglist <- as.list(match.call())
       ret <- vector("list",length(dsn))
@@ -37,6 +38,8 @@
                  ,silent=TRUE)
    if (inherits(engList,"try-error"))
       engList <- c("native","sf")
+   if ((engine[1]=="yyjsonr")&&(requireNamespace("yyjsonr",quietly=.isPackageInUse())))
+      engList <- c(engList,"yyjsonr")
    if ((engine[1]=="geojsonsf")&&(requireNamespace("geojsonsf",quietly=.isPackageInUse())))
       engList <- c(engList,"geojsonsf")
    if ((engine[1]=="sp")&&(requireNamespace("sp",quietly=.isPackageInUse())))
@@ -65,11 +68,12 @@
    if (is.na(resetProj))
       resetProj <- TRUE
    cpg <- NULL
+  # .elapsedTime("S1a")
    if (engine=="sp") {
       isSF <- !.isSP(dsn) & !is.data.frame(dsn)
       isSP <- TRUE
    }
-   else if (engine %in% c("sf","geojsonsf")) {
+   else if (engine %in% c("sf","geojsonsf","___yyjsonr")) {
       isSF <- requireNamespace("sf",quietly=.isPackageInUse())
       isSP <- !isSF
    }
@@ -91,9 +95,12 @@
       isSF <- requireNamespace("sf",quietly=.isPackageInUse())
       isSP <- !isSF
    }
+  # .elapsedTime("S1b")
    jsonSF <- FALSE
    cond1 <- style %in% c("auto","keep")
    if ((length(crs))&&(cond1)) {
+      if ((is_spatial(crs))||(is_ursa(crs))||(.is.grid(crs)))
+         crs <- spatial_crs(crs)
       style <- .epsg2proj4(crs,verbose=FALSE)
    }
    else if (!cond1) {
@@ -122,23 +129,31 @@
    isNative <- engine=="native"
    if (is.character(dsn)) {
       if (length(dsn)>1) {
-         pattern <- "\\.(gpkg|tab|kml|geojson|mif|fgb|sqlite|shp|shz|osm|csv)(\\.(zip|rar|gz|bz2))*$"
+         pattern <- "\\.(gpkg|tab|kml|geojson|mif|fgb|sqlite|shp|shz|osm|csv)(\\.(zip|rar|gz|bz2|zst))*$"
          dsn <- dsn[.grep(pattern,basename(dsn))]
          if (length(dsn)!=1)
             stop("Either filename is not recognized or multiple files")
       }
    }
+  # .elapsedTime("S2")
    proj4 <- NULL
    provider <- FALSE
-   if ((!cond1)&&(T | is.character(dsn))&&(isFALSE(resetProj))) { ## ++20230612
-      provider <- style %in% .tileService(providers=TRUE)
-     # if (T | !(style %in% .tileService(providers=TRUE))) { ## 20240216
-      if (!.isWeb())
+   projClass <- c("longlat","stere","laea","aeqd","utm","merc")
+   if ((!cond1)&& # (!style %in% projClass)&&
+              (T | is.character(dsn))&&(isFALSE(resetProj))) { ## ++20230612
+      if (style %in% projClass)
          resetProj <- TRUE
-      else if (!provider) { ## 20240221
-         resetProj <- TRUE
+      else {
+         provider <- style %in% .tileService(providers=TRUE)
+        # if (T | !(style %in% .tileService(providers=TRUE))) { ## 20240216
+         if (!.isWeb())
+            resetProj <- TRUE
+         else if (!provider) { ## 20240221
+            resetProj <- TRUE
+         }
       }
    }
+  # print(c(provider=provider,resetProj=resetProj))
    if (!((is.character(dsn))&&(length(dsn)==1))) {
       nextCheck <- TRUE
       if ((.isSF(dsn))||(.isSP(dsn))) {
@@ -219,7 +234,7 @@
             else if (isSP) {
                sp::coordinates(obj) <- coords
                if (isCRS)
-                  sp::proj4string(obj) <- crsNow
+                  sp::proj4string(obj) <- unclass(crsNow)
             }
             rm(dsn) ## requierd?
             nextCheck <- FALSE
@@ -323,12 +338,13 @@
                obj <- sf::st_as_sf(dsn,coords=coords,crs=crsNow)
             else
                obj <- sf::st_as_sf(dsn,coords=coords)
+           # obj <- .beautyInput(obj)
          }
          else if (isSP) {
             obj <- dsn
             sp::coordinates(obj) <- coords
             if (isCRS) {
-               if (!.try(sp::proj4string(obj) <- crsNow)) ## sp::CRS() loads 'sf'
+               if (!.try(sp::proj4string(obj) <- unclass(crsNow))) ## sp::CRS() loads 'sf'
                   sp::proj4string(obj) <- "EPSG:4326"
             }
          }
@@ -503,6 +519,7 @@
       }
    }
    else {
+     # .elapsedTime("S3")
       if ((FALSE)&&(isNative)) { ## this check has been done early
          loaded <- .loaded()
          if ("sf" %in% loaded)
@@ -517,6 +534,9 @@
          dsn <- zname
       }
       else if (file.exists(zname <- paste0(dsn,".bz2"))) {
+         dsn <- zname
+      }
+      else if (file.exists(zname <- paste0(dsn,".zst"))) {
          dsn <- zname
       }
       if (!file.exists(dsn)) {
@@ -534,7 +554,7 @@
             mode <- ifelse(.lgrep("(txt|json)$",dsn),"wt","wb")
             dsn <- .ursaCacheDownload(dsn,mode=mode)
          }
-         else if (.lgrep("\\.(gpkg|tab|kml|geojson|mif|fgb|sqlite|shp|shz|osm)(\\.(zip|gz|bz2))*$"
+         else if (.lgrep("\\.(gpkg|tab|kml|geojson|mif|fgb|sqlite|shp|shz|osm)(\\.(zip|gz|bz2|zst))*$"
                  ,basename(dsn))) {
             message(paste("#40. It seems that specified non-existent file name"
                          ,sQuote(dsn),"rather than geocode request."))
@@ -620,10 +640,14 @@
          }
       }
       else {
-         jsonSF <- (engine %in% c("native","geojsonsf"))&&(isSF)&&(.lgrep("\\.geojson",dsn))&&
+         jsonSF <- (engine %in% c("_native","geojsonsf"))&&(isSF)&&(.lgrep("\\.geojson",dsn))&&
             (requireNamespace("geojsonsf",quietly=.isPackageInUse()))
         #    print(data.frame(engine=engine,isSP=isSP,isSF=isSF,jsonSF=jsonSF))
-         if (jsonSF)
+        # .elapsedTime("S6 yyloading")
+         jsonYY <- (engine %in% c("native","yyjsonr"))&&(isSF)&&(.lgrep("\\.geojson",dsn))&&
+            (requireNamespace("yyjsonr",quietly=.isPackageInUse()))
+        # .elapsedTime("S7")
+         if (jsonSF | jsonYY)
             NULL
          else if (isZip <- .lgrep("\\.zip$",dsn)>0) {
             opW <- options(warn=1)
@@ -645,17 +669,23 @@
             on.exit(file.remove(ziplist))
             dsn <- .grep("\\.(shp|shz|fgb|sqlite|gpkg|geojson)$",ziplist,value=TRUE)
          }
-         else if ((nchar(Sys.which("gzip")))&&(isZip <- .lgrep("\\.gz$",dsn)>0)) {
+         else if ((isZip <- .lgrep("\\.gz$",dsn)>0)&&(nchar(Sys.which("gzip")))) {
             dsn0 <- dsn
-            dsn <- tempfile();on.exit(file.remove(dsn))
+            dsn <- tempfile(fileext=gsub(".+(\\.\\w+)\\.gz$","\\1",basename(dsn)))
+            on.exit(file.remove(dsn))
             system2("gzip",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
          }
-         else if ((nchar(Sys.which("bzip2")))&&(isZip <- .lgrep("\\.bz2$",dsn)>0)) {
+         else if ((isZip <- .lgrep("\\.bz2$",dsn)>0)&&(nchar(Sys.which("bzip2")))) {
             dsn0 <- dsn
             dsn <- tempfile();on.exit(file.remove(dsn))
             system2("bzip2",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
          }
-         else if ((T)&&(nchar(Sys.which("7z")))&&(isZip <- .lgrep("\\.rar$",dsn)>0)) {
+         else if ((isZip <- .lgrep("\\.zst$",dsn)>0)&&(nchar(Sys.which("zstd")))) {
+            dsn0 <- dsn
+            dsn <- tempfile();on.exit(file.remove(dsn))
+            system2("zstd",c("-f -d -c",.dQuote(dsn0)),stdout=dsn,stderr=FALSE)
+         }
+         else if ((T)&&(isZip <- .lgrep("\\.rar$",dsn)>0)&&(nchar(Sys.which("7z")))) {
             stop(dsn,": this archive type is not supported")
             ziplist <- system(paste("7z","l","-scsUTF-8",dsn),intern=TRUE)
             ind <- .grep("-{19}\\s",ziplist)
@@ -745,29 +775,84 @@
          }
       }
       if ((!hasOpened)&&((!geocodeStatus)||(file.exists(dsn)))) {
-         if (jsonSF) {
+         if (jsonSF | jsonYY) {
+           # .elapsedTime("S8 yyreading")
             epsg <- "XXXXXXXXX"
             inMemory <- FALSE
             a <- dsn
             opGeoW <- options(warn=-1)
-            if (T | .lgrep("\\.(gz|bz2|xz)$",a)) {
-               a <- readLines(a)
-               inMemory <- TRUE
+            if ((jsonSF)||((jsonYY)&&(.lgrep("\\.(gz|bz2|xz|zst)$",a)))) {
+               if ((jsonYY)&&(.lgrep("\\.gz$",dsn)>0)&&(nchar(Sys.which("gzip")))) {
+                  if (verboseDevel)
+                     .elapsedTime("Y1 gzip uncompress")
+                 # print("gunzip/read_geojson_file")
+                  ex <- tempfile(fileext=gsub(".+(\\.\\w+)\\.gz$","\\1",basename(dsn)))
+                  on.exit(file.remove(ex))
+                  system2("gzip",c("-f -d -c",.dQuote(dsn)),stdout=ex,stderr=FALSE)
+                  a <- ex
+               }
+               else if ((jsonYY)&&(.lgrep("\\.zst$",dsn)>0)&&(nchar(Sys.which("zstd")))) {
+                  if (verboseDevel)
+                     .elapsedTime("Y1 zstd uncompress")
+                 # print("unzstd/read_geojson_file")
+                  ex <- tempfile(fileext=gsub(".+(\\.\\w+)\\.gz$","\\1",basename(dsn)))
+                  on.exit(file.remove(ex))
+                  system2("zstd",c("-f -d -c",.dQuote(dsn)),stdout=ex,stderr=FALSE)
+                  a <- ex
+               }
+               else {
+                  if (verboseDevel)
+                     .elapsedTime("Y1 to memory")
+                 # print("readLines/read_geojson_str")
+                  a <- readLines(a)
+                  inMemory <- TRUE
+               }
             }
-            obj <- try(geojsonsf::geojson_sf(a),silent=TRUE)
+            if (jsonSF)
+               obj <- try(geojsonsf::geojson_sf(a),silent=TRUE)
+            else if (jsonYY) {
+               if (verboseDevel)
+                  .elapsedTime("Y2 to spatial")
+               if (inMemory)
+                  obj <- try(yyjsonr::read_geojson_str(paste(a,collapse="")),silent=TRUE)
+               else {
+                  obj <- try(yyjsonr::read_geojson_file(a),silent=TRUE)
+               }
+               if (verboseDevel)
+                  .elapsedTime("Y3")
+            }
+            else
+               stop("incorrect geojson handler #1")
             if (inherits(obj,"try-error")) {
                if (!inMemory) {
                   a <- readLines(a)
                   inMemory <- TRUE
-                  obj <- try(geojsonsf::geojson_sf(a),silent=TRUE)
+                  if (jsonSF)
+                     obj <- try(geojsonsf::geojson_sf(a),silent=TRUE)
+                  else if (jsonYY) {
+                     obj <- try(yyjsonr::read_geojson_str(paste(a,collapse="")),silent=TRUE)
+                  }
+                  else
+                     stop("incorrect geojson handler #2")
                }
             }
             if (inherits(obj,"try-error")) {
                a <- paste(a,collapse="")
-               obj <- try(geojsonsf::geojson_sf(a))
+               if (jsonSF)
+                  obj <- try(geojsonsf::geojson_sf(a))
+               else if (jsonYY)
+                  obj <- try(yyjsonr::read_geojson_str(a))
+               else
+                  stop("incorrect geojson handler #2")
             }
             if (inherits(obj,"try-error")) {
-               obj <- sf::st_read(dsn,quiet=TRUE,optional=TRUE)
+               lname <- sf::st_layers(dsn)$name
+               if (length(lname)>1) {
+                  options(opGeoW)
+                  stop("Please specify direct argument `engine=sf`")
+               }
+               else
+                  obj <- sf::st_read(dsn,quiet=TRUE,optional=TRUE)
                if (!spatial_count(obj))
                   return(obj)
             }
@@ -786,7 +871,8 @@
                   spatial_crs(obj) <- as.integer(epsg)
             }
             options(opGeoW)
-            if (length(ind <- which(sapply(obj,inherits,"character")))) {
+            if ((FALSE)&&(length(ind <- which(sapply(obj,inherits,"character"))))) {
+              # .elapsedTime("S11 date/time")
                for (i in ind) {
                   a <- na.omit(obj[,i,drop=TRUE])
                   if (length(grep("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z"
@@ -799,6 +885,7 @@
                      obj[,i] <- as.Date(obj[,i,drop=TRUE],tz="UTC")
                   }
                }
+              # .elapsedTime("S12")
             }
          }
          else {
@@ -904,6 +991,7 @@
                }
                ##~ obj <- readOGR(dsn,layer,pointDropZ=TRUE,encoding=enc
                                     ##~ ,use_iconv=!is.null(enc),verbose=FALSE)
+               stop("RGDAL")
                obj <- .rgdal_readOGR(dsn,layer,pointDropZ=TRUE,encoding=cpg
                                     ,use_iconv=cpg %in% "UTF-8"
                                     ,verbose=FALSE)
@@ -981,11 +1069,14 @@
          obj <- obj[,dname]
       }
    }
+   if (verboseDevel)
+      .elapsedTime("S2 date/time")
    if (hasTable) {
       if (isSF)
          cl <- lapply(obj,class)[dname]
       else if (isSP)
          cl <- lapply(methods::slot(obj,"data"),class)[dname]
+      tpatt <- "^(\\d{4})(\\.|-|/)?(\\d{2})(\\.|-|/)?(\\d{2})($|(\\s|T)\\d.+)"
       for (i in seq_along(dname)) {
          cl2 <- cl[i]
          if (isSF) {
@@ -1006,10 +1097,11 @@
             }
            # str(dname[i])
             isDateTime <- FALSE
-            skipParse <- TRUE # .isPackageInUse()
+            skipParse <- FALSE # .isPackageInUse()
            # if (dname[i]=="time")
            #    str(da)
             nc <- try(nchar(na.omit(da)))
+           # .elapsedTime("S13")
             if (inherits(nc,"try-error")) {
                msg <- attr(nc,"condition")$message
                if (.lgrep("element\\s\\d+",msg)) {
@@ -1026,37 +1118,72 @@
                   options(opW)
                }
             }
-            else if ((dev <- TRUE)&&(length(unique(nc))==1)&&
-                  (.lgrep("\\d{4}.*\\d{2}.*\\d{2}",da))) {
-               nNA <- length(which(is.na(da)))
-               s <- sapply(gregexpr("(-|\\.|/)",da),function(x) length(x[x>=0]))
-               if (all(s>=2)) {
-                  s <- sapply(gregexpr("(-|\\.|/)",da),function(x) diff(x)[1])
-                  if (all(s==3))
-                     da <- .gsub(".*(\\d{4})(.?)(\\d{2})(.?)(\\d{2})(.*)"
-                                ,"\\1-\\3-\\5\\6",da)
+            else if ((dev <- TRUE)&&(length(unc <- unique(nc))==1)&&
+                  (.lgrep(tpatt,da))) {
+               if (verboseDevel)
+                  .elapsedTime("S14")
+               da <- gsub(tpatt,"\\1-\\3-\\5\\6",da)
+              # .elapsedTime("S17")
+               if (FALSE) {
+                 # nNA <- length(which(is.na(da)))
+                  s <- sapply(gregexpr("(-|\\.|/)",da),function(x) length(x[x>=0]))
+                 # .elapsedTime("S15")
+                  if (all(s>=2)) {
+                     s <- sapply(gregexpr("(-|\\.|/)",da),function(x) diff(x)[1])
+                     if (all(s==3)) {
+                        da <- .gsub(".*(\\d{4})(.?)(\\d{2})(.?)(\\d{2})(.*)"
+                                   ,"\\1-\\3-\\5\\6",da)
+                        str(da)
+                     }
+                  }
+                  else if (FALSE & length(grep("(\\d{8})($|\\D.*$)",da))==length(da)) {
+                     da <- .gsub(".*(\\d{4})(.?)(\\d{2})(.?)(\\d{2})(.+)*"
+                                ,"\\1-\\3-\\5\\6 6='\\6' 7='\\7'",da)
+                  }
+                  else
+                     skipParse <- TRUE
                }
-               else if (FALSE & length(grep("(\\d{8})($|\\D.*$)",da))==length(da)) {
-                  da <- .gsub(".*(\\d{4})(.?)(\\d{2})(.?)(\\d{2})(.+)*"
-                             ,"\\1-\\3-\\5\\6 6='\\6' 7='\\7'",da)
-               }
-               else
-                  skipParse <- TRUE
+               if (verboseDevel)
+                  .elapsedTime("S16")
                if (!skipParse) {
-                 # da <- .gsub(".*(\\d{4})(.?)(\\d{2})(.?)(\\d{2})(.*)","\\1-\\3-\\5\\6",da)
-                  a <- as.POSIXct(as.POSIXlt(da,format="%Y-%m-%dT%H:%M:%SZ",tz="UTC"))
-                  if (all(is.na(a))) {
-                     a <- as.POSIXct(da,tz="",format="%Y-%m-%d %H:%M:%S")
-                  }
-                  if (all(is.na(a))) {
-                     a <- as.POSIXct(da,tz="",format="%Y-%m-%d %H:%M")
-                  }
-                  if (all(is.na(a))) {
-                     a <- as.POSIXct(da,tz="",format="%Y-%m-%dT%H:%M")
-                  }
-                  if (all(is.na(a))) {
+                  if (unc==10)
                      a <- as.Date(da,format="%Y-%m-%d")
+                  else if (unc==19)
+                     a <- as.POSIXct(da,tz="",format="%Y-%m-%d %H:%M:%S")
+                  else if (unc==20)
+                     a <- as.POSIXct(da,tz="",format="%Y-%m-%dT%H:%M:%SZ")
+                  else if (unc>20)
+                     a <- as.POSIXct(da,tz="",format="%Y-%m-%dT%H:%M:%OSZ")
+                  else if (unc==16)
+                     a <- as.POSIXct(da,tz="",format="%Y-%m-%d %H:%M")
+                  else {
+                     if (verboseDevel)
+                        .elapsedTime("S16a")
+                    # da <- .gsub(".*(\\d{4})(.?)(\\d{2})(.?)(\\d{2})(.*)","\\1-\\3-\\5\\6",da)
+                     a <- as.POSIXct(as.POSIXlt(da,format="%Y-%m-%dT%H:%M:%SZ",tz="UTC"))
+                     if (all(is.na(a))) {
+                        if (verboseDevel)
+                           .elapsedTime("S16b")
+                        a <- as.POSIXct(da,tz="",format="%Y-%m-%d %H:%M:%S")
+                     }
+                     if (all(is.na(a))) {
+                        if (verboseDevel)
+                           .elapsedTime("S16c")
+                        a <- as.POSIXct(da,tz="",format="%Y-%m-%d %H:%M")
+                     }
+                     if (all(is.na(a))) {
+                        if (verboseDevel)
+                           .elapsedTime("S16d")
+                        a <- as.POSIXct(da,tz="",format="%Y-%m-%dT%H:%M")
+                     }
+                     if (all(is.na(a))) {
+                        if (verboseDevel)
+                           .elapsedTime("S16e")
+                        a <- as.Date(da,format="%Y-%m-%d")
+                     }
                   }
+                  if (verboseDevel)
+                     .elapsedTime("S16z")
                   if (length(which(is.na(a)))==length(which(is.na(da)))) {
                      da <- a
                      rm(a)
@@ -1069,12 +1196,12 @@
             }
            # if (dname[i]=="time")
            #    str(da)
-            if (!isDateTime) {
+           # if (!isDateTime) {
               # da <- iconv(da,to="UTF-8")
               # Encoding(da) <- "UTF-8"
               # if (is.null(cpg)) ## ++ 20180527
               #    Encoding(da) <- "UTF-8"
-            }
+           # }
             if ((is.character(da))&&(anyNA(da))) {
                ind <- which(!is.na(da))
               # da[ind] <- paste0("a",da[ind]) ## devel
@@ -1104,9 +1231,9 @@
             }
          }
          else if (TRUE) {
-            cond1 <- isTRUE(!is.factor(da))
-            cond2 <- isTRUE(try(.is.integer(na.omit(da))))
-            isInt <- cond1 && cond2
+            isInt <- isTRUE(!is.factor(da))
+            if (isInt)
+               isInt <- isTRUE(try(.is.integer(na.omit(da))))
            # isInt <- .is.integer(da)
             if (isInt) { # &&(!is.integer(da))
                da <- as.integer(round(da))
@@ -1125,6 +1252,8 @@
      # Sys.setlocale("LC_CTYPE",lc)
      # str(asf)
    }
+   if (verboseDevel)
+      .elapsedTime("S17")
    if (!exists("obj")) {
       stop("Object cannot be recognized as spatial")
    }
@@ -1170,7 +1299,6 @@
          stop("POLYGON to MULTIPOLYGON for 'Spatial' is not implemented")
       }
    }
-   projClass <- c("longlat","stere","laea","merc")
    projPatt <- paste0("(",paste(projClass,collapse="|"),")")
    staticMap <- c("openstreetmap","sputnikmap","google")
    tilePatt <- paste0("(",paste0(unique(c(staticMap,.tileService())),collapse="|"),")")
@@ -1271,7 +1399,10 @@
   # isColor <- .lgrep("colo(u)*r",style)>0
    isWeb <- .lgrep(tilePatt,art)
    if (verbose) {
-      print(data.frame(proj=proj,art=art,static=isStatic
+     # print(class(proj))
+     # str(unclass(proj))
+      proj2prn <- ifelse(inherits(proj,c("ursaCRS")),'<proj4/WKT>',proj)
+      print(data.frame(proj=proj2prn,art=art,static=isStatic
                       ,canTile=canTile,tile=isTile,web=isWeb,row.names="spatialize:"))
      # str(as.list(match.call()))
    }
@@ -1303,7 +1434,7 @@
          resetProj <- TRUE
          proj4 <- "auto"
       }
-      if ((isLonLat)&&(proj==style)&&(proj %in% c("laea","stere"))) {
+      if ((isLonLat)&&(proj==style)&&(proj %in% c("laea","stere","aeqd"))) {
          resetProj <- TRUE
          proj4 <- "auto"
       }
@@ -1415,10 +1546,10 @@
             dr5 <- diff(range(lon5))
             dr0 <- min(c(dr2,dr3,dr4,dr5))
             if (verbose)
-               print(data.frame(r2=diff(range(lon2))
-                               ,r3=diff(range(lon3))
-                               ,r4=diff(range(lon4))
-                               ,r5=diff(range(lon5))))
+               print(data.frame(r2=dr2
+                               ,r3=dr3
+                               ,r4=dr4
+                               ,r5=dr5))
             if (verbose)
                print(data.frame(sd2=sd2,'sd3R'=sd3,'sd4L'=sd4,'sd5C'=sd5
                                ,n3=length(ind3),n4=length(ind4)))
@@ -1433,6 +1564,8 @@
                lon2 <- lon4
             }
          }
+         else
+            dr0 <- 0
         # if ((any(lon2<180))&&(any(lon2>180)))
         #    selection <- 3L
          if (verbose)
@@ -1443,12 +1576,16 @@
          bbox <- c(range(lon2),range(lat2))[c(1,3,2,4)]
         # options(ursaRasterizeSelection=selection)
         # options(ursaRasterizeBbox=bbox)
-         theta2 <- mean(range(lon2))
+         if (dr0>350) {
+            theta2 <- median(lon2)
+         }
+         else
+            theta2 <- mean(range(lon2))
         # print(c(old=theta2,new=theta))
         # lon_0 <- if (is.numeric(lon0)) lon0 else mean(range(lon2))
          lon_0 <- if (is.numeric(lon0)) lon0 else round(theta2,4)
          lat_ts <- if (is.numeric(lat0)) lat0 else round(mean(lat2),4)
-         if (proj=="laea")
+         if (proj %in% c("laea","aeqd"))
             lat_0 <- lat_ts
          else
             lat_0 <- if (lat_ts>=0) 90 else -90
@@ -1498,12 +1635,30 @@
                           ,paste0("+lon_0=",lon_0)
                           ,"+k=1","+x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs")
          }
-         else if (proj=="merc")
-            t_srs <- paste("+proj=merc +a=6378137 +b=6378137"
+         else if (proj=="utm") {
+            zone <- as.integer(floor(lon_0/6))+31L
+            zone[zone>60] <- zone %/% 60L
+           # print(data.frame(lat_0=lat_0,lon_0=lon_0,zone=zone))
+            t_srs <- paste0("+proj=utm"
+                           ,paste0(" +zone=",zone),ifelse(lat_0>0,""," +south")
+                           ," +datum=WGS84 +units=m +no_defs")
+         }
+         else if (proj=="aeqd") {
+            t_srs <- paste("+proj=aeqd"
+                          ,paste0("+lat_0=",lat_0)
+                          ,paste0("+lon_0=",lon_0)
+                          ,"+k=1","+x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs")
+         }
+         else if (proj=="merc") {
+            ax <- ifelse(grepl("[Yy]andex",style),"+datum=WGS84","+a=6378137 +b=6378137")
+            t_srs <- paste("+proj=merc",ax
                           ,"+lat_ts=0.0",paste0("+lon_0=",lon_0)
                           ,"+x_0=0.0 +y_0=0 +k=1.0 +units=m"
                          # ,"+nadgrids=@null"
                           ,"+wktext +no_defs")
+           # print(t_srs)
+           # stop("t_srs")
+         }
          else if ((proj %in% c("longlat"))||(isLonLat)) {
             t_srs <- .crsWGS84()
          }
@@ -1622,6 +1777,9 @@
                obj <- sp::spTransform(obj,t_srs)
             }
          }
+         if (isSF) {
+            obj <- .beautyInput(obj)
+         }
       }
    }
   # else if (((isSF)&&(is.ursa(a,"grid")))||((isSP)&&(is.ursa(asp,"grid")))) {
@@ -1637,8 +1795,12 @@
             t_srs <- spatial_crs(t_srs)
             g0$crs <- t_srs
             if ((!identical(.crsBeauty(src0,extended=TRUE)
-                           ,.crsBeauty(t_srs,extended=TRUE)))&&(nchar(t_srs)>0))
+                           ,.crsBeauty(t_srs,extended=TRUE)))&&(nchar(t_srs)>0)) {
+               a <- .beautyInput(t_srs)
                obj <- sf::st_transform(obj,t_srs)
+               obj <- .beautyInput(obj)
+              # str(attr(unclass(spatial_geometry(obj)),"crs"))
+            }
          }
         # print(sf::st_crs(obj)$proj4string)
         # print(sf::st_bbox(obj))
